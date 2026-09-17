@@ -1,0 +1,64 @@
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.api.router import api_router
+from app.core.config import get_settings
+from app.core.errors import register_error_handlers
+from app.core.logging import setup_logging
+from app.db.database import engine
+
+settings = get_settings()
+logger = setup_logging(settings.LOG_LEVEL)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Application lifespan context manager handling startup and shutdown events."""
+    logger.info(f"Starting {settings.APP_NAME} in [{settings.APP_ENV}] environment")
+    yield
+    logger.info(f"Shutting down {settings.APP_NAME}...")
+    await engine.dispose()
+    logger.info("Database connection pool disposed.")
+
+
+app = FastAPI(
+    title=settings.APP_NAME,
+    description="Hums — Independent High-Fidelity Audio Streaming & Podcast Platform API",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    lifespan=lifespan,
+)
+
+# Configure Cross-Origin Resource Sharing (CORS)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Register centralized error & validation handlers
+register_error_handlers(app)
+
+
+# Root Liveness Endpoint
+@app.get(
+    "/health",
+    tags=["Health"],
+    summary="Shallow liveness probe",
+)
+async def root_health():
+    """Liveness probe for orchestrators and load balancers."""
+    return {
+        "status": "healthy",
+        "app": settings.APP_NAME,
+        "environment": settings.APP_ENV,
+    }
+
+
+# Mount Versioned API Routes under /api
+app.include_router(api_router, prefix="/api")
