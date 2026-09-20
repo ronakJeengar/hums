@@ -13,6 +13,10 @@ from app.schemas.user import (
     TokenResponse,
     TokenPayload,
 )
+from app.schemas.profile import (
+    ProfileResponse,
+    ProfileUpdateRequest,
+)
 
 __all__ = [
     "ApiResponse",
@@ -26,4 +30,6 @@ __all__ = [
     "UserLogin",
     "TokenResponse",
     "TokenPayload",
+    "ProfileResponse",
+    "ProfileUpdateRequest",
 ]

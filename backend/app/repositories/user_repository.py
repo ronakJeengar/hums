@@ -39,6 +39,32 @@ class UserRepository(BaseRepository[User]):
         await self.session.refresh(user)
         return user
 
+    async def update_profile(
+        self,
+        user: User,
+        *,
+        name: Optional[str] = None,
+        email: Optional[str] = None,
+        bio: Optional[str] = None,
+        avatar_url: Optional[str] = None,
+        clear_avatar: bool = False,
+    ) -> User:
+        """Updates user profile attributes."""
+        if name is not None:
+            user.full_name = name.strip()
+        if email is not None:
+            user.email = email.lower().strip()
+        if bio is not None:
+            user.bio = bio.strip() if bio.strip() else None
+        if clear_avatar:
+            user.avatar_url = None
+        elif avatar_url is not None:
+            user.avatar_url = avatar_url
+
+        await self.session.flush()
+        await self.session.refresh(user)
+        return user
+
 
 class RefreshTokenRepository(BaseRepository[RefreshToken]):
     """Repository managing RefreshToken persistence."""

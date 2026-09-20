@@ -16,7 +16,9 @@ from app.repositories.user_repository import (
     UserRepository,
 )
 from app.services.auth_service import AuthService
+from app.services.profile_service import ProfileService
 from app.services.user_service import UserService
+from app.utils.storage import BaseStorageService, S3StorageService
 
 settings = get_settings()
 security_scheme = HTTPBearer(auto_error=False)
@@ -72,6 +74,17 @@ def get_auth_service(
     ),
 ) -> AuthService:
     return AuthService(user_repo, refresh_token_repo, password_reset_token_repo)
+
+
+def get_storage_service() -> BaseStorageService:
+    return S3StorageService()
+
+
+def get_profile_service(
+    user_repo: UserRepository = Depends(get_user_repository),
+    storage_service: BaseStorageService = Depends(get_storage_service),
+) -> ProfileService:
+    return ProfileService(user_repo, storage_service)
 
 
 async def get_current_user(

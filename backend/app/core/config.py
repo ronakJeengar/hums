@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     # CDN Base URL for media distribution
     CDN_BASE_URL: str = "http://localhost:9000/hums-audio"
 
+    # Profile & Avatar Settings
+    MAX_AVATAR_SIZE_MB: int = 5
+
     # Future AI Integration (Optional for foundation)
     GEMINI_API_KEY: str = ""
 

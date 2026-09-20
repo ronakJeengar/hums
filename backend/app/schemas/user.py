@@ -29,6 +29,7 @@ class UserRead(BaseModel):
     username: Optional[str] = None
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None
+    bio: Optional[str] = None
     is_active: bool
     is_verified: bool
     created_at: datetime
