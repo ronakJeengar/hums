@@ -42,6 +42,36 @@ class ProcessingJobEntity {
   });
 }
 
+class AudioRenditionEntity {
+  final String id;
+  final String trackId;
+  final String storageKey;
+  final String storageProvider;
+  final String format;
+  final String codec;
+  final int bitrateKbps;
+  final int? sampleRate;
+  final int? channels;
+  final int? durationSeconds;
+  final int fileSizeBytes;
+  final DateTime createdAt;
+
+  const AudioRenditionEntity({
+    required this.id,
+    required this.trackId,
+    required this.storageKey,
+    required this.storageProvider,
+    required this.format,
+    required this.codec,
+    required this.bitrateKbps,
+    this.sampleRate,
+    this.channels,
+    this.durationSeconds,
+    required this.fileSizeBytes,
+    required this.createdAt,
+  });
+}
+
 class TrackEntity {
   final String id;
   final String ownerId;
@@ -51,10 +81,12 @@ class TrackEntity {
   final String? albumName;
   final String? genre;
   final int? durationSeconds;
+  final String? waveformKey;
   final String status;
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<AudioFileEntity> audioFiles;
+  final List<AudioRenditionEntity> renditions;
   final List<ProcessingJobEntity> processingJobs;
 
   const TrackEntity({
@@ -66,10 +98,12 @@ class TrackEntity {
     this.albumName,
     this.genre,
     this.durationSeconds,
+    this.waveformKey,
     required this.status,
     required this.createdAt,
     required this.updatedAt,
     this.audioFiles = const [],
+    this.renditions = const [],
     this.processingJobs = const [],
   });
 
@@ -81,6 +115,8 @@ class TrackStatusEntity {
   final String trackId;
   final String title;
   final String status;
+  final int? durationSeconds;
+  final String? waveformKey;
   final String? processingJobId;
   final String? processingStatus;
   final String? errorMessage;
@@ -90,9 +126,12 @@ class TrackStatusEntity {
     required this.trackId,
     required this.title,
     required this.status,
+    this.durationSeconds,
+    this.waveformKey,
     this.processingJobId,
     this.processingStatus,
     this.errorMessage,
     required this.updatedAt,
   });
 }
+

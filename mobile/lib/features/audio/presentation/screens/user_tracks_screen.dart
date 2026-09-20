@@ -157,6 +157,12 @@ class UserTracksScreen extends ConsumerWidget {
     );
   }
 
+  String _formatDuration(int seconds) {
+    final minutes = seconds ~/ 60;
+    final remainingSeconds = seconds % 60;
+    return '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
+  }
+
   Widget _buildTrackCard(BuildContext context, TrackEntity track) {
     final statusColor = _getStatusColor(track.status);
     final jobStatus = track.latestJob?.status;
@@ -194,11 +200,26 @@ class UserTracksScreen extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: AppSpacing.xxs),
-                      Text(
-                        track.artistName ?? 'Unknown Artist',
-                        style: AppTypography.labelSmall,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              track.artistName ?? 'Unknown Artist',
+                              style: AppTypography.labelSmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (track.durationSeconds != null) ...[
+                            const SizedBox(width: AppSpacing.xs),
+                            Text(
+                              '•  ${_formatDuration(track.durationSeconds!)}',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                   ),
@@ -237,15 +258,34 @@ class UserTracksScreen extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                if (track.genre != null)
-                  Text(
-                    'Genre: ${track.genre}',
-                    style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  )
-                else
-                  const SizedBox.shrink(),
+                Row(
+                  children: [
+                    if (track.genre != null)
+                      Text(
+                        'Genre: ${track.genre}',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    if (track.renditions.isNotEmpty) ...[
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        '•  ${track.renditions.length} renditions',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                    if (track.waveformKey != null) ...[
+                      const SizedBox(width: AppSpacing.xs),
+                      const Icon(
+                        Icons.graphic_eq_rounded,
+                        size: 14,
+                        color: AppColors.primary,
+                      ),
+                    ],
+                  ],
+                ),
                 if (jobStatus != null)
                   Text(
                     'Job: $jobStatus',
@@ -260,4 +300,5 @@ class UserTracksScreen extends ConsumerWidget {
       ),
     );
   }
+
 }
