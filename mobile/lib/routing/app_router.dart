@@ -10,6 +10,8 @@ import 'package:hums_mobile/features/auth/presentation/screens/signup_screen.dar
 import 'package:hums_mobile/features/common/presentation/screens/error_screen.dart';
 import 'package:hums_mobile/features/common/presentation/screens/home_screen.dart';
 import 'package:hums_mobile/features/common/presentation/screens/splash_screen.dart';
+import 'package:hums_mobile/features/audio/presentation/screens/upload_audio_screen.dart';
+import 'package:hums_mobile/features/audio/presentation/screens/user_tracks_screen.dart';
 import 'package:hums_mobile/features/profile/presentation/screens/edit_profile_screen.dart';
 import 'package:hums_mobile/features/profile/presentation/screens/profile_screen.dart';
 import 'package:hums_mobile/routing/route_names.dart';
@@ -99,6 +101,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.editProfile,
         path: RouteNames.editProfilePath,
         builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.uploadAudio,
+        path: RouteNames.uploadAudioPath,
+        builder: (context, state) => const UploadAudioScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.userTracks,
+        path: RouteNames.userTracksPath,
+        builder: (context, state) => const UserTracksScreen(),
       ),
     ],
     errorBuilder: (context, state) => ErrorScreen(

@@ -30,4 +30,10 @@ abstract class RouteNames {
 
   static const String editProfile = 'edit-profile';
   static const String editProfilePath = '/profile/edit';
+
+  static const String uploadAudio = 'upload-audio';
+  static const String uploadAudioPath = '/upload';
+
+  static const String userTracks = 'user-tracks';
+  static const String userTracksPath = '/tracks';
 }

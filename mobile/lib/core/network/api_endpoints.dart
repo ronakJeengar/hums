@@ -15,4 +15,11 @@ abstract class ApiEndpoints {
   // Profile Endpoints
   static const String profile = '/api/v1/profile';
   static const String avatar = '/api/v1/profile/avatar';
+
+  // Audio Endpoints
+  static const String audioUpload = '/api/v1/audio/upload';
+  static const String audioTracks = '/api/v1/audio/tracks';
+  static String audioTrackDetails(String trackId) => '/api/v1/audio/tracks/$trackId';
+  static String audioTrackStatus(String trackId) => '/api/v1/audio/tracks/$trackId/status';
+  static String audioJobStatus(String jobId) => '/api/v1/audio/jobs/$jobId';
 }

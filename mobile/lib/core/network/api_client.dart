@@ -78,6 +78,7 @@ class ApiClient {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     Options? options,
+    ProgressCallback? onSendProgress,
   }) async {
     try {
       return await _dio.post<T>(
@@ -85,6 +86,7 @@ class ApiClient {
         data: data,
         queryParameters: queryParameters,
         options: options,
+        onSendProgress: onSendProgress,
       );
     } on DioException catch (e) {
       if (e.error is ApiException) {

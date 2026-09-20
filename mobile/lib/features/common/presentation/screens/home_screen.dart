@@ -37,6 +37,13 @@ class HomeScreen extends ConsumerWidget {
         centerTitle: false,
         actions: [
           IconButton(
+            icon: const Icon(Icons.cloud_upload_outlined, color: AppColors.primary),
+            tooltip: 'Upload Audio',
+            onPressed: () {
+              context.push(RouteNames.uploadAudioPath);
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.person_outline_rounded, color: AppColors.textPrimary),
             tooltip: 'Profile',
             onPressed: () {
@@ -109,6 +116,48 @@ class HomeScreen extends ConsumerWidget {
                     const Text(
                       'Your standalone, high-fidelity audio and podcast streaming experience.',
                       style: AppTypography.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.lg),
+
+              // Creator Hub Quick Action Card
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Creator Studio',
+                            style: AppTypography.titleMedium,
+                          ),
+                          const SizedBox(height: AppSpacing.xxs),
+                          Text(
+                            'Upload audio files and manage your tracks.',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    HumsButton(
+                      label: 'Upload',
+                      variant: HumsButtonVariant.primary,
+                      onPressed: () {
+                        context.push(RouteNames.uploadAudioPath);
+                      },
                     ),
                   ],
                 ),
