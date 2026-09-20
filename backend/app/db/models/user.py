@@ -1,10 +1,13 @@
 import uuid
 from datetime import datetime
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import BaseDBModel
+
+if TYPE_CHECKING:
+    from app.db.models.audio import Track
 
 
 class User(BaseDBModel):
@@ -64,6 +67,12 @@ class User(BaseDBModel):
         "PasswordResetToken",
         back_populates="user",
         cascade="all, delete-orphan",
+    )
+    tracks: Mapped[List["Track"]] = relationship(
+        "Track",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+        order_by="Track.created_at.desc()",
     )
 
     @property

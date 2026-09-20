@@ -9,12 +9,17 @@ from app.core.config import get_settings
 from app.core.errors import AuthenticationError
 from app.core.security import decode_token
 from app.db.database import get_db
-from app.db.models.user import User
+from app.repositories.audio_repository import (
+    AudioFileRepository,
+    ProcessingJobRepository,
+    TrackRepository,
+)
 from app.repositories.user_repository import (
     PasswordResetTokenRepository,
     RefreshTokenRepository,
     UserRepository,
 )
+from app.services.audio_service import AudioService
 from app.services.auth_service import AuthService
 from app.services.profile_service import ProfileService
 from app.services.user_service import UserService
@@ -85,6 +90,29 @@ def get_profile_service(
     storage_service: BaseStorageService = Depends(get_storage_service),
 ) -> ProfileService:
     return ProfileService(user_repo, storage_service)
+
+
+def get_track_repository(session: AsyncSession = Depends(get_db)) -> TrackRepository:
+    return TrackRepository(session)
+
+
+def get_audio_file_repository(session: AsyncSession = Depends(get_db)) -> AudioFileRepository:
+    return AudioFileRepository(session)
+
+
+def get_processing_job_repository(
+    session: AsyncSession = Depends(get_db),
+) -> ProcessingJobRepository:
+    return ProcessingJobRepository(session)
+
+
+def get_audio_service(
+    track_repo: TrackRepository = Depends(get_track_repository),
+    audio_file_repo: AudioFileRepository = Depends(get_audio_file_repository),
+    processing_job_repo: ProcessingJobRepository = Depends(get_processing_job_repository),
+    storage_service: BaseStorageService = Depends(get_storage_service),
+) -> AudioService:
+    return AudioService(track_repo, audio_file_repo, processing_job_repo, storage_service)
 
 
 async def get_current_user(

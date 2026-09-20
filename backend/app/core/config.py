@@ -48,6 +48,24 @@ class Settings(BaseSettings):
     # Profile & Avatar Settings
     MAX_AVATAR_SIZE_MB: int = 5
 
+    # Audio Upload Settings
+    MAX_AUDIO_SIZE_MB: int = 100
+    ALLOWED_AUDIO_MIME_TYPES: List[str] = [
+        "audio/mpeg",
+        "audio/mp3",
+        "audio/wav",
+        "audio/x-wav",
+        "audio/wave",
+        "audio/flac",
+        "audio/x-flac",
+        "audio/mp4",
+        "audio/m4a",
+        "audio/x-m4a",
+        "audio/aac",
+        "audio/ogg",
+        "audio/vorbis",
+    ]
+
     # Future AI Integration (Optional for foundation)
     GEMINI_API_KEY: str = ""
 
