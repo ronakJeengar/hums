@@ -10,7 +10,12 @@ from app.core.errors import AuthenticationError
 from app.core.security import decode_token
 from app.db.database import get_db
 from app.db.models.user import User
-from app.repositories.user_repository import UserRepository
+from app.repositories.user_repository import (
+    PasswordResetTokenRepository,
+    RefreshTokenRepository,
+    UserRepository,
+)
+from app.services.auth_service import AuthService
 from app.services.user_service import UserService
 
 settings = get_settings()
@@ -45,27 +50,69 @@ def get_user_repository(session: AsyncSession = Depends(get_db)) -> UserReposito
     return UserRepository(session)
 
 
+def get_refresh_token_repository(session: AsyncSession = Depends(get_db)) -> RefreshTokenRepository:
+    return RefreshTokenRepository(session)
+
+
+def get_password_reset_token_repository(
+    session: AsyncSession = Depends(get_db),
+) -> PasswordResetTokenRepository:
+    return PasswordResetTokenRepository(session)
+
+
 def get_user_service(user_repo: UserRepository = Depends(get_user_repository)) -> UserService:
     return UserService(user_repo)
 
 
+def get_auth_service(
+    user_repo: UserRepository = Depends(get_user_repository),
+    refresh_token_repo: RefreshTokenRepository = Depends(get_refresh_token_repository),
+    password_reset_token_repo: PasswordResetTokenRepository = Depends(
+        get_password_reset_token_repository
+    ),
+) -> AuthService:
+    return AuthService(user_repo, refresh_token_repo, password_reset_token_repo)
+
+
 async def get_current_user(
-    auth: HTTPAuthorizationCredentials = Depends(security_scheme),
-    user_service: UserService = Depends(get_user_service),
+    auth: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+    user_repo: UserRepository = Depends(get_user_repository),
 ) -> User:
-    """Extracts and validates authenticated user from JWT Bearer token."""
+    """Extracts, decodes, and validates authenticated user from JWT Bearer token."""
     if not auth or not auth.credentials:
-        raise AuthenticationError("Authorization bearer token is missing")
+        raise AuthenticationError(
+            "Authorization bearer token is missing",
+            code="UNAUTHORIZED",
+        )
 
     try:
         payload = decode_token(auth.credentials)
         if payload.get("type") != "access":
-            raise AuthenticationError("Invalid token type. Expected access token.")
+            raise AuthenticationError(
+                "Invalid token type. Expected access token.",
+                code="UNAUTHORIZED",
+            )
         user_id_str = payload.get("sub")
         if not user_id_str:
-            raise AuthenticationError("Malformed token claims")
+            raise AuthenticationError("Malformed token claims", code="UNAUTHORIZED")
         user_id = uuid.UUID(user_id_str)
+    except AuthenticationError:
+        raise
     except Exception as exc:
-        raise AuthenticationError(f"Invalid or expired token: {str(exc)}")
+        raise AuthenticationError(
+            f"Invalid or expired token: {str(exc)}",
+            code="UNAUTHORIZED",
+        )
 
-    return await user_service.get_user_by_id(user_id)
+    user = await user_repo.get_by_id(user_id)
+    if not user:
+        raise AuthenticationError("User not found", code="UNAUTHORIZED")
+
+    if not user.is_active:
+        raise AuthenticationError(
+            "User account is inactive",
+            code="ACCOUNT_INACTIVE",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
+    return user

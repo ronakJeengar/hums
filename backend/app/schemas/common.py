@@ -16,6 +16,10 @@ class ApiResponse(BaseModel, Generic[DataT]):
     meta: ApiMeta = Field(default_factory=ApiMeta)
 
 
+class MessageData(BaseModel):
+    message: str
+
+
 class ErrorDetail(BaseModel):
     code: str
     message: str

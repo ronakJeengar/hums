@@ -21,7 +21,7 @@ class User(BaseDBModel):
         String(50),
         unique=True,
         index=True,
-        nullable=False,
+        nullable=True,
     )
     hashed_password: Mapped[str] = mapped_column(
         String(255),
@@ -45,13 +45,27 @@ class User(BaseDBModel):
         default=False,
         nullable=False,
     )
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
 
-    # Relationship to user refresh tokens
+    # Relationships
     refresh_tokens: Mapped[List["RefreshToken"]] = relationship(
         "RefreshToken",
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    password_reset_tokens: Mapped[List["PasswordResetToken"]] = relationship(
+        "PasswordResetToken",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+    @property
+    def name(self) -> str:
+        """Returns the user's display name or username."""
+        return self.full_name or self.username or ""
 
 
 class RefreshToken(BaseDBModel):
@@ -83,6 +97,10 @@ class RefreshToken(BaseDBModel):
         default=False,
         nullable=False,
     )
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -93,4 +111,37 @@ class RefreshToken(BaseDBModel):
     user: Mapped["User"] = relationship(
         "User",
         back_populates="refresh_tokens",
+    )
+
+
+class PasswordResetToken(BaseDBModel):
+    """Secure password reset tokens for single-use credential recovery."""
+    __tablename__ = "password_reset_tokens"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    token_hash: Mapped[str] = mapped_column(
+        String(255),
+        unique=True,
+        index=True,
+        nullable=False,
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        index=True,
+    )
+    used_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    # Relationship to user
+    user: Mapped["User"] = relationship(
+        "User",
+        back_populates="password_reset_tokens",
     )

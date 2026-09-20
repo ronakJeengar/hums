@@ -36,9 +36,15 @@ def create_access_token(subject: str, role: str = "user", expires_delta: Optiona
         "role": role,
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
+        "jti": secrets.token_hex(16),
         "type": "access",
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def create_password_reset_token() -> str:
+    """Generates a cryptographically secure URL-safe password reset token."""
+    return secrets.token_urlsafe(32)
 
 
 def create_refresh_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:

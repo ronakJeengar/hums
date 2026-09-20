@@ -33,32 +33,42 @@ class NotFoundError(AppException):
         )
 
 
-class AuthenticationError(AppException):
-    def __init__(self, message: str = "Authentication failed", details: Optional[Dict[str, Any]] = None):
+class BadRequestError(AppException):
+    def __init__(self, message: str = "Bad request", code: str = "BAD_REQUEST", status_code: int = status.HTTP_400_BAD_REQUEST, details: Optional[Dict[str, Any]] = None):
         super().__init__(
             message=message,
-            code="UNAUTHORIZED",
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            code=code,
+            status_code=status_code,
+            details=details,
+        )
+
+
+class AuthenticationError(AppException):
+    def __init__(self, message: str = "Authentication failed", code: str = "UNAUTHORIZED", status_code: int = status.HTTP_401_UNAUTHORIZED, details: Optional[Dict[str, Any]] = None):
+        super().__init__(
+            message=message,
+            code=code,
+            status_code=status_code,
             details=details,
         )
 
 
 class ForbiddenError(AppException):
-    def __init__(self, message: str = "Permission denied", details: Optional[Dict[str, Any]] = None):
+    def __init__(self, message: str = "Permission denied", code: str = "FORBIDDEN", status_code: int = status.HTTP_403_FORBIDDEN, details: Optional[Dict[str, Any]] = None):
         super().__init__(
             message=message,
-            code="FORBIDDEN",
-            status_code=status.HTTP_403_FORBIDDEN,
+            code=code,
+            status_code=status_code,
             details=details,
         )
 
 
 class ConflictError(AppException):
-    def __init__(self, message: str = "Resource conflict", details: Optional[Dict[str, Any]] = None):
+    def __init__(self, message: str = "Resource conflict", code: str = "CONFLICT", status_code: int = status.HTTP_409_CONFLICT, details: Optional[Dict[str, Any]] = None):
         super().__init__(
             message=message,
-            code="CONFLICT",
-            status_code=status.HTTP_409_CONFLICT,
+            code=code,
+            status_code=status_code,
             details=details,
         )
 
