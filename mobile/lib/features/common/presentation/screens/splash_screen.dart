@@ -1,28 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hums_mobile/core/theme/app_colors.dart';
 import 'package:hums_mobile/core/theme/app_spacing.dart';
 import 'package:hums_mobile/core/theme/app_typography.dart';
+import 'package:hums_mobile/features/auth/presentation/providers/auth_provider.dart';
+import 'package:hums_mobile/features/auth/presentation/states/auth_state.dart';
 import 'package:hums_mobile/routing/route_names.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    Future.microtask(() {
+      ref.read(authNotifierProvider.notifier).checkAuthStatus();
+    });
     _navigateToNext();
   }
 
   Future<void> _navigateToNext() async {
     await Future.delayed(const Duration(milliseconds: 1200));
-    if (mounted) {
+    if (!mounted) return;
+
+    final authState = ref.read(authNotifierProvider);
+    if (authState.isAuthenticated) {
       context.go(RouteNames.homePath);
+    } else {
+      context.go(RouteNames.loginPath);
     }
   }
 

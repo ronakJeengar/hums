@@ -3,7 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hums_mobile/core/config/env_config.dart';
 import 'package:hums_mobile/core/network/api_exception.dart';
 
+import 'package:hums_mobile/core/network/auth_interceptor.dart';
+import 'package:hums_mobile/features/auth/presentation/providers/auth_provider.dart';
+
 final apiClientProvider = Provider<ApiClient>((ref) {
+  final localDataSource = ref.watch(authLocalDataSourceProvider);
   final dio = Dio(
     BaseOptions(
       baseUrl: EnvConfig.apiBaseUrl,
@@ -15,6 +19,8 @@ final apiClientProvider = Provider<ApiClient>((ref) {
       },
     ),
   );
+
+  dio.interceptors.add(AuthInterceptor(localDataSource));
 
   return ApiClient(dio);
 });

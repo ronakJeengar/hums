@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hums_mobile/core/widgets/hums_button.dart';
 import 'package:hums_mobile/main.dart';
 
 void main() {
+  setUp(() {
+    FlutterSecureStorage.setMockInitialValues({});
+  });
+
   testWidgets('HumsApp boots and displays branding on Splash screen', (WidgetTester tester) async {
     await tester.pumpWidget(
       const ProviderScope(
@@ -19,10 +24,13 @@ void main() {
 
     // Advance clock past the splash delay so all pending timers finish
     await tester.pump(const Duration(milliseconds: 1300));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
 
-    // Verify navigation to HomeScreen completed
-    expect(find.text('Welcome to Hums'), findsOneWidget);
+    // Verify navigation to LoginScreen completed for unauthenticated user
+    expect(find.text('Welcome Back'), findsOneWidget);
+    expect(find.text('Sign in to your Hums account'), findsOneWidget);
   });
 
   testWidgets('HumsButton renders label and triggers tap callbacks', (WidgetTester tester) async {

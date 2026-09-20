@@ -8,6 +8,9 @@ import 'package:hums_mobile/core/theme/app_typography.dart';
 import 'package:hums_mobile/core/widgets/hums_app_bar.dart';
 import 'package:hums_mobile/core/widgets/hums_button.dart';
 
+import 'package:hums_mobile/features/auth/presentation/providers/auth_provider.dart';
+import 'package:hums_mobile/features/auth/presentation/states/auth_state.dart';
+
 // AsyncNotifier or FutureProvider for system health check
 final systemHealthProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
   final client = ref.watch(apiClientProvider);
@@ -21,12 +24,23 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final healthAsync = ref.watch(systemHealthProvider);
+    final authState = ref.watch(authNotifierProvider);
+    final userName = authState.user?.name;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const HumsAppBar(
+      appBar: HumsAppBar(
         title: 'Hums',
         centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, color: AppColors.textSecondary),
+            tooltip: 'Log Out',
+            onPressed: () {
+              ref.read(authNotifierProvider.notifier).logout();
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -77,8 +91,8 @@ class HomeScreen extends ConsumerWidget {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    const Text(
-                      'Welcome to Hums',
+                    Text(
+                      userName != null ? 'Welcome, $userName' : 'Welcome to Hums',
                       style: AppTypography.displayMedium,
                     ),
                     const SizedBox(height: AppSpacing.xs),

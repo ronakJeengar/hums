@@ -16,6 +16,12 @@ abstract class RouteNames {
   static const String register = 'register';
   static const String registerPath = '/register';
 
+  static const String forgotPassword = 'forgot-password';
+  static const String forgotPasswordPath = '/forgot-password';
+
+  static const String resetPassword = 'reset-password';
+  static const String resetPasswordPath = '/reset-password';
+
   static const String player = 'player';
   static const String playerPath = '/player';
 }

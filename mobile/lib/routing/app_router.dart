@@ -1,19 +1,87 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hums_mobile/features/auth/presentation/providers/auth_provider.dart';
+import 'package:hums_mobile/features/auth/presentation/states/auth_state.dart';
+import 'package:hums_mobile/features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:hums_mobile/features/auth/presentation/screens/login_screen.dart';
+import 'package:hums_mobile/features/auth/presentation/screens/reset_password_screen.dart';
+import 'package:hums_mobile/features/auth/presentation/screens/signup_screen.dart';
 import 'package:hums_mobile/features/common/presentation/screens/error_screen.dart';
 import 'package:hums_mobile/features/common/presentation/screens/home_screen.dart';
 import 'package:hums_mobile/features/common/presentation/screens/splash_screen.dart';
 import 'package:hums_mobile/routing/route_names.dart';
 
+class RouterNotifier extends ChangeNotifier {
+  final Ref _ref;
+
+  RouterNotifier(this._ref) {
+    _ref.listen<AuthState>(authNotifierProvider, (previous, next) {
+      notifyListeners();
+    });
+  }
+
+  String? redirect(BuildContext context, GoRouterState state) {
+    final authState = _ref.read(authNotifierProvider);
+    final isAuth = authState.isAuthenticated;
+
+    final currentLoc = state.matchedLocation;
+    final isSplash = currentLoc == RouteNames.splashPath;
+    final isAuthRoute = currentLoc == RouteNames.loginPath ||
+        currentLoc == RouteNames.registerPath ||
+        currentLoc == RouteNames.forgotPasswordPath ||
+        currentLoc == RouteNames.resetPasswordPath;
+
+    // Allow splash screen to execute its transition
+    if (isSplash) return null;
+
+    // If authenticated and trying to access auth pages, redirect to Home
+    if (isAuth && isAuthRoute) {
+      return RouteNames.homePath;
+    }
+
+    // If unauthenticated and trying to access protected pages, redirect to Login
+    if (!isAuth && !isAuthRoute) {
+      return RouteNames.loginPath;
+    }
+
+    return null;
+  }
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
+  final notifier = RouterNotifier(ref);
+
   return GoRouter(
     initialLocation: RouteNames.splashPath,
     debugLogDiagnostics: false,
+    refreshListenable: notifier,
+    redirect: notifier.redirect,
     routes: [
       GoRoute(
         name: RouteNames.splash,
         path: RouteNames.splashPath,
         builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.login,
+        path: RouteNames.loginPath,
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.register,
+        path: RouteNames.registerPath,
+        builder: (context, state) => const SignupScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.forgotPassword,
+        path: RouteNames.forgotPasswordPath,
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.resetPassword,
+        path: RouteNames.resetPasswordPath,
+        builder: (context, state) => const ResetPasswordScreen(),
       ),
       GoRoute(
         name: RouteNames.home,
