@@ -21,5 +21,8 @@ abstract class ApiEndpoints {
   static const String audioTracks = '/api/v1/audio/tracks';
   static String audioTrackDetails(String trackId) => '/api/v1/audio/tracks/$trackId';
   static String audioTrackStatus(String trackId) => '/api/v1/audio/tracks/$trackId/status';
+  static String audioTrackPlayback(String trackId) => '/api/v1/audio/tracks/$trackId/playback';
+  static String audioTrackWaveform(String trackId) => '/api/v1/audio/tracks/$trackId/waveform';
   static String audioJobStatus(String jobId) => '/api/v1/audio/jobs/$jobId';
 }
+

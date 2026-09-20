@@ -590,3 +590,91 @@ class TestAudioTranscodeEndpoints:
         assert len(data["renditions"]) == 2
         assert data["renditions"][0]["bitrate_kbps"] == 192
         assert data["renditions"][1]["bitrate_kbps"] == 128
+
+    async def test_get_playback_source_endpoint(
+        self, async_client: AsyncClient, user_auth, mock_storage
+    ):
+        user_id = user_auth["user_id"]
+        headers = user_auth["headers"]
+        track_id = uuid.uuid4()
+        rendition_key = f"audio/processed/{track_id}/192k.m4a"
+        waveform_key = f"audio/waveforms/{track_id}.json"
+
+        # Populate storage
+        await mock_storage.upload_file(b"fake-aac-data", rendition_key)
+        await mock_storage.upload_file(json.dumps([0.1, 0.5, 0.9]).encode("utf-8"), waveform_key)
+
+        async with AsyncSessionLocal() as session:
+            track_repo = TrackRepository(session)
+            rendition_repo = AudioRenditionRepository(session)
+
+            await track_repo.create(
+                id=track_id,
+                owner_id=user_id,
+                title="Playable Track",
+                duration_seconds=200,
+                waveform_key=waveform_key,
+                status="READY",
+            )
+            await rendition_repo.create(
+                track_id=track_id,
+                storage_key=rendition_key,
+                storage_provider="s3",
+                format="m4a",
+                codec="aac",
+                bitrate_kbps=192,
+                sample_rate=44100,
+                channels=2,
+                duration_seconds=200,
+                file_size_bytes=50000,
+            )
+            await session.commit()
+
+        from app.core.dependencies import get_storage_service
+        from app.main import app
+        app.dependency_overrides[get_storage_service] = lambda: mock_storage
+
+        try:
+            response = await async_client.get(
+                f"/api/v1/audio/tracks/{track_id}/playback",
+                headers=headers,
+            )
+            assert response.status_code == 200
+            data = response.json()["data"]
+            assert data["track_id"] == str(track_id)
+            assert data["title"] == "Playable Track"
+            assert data["status"] == "READY"
+            assert data["audio"]["format"] == "m4a"
+            assert data["audio"]["codec"] == "aac"
+            assert data["audio"]["bitrate_kbps"] == 192
+            assert "192k.m4a" in data["audio"]["url"]
+            assert len(data["waveform_samples"]) == 3
+        finally:
+            app.dependency_overrides.pop(get_storage_service, None)
+
+    async def test_get_playback_source_not_ready_returns_409(
+        self, async_client: AsyncClient, user_auth
+    ):
+        user_id = user_auth["user_id"]
+        headers = user_auth["headers"]
+        track_id = uuid.uuid4()
+
+        async with AsyncSessionLocal() as session:
+            track_repo = TrackRepository(session)
+            await track_repo.create(
+                id=track_id,
+                owner_id=user_id,
+                title="Processing Track",
+                status="PROCESSING",
+            )
+            await session.commit()
+
+        response = await async_client.get(
+            f"/api/v1/audio/tracks/{track_id}/playback",
+            headers=headers,
+        )
+        assert response.status_code == 409
+        body = response.json()
+        assert body["success"] is False
+        assert body["error"]["code"] == "TRACK_NOT_READY"
+

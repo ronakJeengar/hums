@@ -8,6 +8,10 @@ import 'package:hums_mobile/core/widgets/hums_app_bar.dart';
 import 'package:hums_mobile/core/widgets/hums_button.dart';
 import 'package:hums_mobile/features/audio/domain/entities/track_entity.dart';
 import 'package:hums_mobile/features/audio/presentation/providers/audio_upload_provider.dart';
+import 'package:hums_mobile/features/audio_player/presentation/providers/audio_player_provider.dart';
+import 'package:hums_mobile/features/audio_player/presentation/widgets/mini_player.dart';
+import 'package:hums_mobile/core/theme/app_icons.dart';
+import 'package:hums_mobile/core/widgets/app_icon.dart';
 import 'package:hums_mobile/routing/route_names.dart';
 
 class UserTracksScreen extends ConsumerWidget {
@@ -113,7 +117,7 @@ class UserTracksScreen extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.sm),
                 itemBuilder: (context, index) {
                   final track = tracks[index];
-                  return _buildTrackCard(context, track);
+                  return _buildTrackCard(context, ref, track);
                 },
               ),
             );
@@ -154,6 +158,7 @@ class UserTracksScreen extends ConsumerWidget {
           ),
         ),
       ),
+      bottomNavigationBar: const MiniPlayer(),
     );
   }
 
@@ -163,86 +168,128 @@ class UserTracksScreen extends ConsumerWidget {
     return '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
   }
 
-  Widget _buildTrackCard(BuildContext context, TrackEntity track) {
+  Widget _buildTrackCard(
+      BuildContext context, WidgetRef ref, TrackEntity track) {
     final statusColor = _getStatusColor(track.status);
     final jobStatus = track.latestJob?.status;
+    final isReady = track.status.toUpperCase() == 'READY';
+    final playerState = ref.watch(audioPlayerNotifierProvider);
+    final isCurrentTrack = playerState.track?.trackId == track.id;
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceElevated,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                  ),
-                  child: const Icon(
-                    Icons.music_note_rounded,
-                    color: AppColors.primary,
-                    size: AppSpacing.iconMd,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        track.title,
-                        style: AppTypography.titleMedium,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: AppSpacing.xxs),
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              track.artistName ?? 'Unknown Artist',
-                              style: AppTypography.labelSmall,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        side: BorderSide(
+          color: isCurrentTrack ? AppColors.primary : AppColors.border,
+          width: isCurrentTrack ? 1.5 : 1.0,
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        onTap: isReady
+            ? () {
+                if (isCurrentTrack) {
+                  ref
+                      .read(audioPlayerNotifierProvider.notifier)
+                      .togglePlayPause();
+                } else {
+                  ref
+                      .read(audioPlayerNotifierProvider.notifier)
+                      .playTrack(track.id);
+                }
+              }
+            : null,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: isCurrentTrack
+                          ? AppColors.primary.withValues(alpha: 0.15)
+                          : AppColors.surfaceElevated,
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                    ),
+                    child: Center(
+                      child: isCurrentTrack
+                          ? AppIcon(
+                              icon: playerState.isPlaying
+                                  ? AppIcons.pause
+                                  : AppIcons.play,
+                              color: AppColors.primary,
+                              size: 24,
+                            )
+                          : const Icon(
+                              Icons.music_note_rounded,
+                              color: AppColors.primary,
+                              size: AppSpacing.iconMd,
                             ),
-                          ),
-                          if (track.durationSeconds != null) ...[
-                            const SizedBox(width: AppSpacing.xs),
-                            Text(
-                              '•  ${_formatDuration(track.durationSeconds!)}',
-                              style: AppTypography.labelSmall.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.xxs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                  ),
-                  child: Text(
-                    track.status,
-                    style: AppTypography.labelSmall.copyWith(
-                      color: statusColor,
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          track.title,
+                          style: AppTypography.titleMedium.copyWith(
+                            color: isCurrentTrack
+                                ? AppColors.primaryLight
+                                : AppColors.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: AppSpacing.xxs),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                track.artistName ?? 'Unknown Artist',
+                                style: AppTypography.labelSmall,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (track.durationSeconds != null) ...[
+                              const SizedBox(width: AppSpacing.xs),
+                              Text(
+                                '•  ${_formatDuration(track.durationSeconds!)}',
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: AppSpacing.xxs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                    ),
+                    child: Text(
+                      track.status,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: statusColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             if (track.description != null && track.description!.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(
@@ -298,7 +345,7 @@ class UserTracksScreen extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-
+    ),
+  );
+}
 }

@@ -5,12 +5,14 @@ from app.core.dependencies import get_current_user, get_audio_service
 from app.db.models.user import User
 from app.schemas.audio import (
     ProcessingJobResponse,
+    TrackPlaybackResponse,
     TrackResponse,
     TrackStatusResponse,
     WaveformResponse,
 )
 from app.schemas.common import ApiResponse
 from app.services.audio_service import AudioService
+
 
 router = APIRouter()
 
@@ -121,6 +123,24 @@ async def get_track_waveform(
 
 
 @router.get(
+    "/tracks/{track_id}/playback",
+    response_model=ApiResponse[TrackPlaybackResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Get track playback source",
+    description="Returns secure streaming audio URL, metadata, and waveform for a READY track.",
+)
+async def get_track_playback(
+    track_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    audio_service: AudioService = Depends(get_audio_service),
+) -> ApiResponse[TrackPlaybackResponse]:
+    playback_data = await audio_service.get_track_playback(
+        track_id=track_id, user_id=current_user.id
+    )
+    return ApiResponse(data=playback_data)
+
+
+@router.get(
     "/jobs/{job_id}",
     response_model=ApiResponse[ProcessingJobResponse],
     status_code=status.HTTP_200_OK,
@@ -136,4 +156,5 @@ async def get_processing_job(
         job_id=job_id, user_id=current_user.id
     )
     return ApiResponse(data=ProcessingJobResponse.model_validate(job))
+
 

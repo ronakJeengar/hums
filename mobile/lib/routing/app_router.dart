@@ -14,6 +14,7 @@ import 'package:hums_mobile/features/audio/presentation/screens/upload_audio_scr
 import 'package:hums_mobile/features/audio/presentation/screens/user_tracks_screen.dart';
 import 'package:hums_mobile/features/profile/presentation/screens/edit_profile_screen.dart';
 import 'package:hums_mobile/features/profile/presentation/screens/profile_screen.dart';
+import 'package:hums_mobile/features/audio_player/presentation/screens/full_player_screen.dart';
 import 'package:hums_mobile/routing/route_names.dart';
 
 class RouterNotifier extends ChangeNotifier {
@@ -111,6 +112,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.userTracks,
         path: RouteNames.userTracksPath,
         builder: (context, state) => const UserTracksScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.player,
+        path: RouteNames.playerPath,
+        builder: (context, state) => const FullPlayerScreen(),
       ),
     ],
     errorBuilder: (context, state) => ErrorScreen(

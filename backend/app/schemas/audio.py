@@ -96,3 +96,29 @@ class WaveformResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class AudioPlaybackSourceResponse(BaseModel):
+    """Playable audio rendition source details."""
+    url: str
+    format: str
+    codec: str
+    bitrate_kbps: int
+    duration_seconds: Optional[int] = None
+    file_size_bytes: int
+
+
+class TrackPlaybackResponse(BaseModel):
+    """Complete playback source response for player consumption."""
+    track_id: uuid.UUID
+    title: str
+    artist_name: Optional[str] = None
+    album_name: Optional[str] = None
+    genre: Optional[str] = None
+    duration_seconds: Optional[int] = None
+    status: str
+    audio: AudioPlaybackSourceResponse
+    waveform_samples: List[float] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+

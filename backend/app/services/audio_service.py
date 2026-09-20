@@ -10,8 +10,13 @@ from app.repositories.audio_repository import (
     ProcessingJobRepository,
     TrackRepository,
 )
-from app.schemas.audio import TrackStatusResponse
+from app.schemas.audio import (
+    AudioPlaybackSourceResponse,
+    TrackPlaybackResponse,
+    TrackStatusResponse,
+)
 from app.utils.storage import BaseStorageService
+
 
 logger = logging.getLogger("hums.audio")
 settings = get_settings()
@@ -276,4 +281,59 @@ class AudioService:
         except Exception as exc:
             logger.warning(f"Failed to load waveform for track {track_id}: {exc}")
             return []
+
+    async def get_track_playback(
+        self, track_id: uuid.UUID, user_id: uuid.UUID
+    ) -> TrackPlaybackResponse:
+        """Retrieves playable audio stream source and waveform for a READY track."""
+        track = await self.get_user_track(track_id, user_id)
+        if track.status != "READY":
+            raise AppException(
+                f"Track is not ready for playback (current status: {track.status})",
+                code="TRACK_NOT_READY",
+                status_code=409,
+            )
+
+        if not track.renditions and not track.audio_files:
+            raise NotFoundError("No audio source available for this track.")
+
+        # Renditions are ordered by bitrate_kbps DESC in model
+        primary_rendition = track.renditions[0] if track.renditions else None
+
+        if primary_rendition:
+            audio_url = await self.storage_service.get_download_url(primary_rendition.storage_key)
+            source = AudioPlaybackSourceResponse(
+                url=audio_url,
+                format=primary_rendition.format,
+                codec=primary_rendition.codec,
+                bitrate_kbps=primary_rendition.bitrate_kbps,
+                duration_seconds=primary_rendition.duration_seconds or track.duration_seconds,
+                file_size_bytes=primary_rendition.file_size_bytes,
+            )
+        else:
+            orig_file = track.audio_files[0]
+            audio_url = await self.storage_service.get_download_url(orig_file.object_key)
+            source = AudioPlaybackSourceResponse(
+                url=audio_url,
+                format="mp3",
+                codec="mp3",
+                bitrate_kbps=128,
+                duration_seconds=track.duration_seconds,
+                file_size_bytes=orig_file.file_size_bytes,
+            )
+
+        waveform_samples = await self.get_track_waveform(track_id, user_id)
+
+        return TrackPlaybackResponse(
+            track_id=track.id,
+            title=track.title,
+            artist_name=track.artist_name,
+            album_name=track.album_name,
+            genre=track.genre,
+            duration_seconds=track.duration_seconds,
+            status=track.status,
+            audio=source,
+            waveform_samples=waveform_samples,
+        )
+
 

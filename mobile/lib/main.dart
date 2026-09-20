@@ -6,8 +6,16 @@ import 'package:hums_mobile/core/theme/app_colors.dart';
 import 'package:hums_mobile/core/theme/app_theme.dart';
 import 'package:hums_mobile/routing/app_router.dart';
 
-void main() {
+import 'package:just_audio_background/just_audio_background.dart';
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await JustAudioBackground.init(
+    androidNotificationChannelId: 'com.hums.hums_mobile.channel.audio',
+    androidNotificationChannelName: 'Audio playback',
+    androidNotificationOngoing: true,
+  );
 
   // Configure system UI overlay for dark audio aesthetic
   SystemChrome.setSystemUIOverlayStyle(

@@ -13,6 +13,7 @@ import 'package:hums_mobile/routing/route_names.dart';
 
 import 'package:hums_mobile/features/auth/presentation/providers/auth_provider.dart';
 import 'package:hums_mobile/features/auth/presentation/states/auth_state.dart';
+import 'package:hums_mobile/features/audio_player/presentation/widgets/mini_player.dart';
 
 // AsyncNotifier or FutureProvider for system health check
 final systemHealthProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
@@ -36,6 +37,13 @@ class HomeScreen extends ConsumerWidget {
         title: 'Hums',
         centerTitle: false,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.library_music_outlined, color: AppColors.textPrimary),
+            tooltip: 'My Tracks',
+            onPressed: () {
+              context.push(RouteNames.userTracksPath);
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.cloud_upload_outlined, color: AppColors.primary),
             tooltip: 'Upload Audio',
@@ -152,6 +160,14 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
+                    HumsButton(
+                      label: 'My Tracks',
+                      variant: HumsButtonVariant.secondary,
+                      onPressed: () {
+                        context.push(RouteNames.userTracksPath);
+                      },
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
                     HumsButton(
                       label: 'Upload',
                       variant: HumsButtonVariant.primary,
@@ -316,6 +332,7 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
       ),
+      bottomNavigationBar: const MiniPlayer(),
     );
   }
 
