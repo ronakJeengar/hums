@@ -200,6 +200,17 @@ class AudioService:
             )
 
             refreshed_track = await self.track_repo.get_by_id_with_relations(track_id)
+
+            # Dispatch Celery background processing task
+            try:
+                from app.workers.audio_tasks import process_audio_track
+                process_audio_track.delay(str(track_id))
+                logger.info(f"Enqueued background processing task for track {track_id}")
+            except Exception as queue_exc:
+                logger.warning(
+                    f"Could not enqueue background processing task for track {track_id}: {queue_exc}"
+                )
+
             return refreshed_track or track
         except Exception as exc:
             logger.error(f"Database error while saving track: {exc}", exc_info=True)
@@ -242,8 +253,27 @@ class AudioService:
             track_id=track.id,
             title=track.title,
             status=track.status,
+            duration_seconds=track.duration_seconds,
+            waveform_key=track.waveform_key,
             processing_job_id=latest_job.id if latest_job else None,
             processing_status=latest_job.status if latest_job else None,
             error_message=latest_job.error_message if latest_job else None,
             updated_at=track.updated_at,
         )
+
+    async def get_track_waveform(
+        self, track_id: uuid.UUID, user_id: uuid.UUID
+    ) -> List[float]:
+        """Retrieves normalized waveform sample points for a track."""
+        import json
+        track = await self.get_user_track(track_id, user_id)
+        if not track.waveform_key:
+            return []
+
+        try:
+            waveform_bytes = await self.storage_service.download_file(track.waveform_key)
+            return json.loads(waveform_bytes.decode("utf-8"))
+        except Exception as exc:
+            logger.warning(f"Failed to load waveform for track {track_id}: {exc}")
+            return []
+

@@ -44,6 +44,10 @@ class Track(BaseDBModel):
         Integer,
         nullable=True,
     )
+    waveform_key: Mapped[Optional[str]] = mapped_column(
+        String(500),
+        nullable=True,
+    )
     status: Mapped[str] = mapped_column(
         String(50),
         default="UPLOADED",
@@ -67,6 +71,12 @@ class Track(BaseDBModel):
         back_populates="track",
         cascade="all, delete-orphan",
         order_by="ProcessingJob.created_at.desc()",
+    )
+    renditions: Mapped[List["AudioRendition"]] = relationship(
+        "AudioRendition",
+        back_populates="track",
+        cascade="all, delete-orphan",
+        order_by="AudioRendition.bitrate_kbps.desc()",
     )
 
 
@@ -107,6 +117,62 @@ class AudioFile(BaseDBModel):
     track: Mapped["Track"] = relationship(
         "Track",
         back_populates="audio_files",
+    )
+
+
+class AudioRendition(BaseDBModel):
+    """Processed audio renditions (e.g. 64k, 128k, 256k AAC/M4A) stored in object storage."""
+    __tablename__ = "audio_renditions"
+
+    track_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tracks.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    storage_key: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+        index=True,
+    )
+    storage_provider: Mapped[str] = mapped_column(
+        String(50),
+        default="s3",
+        nullable=False,
+    )
+    format: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+    codec: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+    bitrate_kbps: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+    sample_rate: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    channels: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    duration_seconds: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    file_size_bytes: Mapped[int] = mapped_column(
+        BigInteger,
+        nullable=False,
+    )
+
+    # Relationship
+    track: Mapped["Track"] = relationship(
+        "Track",
+        back_populates="renditions",
     )
 
 

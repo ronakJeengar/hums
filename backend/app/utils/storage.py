@@ -18,9 +18,29 @@ class BaseStorageService(ABC):
         self,
         file_bytes: bytes,
         destination_key: str,
-        content_type: str = "application/octet-stream"
+        content_type: str = "application/octet-stream",
     ) -> str:
         """Uploads raw binary bytes to object storage and returns the object key/URL."""
+        pass
+
+    @abstractmethod
+    async def upload_file_from_path(
+        self,
+        source_path: str,
+        destination_key: str,
+        content_type: str = "application/octet-stream",
+    ) -> str:
+        """Uploads a local file directly to object storage."""
+        pass
+
+    @abstractmethod
+    async def download_file(self, key: str) -> bytes:
+        """Downloads an object from storage and returns raw bytes."""
+        pass
+
+    @abstractmethod
+    async def download_file_to_path(self, key: str, destination_path: str) -> None:
+        """Downloads an object directly to a local filesystem destination path."""
         pass
 
     @abstractmethod
@@ -63,7 +83,7 @@ class S3StorageService(BaseStorageService):
         self,
         file_bytes: bytes,
         destination_key: str,
-        content_type: str = "application/octet-stream"
+        content_type: str = "application/octet-stream",
     ) -> str:
         clean_key = destination_key.removeprefix(f"{self.bucket}/").lstrip("/")
 
@@ -81,6 +101,57 @@ class S3StorageService(BaseStorageService):
             return await asyncio.to_thread(_upload)
         except Exception as e:
             logger.error(f"Failed to upload object {clean_key} to bucket {self.bucket}: {e}")
+            raise
+
+    async def upload_file_from_path(
+        self,
+        source_path: str,
+        destination_key: str,
+        content_type: str = "application/octet-stream",
+    ) -> str:
+        clean_key = destination_key.removeprefix(f"{self.bucket}/").lstrip("/")
+
+        def _upload_from_path():
+            client = self._get_client()
+            client.upload_file(
+                Filename=source_path,
+                Bucket=self.bucket,
+                Key=clean_key,
+                ExtraArgs={"ContentType": content_type},
+            )
+            return clean_key
+
+        try:
+            return await asyncio.to_thread(_upload_from_path)
+        except Exception as e:
+            logger.error(f"Failed to upload file {source_path} to {clean_key}: {e}")
+            raise
+
+    async def download_file(self, key: str) -> bytes:
+        clean_key = key.removeprefix(f"{self.bucket}/").lstrip("/")
+
+        def _download():
+            client = self._get_client()
+            response = client.get_object(Bucket=self.bucket, Key=clean_key)
+            return response["Body"].read()
+
+        try:
+            return await asyncio.to_thread(_download)
+        except Exception as e:
+            logger.error(f"Failed to download object {clean_key} from bucket {self.bucket}: {e}")
+            raise
+
+    async def download_file_to_path(self, key: str, destination_path: str) -> None:
+        clean_key = key.removeprefix(f"{self.bucket}/").lstrip("/")
+
+        def _download_to_path():
+            client = self._get_client()
+            client.download_file(Bucket=self.bucket, Key=clean_key, Filename=destination_path)
+
+        try:
+            await asyncio.to_thread(_download_to_path)
+        except Exception as e:
+            logger.error(f"Failed to download object {clean_key} to {destination_path}: {e}")
             raise
 
     async def get_download_url(self, key: str, expires_in: int = 3600) -> str:

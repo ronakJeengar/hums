@@ -7,6 +7,7 @@ from app.schemas.audio import (
     ProcessingJobResponse,
     TrackResponse,
     TrackStatusResponse,
+    WaveformResponse,
 )
 from app.schemas.common import ApiResponse
 from app.services.audio_service import AudioService
@@ -102,6 +103,24 @@ async def get_track_status(
 
 
 @router.get(
+    "/tracks/{track_id}/waveform",
+    response_model=ApiResponse[WaveformResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Get track waveform",
+    description="Retrieves the 200 normalized amplitude points for a processed audio track.",
+)
+async def get_track_waveform(
+    track_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    audio_service: AudioService = Depends(get_audio_service),
+) -> ApiResponse[WaveformResponse]:
+    samples = await audio_service.get_track_waveform(
+        track_id=track_id, user_id=current_user.id
+    )
+    return ApiResponse(data=WaveformResponse(track_id=track_id, samples=samples))
+
+
+@router.get(
     "/jobs/{job_id}",
     response_model=ApiResponse[ProcessingJobResponse],
     status_code=status.HTTP_200_OK,
@@ -117,3 +136,4 @@ async def get_processing_job(
         job_id=job_id, user_id=current_user.id
     )
     return ApiResponse(data=ProcessingJobResponse.model_validate(job))
+

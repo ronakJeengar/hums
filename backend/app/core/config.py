@@ -66,6 +66,18 @@ class Settings(BaseSettings):
         "audio/vorbis",
     ]
 
+    # Celery & Worker Settings
+    CELERY_BROKER_URL: str = "redis://localhost:6379/1"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
+
+    # Audio Transcoding & Processing Settings
+    AUDIO_OUTPUT_FORMAT: str = "m4a"
+    AUDIO_CODEC: str = "aac"
+    AUDIO_BITRATE: str = "192k"
+    WAVEFORM_SAMPLE_COUNT: int = 200
+    FFMPEG_PATH: str = "ffmpeg"
+    FFPROBE_PATH: str = "ffprobe"
+
     # Future AI Integration (Optional for foundation)
     GEMINI_API_KEY: str = ""
 

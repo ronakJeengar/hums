@@ -33,8 +33,27 @@ class ProcessingJobResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class AudioRenditionResponse(BaseModel):
+    """Processed audio rendition response schema."""
+    id: uuid.UUID
+    track_id: uuid.UUID
+    storage_key: str
+    storage_provider: str
+    format: str
+    codec: str
+    bitrate_kbps: int
+    sample_rate: Optional[int] = None
+    channels: Optional[int] = None
+    duration_seconds: Optional[int] = None
+    file_size_bytes: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TrackResponse(BaseModel):
-    """Complete audio track response schema with associated files and jobs."""
+    """Complete audio track response schema with associated files, renditions, and jobs."""
     id: uuid.UUID
     owner_id: uuid.UUID
     title: str
@@ -43,11 +62,13 @@ class TrackResponse(BaseModel):
     album_name: Optional[str] = None
     genre: Optional[str] = None
     duration_seconds: Optional[int] = None
+    waveform_key: Optional[str] = None
     status: str
     created_at: datetime
     updated_at: datetime
     audio_files: List[AudioFileResponse] = []
     processing_jobs: List[ProcessingJobResponse] = []
+    renditions: List[AudioRenditionResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -57,9 +78,21 @@ class TrackStatusResponse(BaseModel):
     track_id: uuid.UUID
     title: str
     status: str
+    duration_seconds: Optional[int] = None
+    waveform_key: Optional[str] = None
     processing_job_id: Optional[uuid.UUID] = None
     processing_status: Optional[str] = None
     error_message: Optional[str] = None
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class WaveformResponse(BaseModel):
+    """Normalized waveform data response schema."""
+    track_id: uuid.UUID
+    samples: List[float] = Field(..., description="Array of normalized amplitude floats [0.0, 1.0]")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
