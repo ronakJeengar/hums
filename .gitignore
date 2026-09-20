@@ -95,7 +95,7 @@ Thumbs.db
 postgres_data/
 redis_data/
 minio_data/
-data/
+/data/
 
 # Logs
 *.log
