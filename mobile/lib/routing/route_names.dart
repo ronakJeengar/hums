@@ -24,4 +24,10 @@ abstract class RouteNames {
 
   static const String player = 'player';
   static const String playerPath = '/player';
+
+  static const String profile = 'profile';
+  static const String profilePath = '/profile';
+
+  static const String editProfile = 'edit-profile';
+  static const String editProfilePath = '/profile/edit';
 }

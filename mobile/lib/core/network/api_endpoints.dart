@@ -11,4 +11,8 @@ abstract class ApiEndpoints {
   static const String currentUser = '/api/v1/auth/me';
   static const String forgotPassword = '/api/v1/auth/forgot-password';
   static const String resetPassword = '/api/v1/auth/reset-password';
+
+  // Profile Endpoints
+  static const String profile = '/api/v1/profile';
+  static const String avatar = '/api/v1/profile/avatar';
 }

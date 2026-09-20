@@ -8,6 +8,9 @@ import 'package:hums_mobile/core/theme/app_typography.dart';
 import 'package:hums_mobile/core/widgets/hums_app_bar.dart';
 import 'package:hums_mobile/core/widgets/hums_button.dart';
 
+import 'package:go_router/go_router.dart';
+import 'package:hums_mobile/routing/route_names.dart';
+
 import 'package:hums_mobile/features/auth/presentation/providers/auth_provider.dart';
 import 'package:hums_mobile/features/auth/presentation/states/auth_state.dart';
 
@@ -33,6 +36,13 @@ class HomeScreen extends ConsumerWidget {
         title: 'Hums',
         centerTitle: false,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline_rounded, color: AppColors.textPrimary),
+            tooltip: 'Profile',
+            onPressed: () {
+              context.push(RouteNames.profilePath);
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: AppColors.textSecondary),
             tooltip: 'Log Out',

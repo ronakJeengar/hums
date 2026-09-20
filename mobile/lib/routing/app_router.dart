@@ -10,6 +10,8 @@ import 'package:hums_mobile/features/auth/presentation/screens/signup_screen.dar
 import 'package:hums_mobile/features/common/presentation/screens/error_screen.dart';
 import 'package:hums_mobile/features/common/presentation/screens/home_screen.dart';
 import 'package:hums_mobile/features/common/presentation/screens/splash_screen.dart';
+import 'package:hums_mobile/features/profile/presentation/screens/edit_profile_screen.dart';
+import 'package:hums_mobile/features/profile/presentation/screens/profile_screen.dart';
 import 'package:hums_mobile/routing/route_names.dart';
 
 class RouterNotifier extends ChangeNotifier {
@@ -87,6 +89,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.home,
         path: RouteNames.homePath,
         builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.profile,
+        path: RouteNames.profilePath,
+        builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.editProfile,
+        path: RouteNames.editProfilePath,
+        builder: (context, state) => const EditProfileScreen(),
       ),
     ],
     errorBuilder: (context, state) => ErrorScreen(
