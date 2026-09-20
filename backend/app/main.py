@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.router import api_router
 from app.core.config import get_settings
@@ -40,6 +40,31 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def log_requests_middleware(request: Request, call_next):
+    """Logs incoming HTTP requests and outgoing responses with duration."""
+    import time
+    start_time = time.perf_counter()
+    method = request.method
+    path = request.url.path
+    query = request.url.query
+    full_path = f"{path}?{query}" if query else path
+    client_ip = request.client.host if request.client else "unknown"
+
+    logger.info(f"--> {method} {full_path} [client: {client_ip}]")
+
+    try:
+        response = await call_next(request)
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        logger.info(f"<-- {method} {full_path} [{response.status_code}] ({duration_ms:.2f}ms)")
+        return response
+    except Exception as exc:
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        logger.error(f"<-- {method} {full_path} [FAILED] ({duration_ms:.2f}ms): {exc}")
+        raise
+
 
 # Register centralized error & validation handlers
 register_error_handlers(app)

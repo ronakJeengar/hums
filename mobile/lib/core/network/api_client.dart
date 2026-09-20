@@ -4,6 +4,7 @@ import 'package:hums_mobile/core/config/env_config.dart';
 import 'package:hums_mobile/core/network/api_exception.dart';
 
 import 'package:hums_mobile/core/network/auth_interceptor.dart';
+import 'package:hums_mobile/core/network/logging_interceptor.dart';
 import 'package:hums_mobile/features/auth/presentation/providers/auth_provider.dart';
 
 final apiClientProvider = Provider<ApiClient>((ref) {
@@ -21,6 +22,7 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   );
 
   dio.interceptors.add(AuthInterceptor(localDataSource));
+  dio.interceptors.add(LoggingInterceptor());
 
   return ApiClient(dio);
 });
