@@ -9,6 +9,16 @@ class AppIcons {
   static const String waveform = 'assets/icons/waveform.svg';
   static const String close = 'assets/icons/close.svg';
   static const String error = 'assets/icons/error.svg';
+  static const String playlist = 'assets/icons/playlist.svg';
+  static const String add = 'assets/icons/add.svg';
+  static const String edit = 'assets/icons/edit.svg';
+  static const String delete = 'assets/icons/delete.svg';
+  static const String more = 'assets/icons/more.svg';
+  static const String drag = 'assets/icons/drag.svg';
+  static const String remove = 'assets/icons/remove.svg';
+  static const String next = 'assets/icons/next.svg';
+  static const String previous = 'assets/icons/previous.svg';
+  static const String back = 'assets/icons/back.svg';
 }
 
 class AppIconSizes {

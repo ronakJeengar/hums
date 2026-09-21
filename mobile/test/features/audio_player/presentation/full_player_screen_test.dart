@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:hums_mobile/core/theme/app_icons.dart';
+import 'package:hums_mobile/core/widgets/app_icon.dart';
 import 'package:hums_mobile/features/audio_player/domain/entities/playback_entity.dart';
 import 'package:hums_mobile/features/audio_player/domain/entities/player_error.dart';
 import 'package:hums_mobile/features/audio_player/presentation/providers/audio_player_provider.dart';
@@ -98,14 +100,25 @@ void main() {
       await tester.pumpWidget(createWidgetUnderTest(state, notifier: notifier));
       await tester.pumpAndSettle();
 
-      // Seek backward 10s is the 2nd IconButton in the screen (1st is close)
-      final iconButtons = find.byType(IconButton);
-      await tester.tap(iconButtons.at(1));
+      // Seek backward 10s
+      final seekBackwardBtn = find.ancestor(
+        of: find.byWidgetPredicate(
+          (w) => w is AppIcon && w.icon == AppIcons.seekBackward10,
+        ),
+        matching: find.byType(IconButton),
+      );
+      await tester.tap(seekBackwardBtn);
       await tester.pump();
       verify(() => notifier.seekBackward10()).called(1);
 
-      // Seek forward 30s is the 3rd IconButton
-      await tester.tap(iconButtons.at(2));
+      // Seek forward 30s
+      final seekForwardBtn = find.ancestor(
+        of: find.byWidgetPredicate(
+          (w) => w is AppIcon && w.icon == AppIcons.seekForward30,
+        ),
+        matching: find.byType(IconButton),
+      );
+      await tester.tap(seekForwardBtn);
       await tester.pump();
       verify(() => notifier.seekForward30()).called(1);
     });

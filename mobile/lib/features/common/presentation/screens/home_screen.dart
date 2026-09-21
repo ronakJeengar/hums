@@ -5,6 +5,8 @@ import 'package:hums_mobile/core/network/api_endpoints.dart';
 import 'package:hums_mobile/core/theme/app_colors.dart';
 import 'package:hums_mobile/core/theme/app_spacing.dart';
 import 'package:hums_mobile/core/theme/app_typography.dart';
+import 'package:hums_mobile/core/theme/app_icons.dart';
+import 'package:hums_mobile/core/widgets/app_icon.dart';
 import 'package:hums_mobile/core/widgets/hums_app_bar.dart';
 import 'package:hums_mobile/core/widgets/hums_button.dart';
 
@@ -37,6 +39,17 @@ class HomeScreen extends ConsumerWidget {
         title: 'Hums',
         centerTitle: false,
         actions: [
+          IconButton(
+            icon: const AppIcon(
+              icon: AppIcons.playlist,
+              size: AppIconSizes.md,
+              color: AppColors.textPrimary,
+            ),
+            tooltip: 'Playlists',
+            onPressed: () {
+              context.push(RouteNames.playlistsPath);
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.library_music_outlined, color: AppColors.textPrimary),
             tooltip: 'My Tracks',
@@ -173,6 +186,48 @@ class HomeScreen extends ConsumerWidget {
                       variant: HumsButtonVariant.primary,
                       onPressed: () {
                         context.push(RouteNames.uploadAudioPath);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.md),
+
+              // Playlists Quick Action Card
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Playlists',
+                            style: AppTypography.titleMedium,
+                          ),
+                          const SizedBox(height: AppSpacing.xxs),
+                          Text(
+                            'Organize and stream your custom track queues.',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    HumsButton(
+                      label: 'View Playlists',
+                      variant: HumsButtonVariant.primary,
+                      onPressed: () {
+                        context.push(RouteNames.playlistsPath);
                       },
                     ),
                   ],

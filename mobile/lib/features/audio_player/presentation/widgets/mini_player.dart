@@ -130,6 +130,22 @@ class MiniPlayer extends ConsumerWidget {
                       splashRadius: 22,
                     ),
 
+                  // Next Track Button (if queue has next)
+                  if (playerState.hasNext)
+                    IconButton(
+                      icon: const AppIcon(
+                        icon: AppIcons.next,
+                        size: 20,
+                        color: AppColors.textPrimary,
+                      ),
+                      onPressed: () {
+                        ref
+                            .read(audioPlayerNotifierProvider.notifier)
+                            .skipToNext();
+                      },
+                      splashRadius: 20,
+                    ),
+
                   // Stop / Close Button
                   IconButton(
                     icon: const AppIcon(

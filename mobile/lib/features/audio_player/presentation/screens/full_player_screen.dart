@@ -377,11 +377,31 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Previous Track
+                  IconButton(
+                    icon: AppIcon(
+                      icon: AppIcons.previous,
+                      size: 26,
+                      color: playerState.hasPrevious
+                          ? AppColors.textPrimary
+                          : AppColors.textTertiary.withValues(alpha: 0.3),
+                    ),
+                    onPressed: playerState.hasPrevious
+                        ? () {
+                            ref
+                                .read(audioPlayerNotifierProvider.notifier)
+                                .skipToPrevious();
+                          }
+                        : null,
+                    splashRadius: 24,
+                  ),
+                  const SizedBox(width: 12),
+
                   // Seek Backward 10s
                   IconButton(
                     icon: const AppIcon(
                       icon: AppIcons.seekBackward10,
-                      size: 32,
+                      size: 28,
                       color: AppColors.textPrimary,
                     ),
                     onPressed: () {
@@ -389,9 +409,9 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
                           .read(audioPlayerNotifierProvider.notifier)
                           .seekBackward10();
                     },
-                    splashRadius: 28,
+                    splashRadius: 24,
                   ),
-                  const SizedBox(width: 28),
+                  const SizedBox(width: 16),
 
                   // Play / Pause / Buffering Button
                   Container(
@@ -445,13 +465,13 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 28),
+                  const SizedBox(width: 16),
 
                   // Seek Forward 30s
                   IconButton(
                     icon: const AppIcon(
                       icon: AppIcons.seekForward30,
-                      size: 32,
+                      size: 28,
                       color: AppColors.textPrimary,
                     ),
                     onPressed: () {
@@ -459,7 +479,27 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
                           .read(audioPlayerNotifierProvider.notifier)
                           .seekForward30();
                     },
-                    splashRadius: 28,
+                    splashRadius: 24,
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Next Track
+                  IconButton(
+                    icon: AppIcon(
+                      icon: AppIcons.next,
+                      size: 26,
+                      color: playerState.hasNext
+                          ? AppColors.textPrimary
+                          : AppColors.textTertiary.withValues(alpha: 0.3),
+                    ),
+                    onPressed: playerState.hasNext
+                        ? () {
+                            ref
+                                .read(audioPlayerNotifierProvider.notifier)
+                                .skipToNext();
+                          }
+                        : null,
+                    splashRadius: 24,
                   ),
                 ],
               ),

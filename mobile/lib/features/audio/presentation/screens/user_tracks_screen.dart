@@ -12,6 +12,7 @@ import 'package:hums_mobile/features/audio_player/presentation/providers/audio_p
 import 'package:hums_mobile/features/audio_player/presentation/widgets/mini_player.dart';
 import 'package:hums_mobile/core/theme/app_icons.dart';
 import 'package:hums_mobile/core/widgets/app_icon.dart';
+import 'package:hums_mobile/features/playlists/presentation/widgets/add_track_to_playlist_modal.dart';
 import 'package:hums_mobile/routing/route_names.dart';
 
 class UserTracksScreen extends ConsumerWidget {
@@ -288,6 +289,23 @@ class UserTracksScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
+                  if (isReady) ...[
+                    IconButton(
+                      icon: const AppIcon(
+                        icon: AppIcons.playlist,
+                        size: AppIconSizes.md,
+                        color: AppColors.textSecondary,
+                      ),
+                      tooltip: 'Add to Playlist',
+                      onPressed: () {
+                        AddToPlaylistModal.show(
+                          context,
+                          trackId: track.id,
+                          trackTitle: track.title,
+                        );
+                      },
+                    ),
+                  ],
                 ],
               ),
             if (track.description != null && track.description!.isNotEmpty) ...[

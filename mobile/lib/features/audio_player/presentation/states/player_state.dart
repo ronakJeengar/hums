@@ -1,5 +1,6 @@
 import 'package:hums_mobile/features/audio_player/domain/entities/playback_entity.dart';
 import 'package:hums_mobile/features/audio_player/domain/entities/player_error.dart';
+import 'package:hums_mobile/features/audio_player/domain/entities/player_queue.dart';
 
 enum PlayerStatus {
   idle,
@@ -19,6 +20,7 @@ class PlayerState {
   final Duration duration;
   final Duration bufferedPosition;
   final PlayerError? error;
+  final PlayerQueue? queue;
 
   const PlayerState({
     this.status = PlayerStatus.idle,
@@ -27,6 +29,7 @@ class PlayerState {
     this.duration = Duration.zero,
     this.bufferedPosition = Duration.zero,
     this.error,
+    this.queue,
   });
 
   PlayerState copyWith({
@@ -36,7 +39,9 @@ class PlayerState {
     Duration? duration,
     Duration? bufferedPosition,
     PlayerError? error,
+    PlayerQueue? queue,
     bool clearError = false,
+    bool clearQueue = false,
   }) {
     return PlayerState(
       status: status ?? this.status,
@@ -45,6 +50,7 @@ class PlayerState {
       duration: duration ?? this.duration,
       bufferedPosition: bufferedPosition ?? this.bufferedPosition,
       error: clearError ? null : (error ?? this.error),
+      queue: clearQueue ? null : (queue ?? this.queue),
     );
   }
 
@@ -59,6 +65,9 @@ class PlayerState {
 
   bool get hasTrack => track != null;
   bool get canPlay => hasTrack && (isReady || isPaused || isCompleted);
+  bool get hasQueue => queue != null && queue!.items.isNotEmpty;
+  bool get hasNext => queue?.hasNext ?? false;
+  bool get hasPrevious => queue?.hasPrevious ?? false;
 
   double get progress {
     if (duration.inMilliseconds <= 0) return 0.0;
@@ -80,7 +89,8 @@ class PlayerState {
           position == other.position &&
           duration == other.duration &&
           bufferedPosition == other.bufferedPosition &&
-          error == other.error;
+          error == other.error &&
+          queue == other.queue;
 
   @override
   int get hashCode => Object.hash(
@@ -91,9 +101,10 @@ class PlayerState {
         duration,
         bufferedPosition,
         error,
+        queue,
       );
 
   @override
   String toString() =>
-      'PlayerState(status: $status, track: ${track?.title}, position: $position, duration: $duration, error: $error)';
+      'PlayerState(status: $status, track: ${track?.title}, position: $position, duration: $duration, queue: ${queue?.playlistName}, error: $error)';
 }

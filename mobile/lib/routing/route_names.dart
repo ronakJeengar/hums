@@ -36,4 +36,17 @@ abstract class RouteNames {
 
   static const String userTracks = 'user-tracks';
   static const String userTracksPath = '/tracks';
+
+  static const String playlists = 'playlists';
+  static const String playlistsPath = '/playlists';
+
+  static const String createPlaylist = 'create-playlist';
+  static const String createPlaylistPath = '/playlists/create';
+
+  static const String playlistDetail = 'playlist-detail';
+  static const String playlistDetailPath = '/playlists/:id';
+
+  static const String editPlaylist = 'edit-playlist';
+  static const String editPlaylistPath = '/playlists/:id/edit';
 }
+

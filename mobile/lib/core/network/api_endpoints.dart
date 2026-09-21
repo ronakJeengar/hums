@@ -24,5 +24,15 @@ abstract class ApiEndpoints {
   static String audioTrackPlayback(String trackId) => '/api/v1/audio/tracks/$trackId/playback';
   static String audioTrackWaveform(String trackId) => '/api/v1/audio/tracks/$trackId/waveform';
   static String audioJobStatus(String jobId) => '/api/v1/audio/jobs/$jobId';
+
+  // Playlist Endpoints
+  static const String playlists = '/api/v1/playlists';
+  static String playlistDetails(String playlistId) => '/api/v1/playlists/$playlistId';
+  static String playlistCover(String playlistId) => '/api/v1/playlists/$playlistId/cover';
+  static String playlistTracks(String playlistId) => '/api/v1/playlists/$playlistId/tracks';
+  static String playlistTrack(String playlistId, String trackId) =>
+      '/api/v1/playlists/$playlistId/tracks/$trackId';
+  static String playlistTracksReorder(String playlistId) =>
+      '/api/v1/playlists/$playlistId/tracks/reorder';
 }
 

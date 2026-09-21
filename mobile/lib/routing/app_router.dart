@@ -15,6 +15,10 @@ import 'package:hums_mobile/features/audio/presentation/screens/user_tracks_scre
 import 'package:hums_mobile/features/profile/presentation/screens/edit_profile_screen.dart';
 import 'package:hums_mobile/features/profile/presentation/screens/profile_screen.dart';
 import 'package:hums_mobile/features/audio_player/presentation/screens/full_player_screen.dart';
+import 'package:hums_mobile/features/playlists/presentation/screens/create_playlist_screen.dart';
+import 'package:hums_mobile/features/playlists/presentation/screens/edit_playlist_screen.dart';
+import 'package:hums_mobile/features/playlists/presentation/screens/playlist_detail_screen.dart';
+import 'package:hums_mobile/features/playlists/presentation/screens/playlist_list_screen.dart';
 import 'package:hums_mobile/routing/route_names.dart';
 
 class RouterNotifier extends ChangeNotifier {
@@ -117,6 +121,32 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.player,
         path: RouteNames.playerPath,
         builder: (context, state) => const FullPlayerScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.playlists,
+        path: RouteNames.playlistsPath,
+        builder: (context, state) => const PlaylistListScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.createPlaylist,
+        path: RouteNames.createPlaylistPath,
+        builder: (context, state) => const CreatePlaylistScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.playlistDetail,
+        path: RouteNames.playlistDetailPath,
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return PlaylistDetailScreen(playlistId: id);
+        },
+      ),
+      GoRoute(
+        name: RouteNames.editPlaylist,
+        path: RouteNames.editPlaylistPath,
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return EditPlaylistScreen(playlistId: id);
+        },
       ),
     ],
     errorBuilder: (context, state) => ErrorScreen(

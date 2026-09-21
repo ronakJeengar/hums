@@ -5,6 +5,7 @@ import 'package:hums_mobile/features/audio_player/data/datasources/audio_player_
 import 'package:hums_mobile/features/audio_player/data/services/audio_player_service.dart';
 import 'package:hums_mobile/features/audio_player/data/repositories/audio_player_repository_impl.dart';
 import 'package:hums_mobile/features/audio_player/domain/entities/player_error.dart';
+import 'package:hums_mobile/features/audio_player/domain/entities/player_queue.dart';
 import 'package:hums_mobile/features/audio_player/domain/repositories/audio_player_repository.dart';
 import 'package:hums_mobile/features/audio_player/presentation/states/player_state.dart';
 
@@ -98,10 +99,14 @@ class AudioPlayerNotifier extends StateNotifier<PlayerState> {
       }
     });
 
-    _completedSub = _repository.isCompletedStream.listen((isCompleted) {
+    _completedSub = _repository.isCompletedStream.listen((isCompleted) async {
       if (!mounted) return;
       if (isCompleted && !state.isIdle && !state.isLoading) {
-        state = state.copyWith(status: PlayerStatus.completed);
+        if (state.hasNext) {
+          await skipToNext();
+        } else {
+          state = state.copyWith(status: PlayerStatus.completed);
+        }
       }
     });
   }
@@ -240,6 +245,68 @@ class AudioPlayerNotifier extends StateNotifier<PlayerState> {
 
   Future<void> seekForward30() async {
     await seekRelative(const Duration(seconds: 30));
+  }
+
+  Future<void> playQueue(PlayerQueue queue, {int startIndex = 0}) async {
+    int targetIndex = startIndex;
+    if (targetIndex < 0 || targetIndex >= queue.items.length) {
+      targetIndex = 0;
+    }
+
+    // Find first playable track starting at targetIndex
+    int? playableIndex;
+    for (int i = targetIndex; i < queue.items.length; i++) {
+      if (queue.items[i].isPlayable) {
+        playableIndex = i;
+        break;
+      }
+    }
+    if (playableIndex == null) {
+      for (int i = 0; i < targetIndex; i++) {
+        if (queue.items[i].isPlayable) {
+          playableIndex = i;
+          break;
+        }
+      }
+    }
+
+    if (playableIndex == null) {
+      state = state.copyWith(
+        queue: queue,
+        status: PlayerStatus.error,
+        error: const PlayerError(
+          type: PlayerErrorType.audioLoadFailed,
+          message: 'No playable tracks available in this playlist',
+        ),
+      );
+      return;
+    }
+
+    final updatedQueue = queue.copyWith(currentIndex: playableIndex);
+    state = state.copyWith(queue: updatedQueue);
+    await playTrack(updatedQueue.items[playableIndex].trackId);
+  }
+
+  Future<void> skipToNext() async {
+    if (state.hasNext && state.queue != null) {
+      final nextIdx = state.queue!.nextIndex!;
+      final nextItem = state.queue!.items[nextIdx];
+      state = state.copyWith(queue: state.queue!.copyWith(currentIndex: nextIdx));
+      await playTrack(nextItem.trackId);
+    }
+  }
+
+  Future<void> skipToPrevious() async {
+    if (state.position.inSeconds > 3) {
+      await seek(Duration.zero);
+    } else if (state.hasPrevious && state.queue != null) {
+      final prevIdx = state.queue!.previousIndex!;
+      final prevItem = state.queue!.items[prevIdx];
+      state = state.copyWith(queue: state.queue!.copyWith(currentIndex: prevIdx));
+      await playTrack(prevItem.trackId);
+    } else {
+      await seek(Duration.zero);
+    }
   }
 
   Future<void> retry() async {

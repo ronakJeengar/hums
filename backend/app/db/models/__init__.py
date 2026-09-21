@@ -1,6 +1,7 @@
 from app.db.base import Base, BaseDBModel
 from app.db.models.user import User, RefreshToken, PasswordResetToken
 from app.db.models.audio import Track, AudioFile, ProcessingJob, AudioRendition
+from app.db.models.playlist import Playlist, PlaylistTrack
 
 __all__ = [
     "Base",
@@ -12,4 +13,6 @@ __all__ = [
     "AudioFile",
     "ProcessingJob",
     "AudioRendition",
+    "Playlist",
+    "PlaylistTrack",
 ]
