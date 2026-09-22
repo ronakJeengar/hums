@@ -78,8 +78,16 @@ class Settings(BaseSettings):
     FFMPEG_PATH: str = "ffmpeg"
     FFPROBE_PATH: str = "ffprobe"
 
-    # Future AI Integration (Optional for foundation)
+    # AI Integration Settings (Gemini)
     GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_TIMEOUT_SECONDS: int = 30
+
+    # Recommendation Settings
+    RECOMMENDATION_CACHE_TTL_SECONDS: int = 300
+    RECOMMENDATION_REFRESH_DEBOUNCE_SECONDS: int = 30
+    RECOMMENDATION_MAX_CANDIDATES: int = 50
+    RECOMMENDATION_DEFAULT_LIMIT: int = 10
 
     # CORS Allowed Origins
     CORS_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://localhost:8000", "http://127.0.0.1:8000"]

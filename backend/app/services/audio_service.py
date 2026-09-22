@@ -271,8 +271,8 @@ class AudioService:
     ) -> List[float]:
         """Retrieves normalized waveform sample points for a track."""
         import json
-        track = await self.get_user_track(track_id, user_id)
-        if not track.waveform_key:
+        track = await self.track_repo.get_by_id(track_id)
+        if not track or not track.waveform_key:
             return []
 
         try:
@@ -286,7 +286,9 @@ class AudioService:
         self, track_id: uuid.UUID, user_id: uuid.UUID
     ) -> TrackPlaybackResponse:
         """Retrieves playable audio stream source and waveform for a READY track."""
-        track = await self.get_user_track(track_id, user_id)
+        track = await self.track_repo.get_by_id_with_relations(track_id)
+        if not track:
+            raise NotFoundError("Track not found", details={"track_id": str(track_id)})
         if track.status != "READY":
             raise AppException(
                 f"Track is not ready for playback (current status: {track.status})",

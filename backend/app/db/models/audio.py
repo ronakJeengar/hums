@@ -8,6 +8,7 @@ from app.db.base import BaseDBModel
 
 if TYPE_CHECKING:
     from app.db.models.user import User
+    from app.db.models.recommendation import RecommendationItem
 
 
 class Track(BaseDBModel):
@@ -39,6 +40,7 @@ class Track(BaseDBModel):
     genre: Mapped[Optional[str]] = mapped_column(
         String(100),
         nullable=True,
+        index=True,
     )
     duration_seconds: Mapped[Optional[int]] = mapped_column(
         Integer,
@@ -77,6 +79,11 @@ class Track(BaseDBModel):
         back_populates="track",
         cascade="all, delete-orphan",
         order_by="AudioRendition.bitrate_kbps.desc()",
+    )
+    recommendation_items: Mapped[List["RecommendationItem"]] = relationship(
+        "RecommendationItem",
+        back_populates="track",
+        cascade="all, delete-orphan",
     )
 
 

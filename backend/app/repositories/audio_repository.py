@@ -87,6 +87,85 @@ class TrackRepository(BaseRepository[Track]):
         await self.session.refresh(track)
         return track
 
+    async def list_popular_ready_tracks(
+        self, limit: int = 20, exclude_ids: Optional[List[uuid.UUID]] = None
+    ) -> List[Track]:
+        """
+        Retrieves top ready tracks sorted by platform popularity (playlist inclusion frequency),
+        then by freshness (created_at DESC).
+        """
+        from app.db.models.playlist import PlaylistTrack
+        stmt = (
+            select(Track)
+            .outerjoin(PlaylistTrack, Track.id == PlaylistTrack.track_id)
+            .where(Track.status == "READY")
+        )
+        if exclude_ids:
+            stmt = stmt.where(Track.id.not_in(exclude_ids))
+        stmt = (
+            stmt.group_by(Track.id)
+            .order_by(func.count(PlaylistTrack.id).desc(), Track.created_at.desc())
+            .limit(limit)
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_recent_ready_tracks(
+        self, limit: int = 20, exclude_ids: Optional[List[uuid.UUID]] = None
+    ) -> List[Track]:
+        """Retrieves most recently created ready tracks."""
+        stmt = select(Track).where(Track.status == "READY")
+        if exclude_ids:
+            stmt = stmt.where(Track.id.not_in(exclude_ids))
+        stmt = stmt.order_by(Track.created_at.desc()).limit(limit)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_ready_by_genres(
+        self, genres: List[str], limit: int = 20, exclude_ids: Optional[List[uuid.UUID]] = None
+    ) -> List[Track]:
+        """Retrieves ready tracks matching a list of genres."""
+        if not genres:
+            return []
+        lower_genres = [g.lower() for g in genres]
+        stmt = select(Track).where(
+            Track.status == "READY",
+            func.lower(Track.genre).in_(lower_genres)
+        )
+        if exclude_ids:
+            stmt = stmt.where(Track.id.not_in(exclude_ids))
+        stmt = stmt.order_by(Track.created_at.desc()).limit(limit)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_ready_by_artists(
+        self, artists: List[str], limit: int = 20, exclude_ids: Optional[List[uuid.UUID]] = None
+    ) -> List[Track]:
+        """Retrieves ready tracks matching a list of artists."""
+        if not artists:
+            return []
+        lower_artists = [a.lower() for a in artists]
+        stmt = select(Track).where(
+            Track.status == "READY",
+            func.lower(Track.artist_name).in_(lower_artists)
+        )
+        if exclude_ids:
+            stmt = stmt.where(Track.id.not_in(exclude_ids))
+        stmt = stmt.order_by(Track.created_at.desc()).limit(limit)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_ready_tracks(
+        self, skip: int = 0, limit: int = 50, exclude_ids: Optional[List[uuid.UUID]] = None
+    ) -> List[Track]:
+        """Retrieves paginated ready tracks."""
+        stmt = select(Track).where(Track.status == "READY")
+        if exclude_ids:
+            stmt = stmt.where(Track.id.not_in(exclude_ids))
+        stmt = stmt.order_by(Track.created_at.desc()).offset(skip).limit(limit)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
 
 class AudioFileRepository(BaseRepository[AudioFile]):
     """Repository managing AudioFile persistence."""

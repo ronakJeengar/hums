@@ -16,6 +16,8 @@ import 'package:hums_mobile/routing/route_names.dart';
 import 'package:hums_mobile/features/auth/presentation/providers/auth_provider.dart';
 import 'package:hums_mobile/features/auth/presentation/states/auth_state.dart';
 import 'package:hums_mobile/features/audio_player/presentation/widgets/mini_player.dart';
+import 'package:hums_mobile/features/recommendations/presentation/providers/recommendation_provider.dart';
+import 'package:hums_mobile/features/recommendations/presentation/widgets/recommendations_view.dart';
 
 // AsyncNotifier or FutureProvider for system health check
 final systemHealthProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
@@ -81,11 +83,19 @@ class HomeScreen extends ConsumerWidget {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        child: RefreshIndicator(
+          color: AppColors.primary,
+          backgroundColor: AppColors.surface,
+          onRefresh: () async {
+            ref.invalidate(systemHealthProvider);
+            await ref.read(recommendationNotifierProvider.notifier).refresh();
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               // Hero Welcome Section
               Container(
                 width: double.infinity,
@@ -234,7 +244,12 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
 
-              const SizedBox(height: AppSpacing.xl),
+              const SizedBox(height: AppSpacing.lg),
+
+              // Recommendations Section
+              const RecommendationsView(),
+
+              const SizedBox(height: AppSpacing.md),
 
               // Backend Health Check Live Card
               const Text(
@@ -387,7 +402,8 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
       ),
-      bottomNavigationBar: const MiniPlayer(),
+    ),
+    bottomNavigationBar: const MiniPlayer(),
     );
   }
 
