@@ -58,4 +58,8 @@ abstract class AppTheme {
       ),
     );
   }
+
+  static ThemeData get lightTheme {
+    return darkTheme.copyWith(brightness: Brightness.light);
+  }
 }

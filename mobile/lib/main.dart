@@ -6,6 +6,7 @@ import 'package:hums_mobile/core/theme/app_colors.dart';
 import 'package:hums_mobile/core/theme/app_theme.dart';
 import 'package:hums_mobile/routing/app_router.dart';
 
+import 'package:hums_mobile/features/notifications/services/push_notification_service.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 
 Future<void> main() async {
@@ -34,11 +35,25 @@ Future<void> main() async {
   );
 }
 
-class HumsApp extends ConsumerWidget {
+class HumsApp extends ConsumerStatefulWidget {
   const HumsApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HumsApp> createState() => _HumsAppState();
+}
+
+class _HumsAppState extends ConsumerState<HumsApp> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final router = ref.read(routerProvider);
+      ref.read(pushNotificationServiceProvider).initialize(router: router);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(

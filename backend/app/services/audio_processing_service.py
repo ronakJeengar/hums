@@ -223,6 +223,9 @@ class AudioProcessingService:
                             status="READY",
                         )
 
+                    user_id = track.owner_id if track else None
+                    track_title = track.title if track else "Your track"
+
                     for rdata in rendition_records_data:
                         await rendition_repo.create(**rdata)
 
@@ -235,6 +238,30 @@ class AudioProcessingService:
                         )
 
                     await session.commit()
+
+                # Dispatch completion notification to track owner
+                if user_id:
+                    try:
+                        from app.schemas.notification import NotificationType
+                        from app.services.notification_service import NotificationService
+
+                        notif_service = NotificationService()
+                        await notif_service.notify_user(
+                            user_id=user_id,
+                            notification_type=NotificationType.UPLOAD_COMPLETE.value,
+                            title="Track Ready",
+                            body=f'"{track_title}" has finished processing and is ready to stream!',
+                            data={
+                                "type": "track",
+                                "track_id": str(track_id),
+                                "screen": "track_detail",
+                            },
+                            idempotency_key=f"upload_complete_{track_id}",
+                        )
+                    except Exception as notif_exc:
+                        logger.warning(
+                            f"Could not dispatch upload notification for track {track_id}: {notif_exc}"
+                        )
 
                 logger.info(
                     f"Successfully processed track {track_id}: duration={duration_sec}s, renditions={len(rendition_records_data)}"

@@ -16,6 +16,7 @@ import 'package:hums_mobile/routing/route_names.dart';
 import 'package:hums_mobile/features/auth/presentation/providers/auth_provider.dart';
 import 'package:hums_mobile/features/auth/presentation/states/auth_state.dart';
 import 'package:hums_mobile/features/audio_player/presentation/widgets/mini_player.dart';
+import 'package:hums_mobile/features/notifications/presentation/providers/notification_provider.dart';
 
 // AsyncNotifier or FutureProvider for system health check
 final systemHealthProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
@@ -39,6 +40,48 @@ class HomeScreen extends ConsumerWidget {
         title: 'Hums',
         centerTitle: false,
         actions: [
+          Consumer(
+            builder: (context, ref, _) {
+              final unreadCount = ref.watch(unreadNotificationCountProvider);
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_outlined, color: AppColors.textPrimary),
+                    tooltip: 'Notifications',
+                    onPressed: () {
+                      context.push(RouteNames.notificationsPath);
+                    },
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          unreadCount > 99 ? '99+' : '$unreadCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
           IconButton(
             icon: const AppIcon(
               icon: AppIcons.playlist,

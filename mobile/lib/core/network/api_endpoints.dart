@@ -34,5 +34,14 @@ abstract class ApiEndpoints {
       '/api/v1/playlists/$playlistId/tracks/$trackId';
   static String playlistTracksReorder(String playlistId) =>
       '/api/v1/playlists/$playlistId/tracks/reorder';
+
+  // Notification Endpoints
+  static const String notificationDevices = '/api/v1/notifications/devices';
+  static String notificationDevice(String deviceId) => '/api/v1/notifications/devices/$deviceId';
+  static const String notificationPreferences = '/api/v1/notifications/preferences';
+  static const String notifications = '/api/v1/notifications';
+  static const String notificationUnreadCount = '/api/v1/notifications/unread-count';
+  static String notificationRead(String notificationId) => '/api/v1/notifications/$notificationId/read';
+  static const String notificationReadAll = '/api/v1/notifications/read-all';
 }
 

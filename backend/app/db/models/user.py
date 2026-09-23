@@ -8,6 +8,7 @@ from app.db.base import BaseDBModel
 
 if TYPE_CHECKING:
     from app.db.models.audio import Track
+    from app.db.models.notification import Notification, NotificationPreference, UserDevice
 
 
 class User(BaseDBModel):
@@ -73,6 +74,24 @@ class User(BaseDBModel):
         back_populates="owner",
         cascade="all, delete-orphan",
         order_by="Track.created_at.desc()",
+    )
+    devices: Mapped[List["UserDevice"]] = relationship(
+        "UserDevice",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="UserDevice.last_seen_at.desc()",
+    )
+    notifications: Mapped[List["Notification"]] = relationship(
+        "Notification",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="Notification.created_at.desc()",
+    )
+    notification_preferences: Mapped[Optional["NotificationPreference"]] = relationship(
+        "NotificationPreference",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
     )
 
     @property

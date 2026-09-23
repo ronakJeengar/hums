@@ -81,6 +81,12 @@ class Settings(BaseSettings):
     # Future AI Integration (Optional for foundation)
     GEMINI_API_KEY: str = ""
 
+    # Push Notification Settings
+    PUSH_ENABLED: bool = True
+    PUSH_PROVIDER: str = "mock"  # "mock" or "fcm"
+    FIREBASE_CREDENTIALS_PATH: str = ""
+    FIREBASE_PROJECT_ID: str = ""
+
     # CORS Allowed Origins
     CORS_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://localhost:8000", "http://127.0.0.1:8000"]
 
