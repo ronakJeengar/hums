@@ -58,7 +58,7 @@ class PlaylistTrackAdd(BaseModel):
 
 class PlaylistTracksReorder(BaseModel):
     """Schema for reordering all tracks in a playlist."""
-    track_ids: List[uuid.UUID] = Field(..., min_length=1, description="Ordered list of track IDs")
+    track_ids: List[uuid.UUID] = Field(..., min_length=1, max_length=500, description="Ordered list of track IDs")
 
     @field_validator("track_ids")
     @classmethod

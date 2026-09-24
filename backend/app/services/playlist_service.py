@@ -21,6 +21,7 @@ from app.schemas.playlist import (
     PlaylistUpdate,
 )
 from app.utils.storage import BaseStorageService
+from app.utils.upload import read_upload_file_bounded
 
 logger = logging.getLogger("hums.playlist_service")
 settings = get_settings()
@@ -233,17 +234,17 @@ class PlaylistService:
                 code="UNSUPPORTED_IMAGE_TYPE",
             )
 
+        # 2. Validate file size with bounded streaming
         max_bytes = settings.MAX_AVATAR_SIZE_MB * 1024 * 1024
-        file_bytes = await file.read()
+        file_bytes = await read_upload_file_bounded(
+            file,
+            max_bytes=max_bytes,
+            error_code="IMAGE_TOO_LARGE",
+            error_message=f"Cover image exceeds the {settings.MAX_AVATAR_SIZE_MB}MB size limit.",
+        )
 
         if len(file_bytes) == 0:
             raise BadRequestError("Cover image cannot be empty.", code="INVALID_IMAGE")
-
-        if len(file_bytes) > max_bytes:
-            raise BadRequestError(
-                f"Cover image exceeds the {settings.MAX_AVATAR_SIZE_MB}MB size limit.",
-                code="IMAGE_TOO_LARGE",
-            )
 
         try:
             image_stream = io.BytesIO(file_bytes)
@@ -353,10 +354,15 @@ class PlaylistService:
 
         self._verify_ownership(playlist, user)
 
-        # Verify track exists
+        # Verify track exists and is not failed
         track = await self.track_repo.get_by_id(data.track_id)
         if not track:
             raise NotFoundError("Track not found")
+        if track.status == "FAILED":
+            raise BadRequestError(
+                "Failed tracks cannot be added to playlists.",
+                code="TRACK_FAILED",
+            )
 
         # Check for duplicate track in playlist
         existing = await self.playlist_repo.get_playlist_track(playlist_id, data.track_id)

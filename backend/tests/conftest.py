@@ -6,11 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.pool import NullPool
 
 os.environ["APP_ENV"] = "testing"
+os.environ["RATE_LIMIT_ENABLED"] = "false"
 
 from app.main import app
 from app.core.config import get_settings
 
 settings = get_settings()
+settings.RATE_LIMIT_ENABLED = False
 
 test_engine = create_async_engine(
     settings.DATABASE_URL,

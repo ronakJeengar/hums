@@ -193,3 +193,21 @@ alembic downgrade -1
 2. Commit with conventional commit messages (`feat:`, `fix:`, `docs:`, `test:`).
 3. Ensure all tests and linters pass before opening a Pull Request.
 4. Merge via approved Pull Request into `main`.
+
+---
+
+## 9. Security & Hardening
+
+Hums incorporates production-grade defensive security engineering:
+* **Rate Limiting:** Atomic Redis sliding-window throttling on authentication, uploads, and creation endpoints with `Retry-After` headers.
+* **Bounded Streams:** Early termination of oversized file uploads (`read_upload_file_bounded`) preventing memory starvation.
+* **Strict Input Bounds:** Field-level character and array limits defending against algorithmic complexity and buffer overflows.
+* **Security Headers:** Automatic enforcement of HSTS, `nosniff`, `DENY` framing, and strict referrer policies.
+* **Container Isolation:** Docker backend executes as unprivileged `appuser` (UID 1000).
+* **Secure Mobile Storage:** Hardware-backed token storage via Keychain / EncryptedSharedPreferences with release-mode log suppression.
+
+Detailed documentation is available in [`docs/security/`](docs/security/):
+* [Security Baseline](docs/security/SECURITY_BASELINE.md)
+* [Security Report](docs/security/SECURITY_REPORT.md)
+* [Security Checklist](docs/security/SECURITY_CHECKLIST.md)
+

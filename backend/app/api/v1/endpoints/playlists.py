@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 
 from app.core.dependencies import get_current_user, get_playlist_service
+from app.core.rate_limit import RateLimiter
 from app.db.models.user import User
 from app.schemas.common import ApiResponse
 from app.schemas.playlist import (
@@ -24,6 +25,7 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     summary="Create a new playlist",
     description="Creates a user-owned playlist with name and optional description.",
+    dependencies=[Depends(RateLimiter(requests=30, window_seconds=60, action="playlist_create"))],
 )
 async def create_playlist(
     body: PlaylistCreate,
