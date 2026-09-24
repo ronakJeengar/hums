@@ -34,5 +34,8 @@ abstract class ApiEndpoints {
       '/api/v1/playlists/$playlistId/tracks/$trackId';
   static String playlistTracksReorder(String playlistId) =>
       '/api/v1/playlists/$playlistId/tracks/reorder';
+
+  // Telemetry & Observability
+  static const String telemetryEvents = '/api/v1/telemetry/events';
 }
 

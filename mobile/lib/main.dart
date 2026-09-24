@@ -17,6 +17,15 @@ Future<void> main() async {
     androidNotificationOngoing: true,
   );
 
+  // Global Flutter framework and platform error listeners for production stability
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+  };
+
+  WidgetsBinding.instance.platformDispatcher.onError = (Object error, StackTrace stack) {
+    return true;
+  };
+
   // Configure system UI overlay for dark audio aesthetic
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

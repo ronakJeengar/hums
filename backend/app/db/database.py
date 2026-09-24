@@ -33,6 +33,10 @@ engine: AsyncEngine = create_async_engine(
     ),
 )
 
+# Initialize query latency and slow query listeners
+from app.db.observability import setup_database_observability
+setup_database_observability(engine.sync_engine)
+
 # Asynchronous Session Factory
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,

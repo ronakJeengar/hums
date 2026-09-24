@@ -56,6 +56,30 @@ async def check_redis_health() -> bool:
         return False
 
 
+async def check_celery_broker_health() -> bool:
+    """Verifies Celery Redis broker reachability."""
+    try:
+        client = aioredis.from_url(settings.REDIS_URL, socket_timeout=2.0)
+        pong = await client.ping()
+        await client.aclose()
+        return bool(pong)
+    except Exception:
+        return False
+
+
+async def check_storage_health() -> bool:
+    """Verifies S3/MinIO object storage reachability."""
+    import asyncio
+    try:
+        storage = S3StorageService()
+        def _check():
+            storage.s3_client.head_bucket(Bucket=settings.S3_BUCKET)
+            return True
+        return await asyncio.to_thread(_check)
+    except Exception:
+        return False
+
+
 def get_user_repository(session: AsyncSession = Depends(get_db)) -> UserRepository:
     return UserRepository(session)
 

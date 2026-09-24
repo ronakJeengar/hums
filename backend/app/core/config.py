@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     APP_PORT: int = 8001
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
+    LOG_FORMAT: str = "auto"  # "json", "text", or "auto"
+    DB_SLOW_QUERY_MS: float = 100.0
+    METRICS_ENABLED: bool = True
 
     # Security & Rate Limiting
     RATE_LIMIT_ENABLED: bool = True

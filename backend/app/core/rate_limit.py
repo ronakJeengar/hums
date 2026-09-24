@@ -85,6 +85,8 @@ class RateLimiter:
             raise
         except Exception as exc:
             # Graceful degradation: Log and fail open so Redis blips do not cause service denial
+            from app.core.metrics import metrics_registry
+            metrics_registry.record_redis_error(operation="rate_limit")
             logger.warning(
                 f"Rate limiter failed to communicate with Redis (failing open): {exc}"
             )

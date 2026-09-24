@@ -10,6 +10,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Production Observability & Monitoring (`feature/observability-monitoring`):**
+  - **Context-Aware Request Correlation:**
+    - Asynchronous `ContextVar` propagation of `X-Request-ID` across all FastAPI routes, database queries, background workers, and logs.
+    - Header validation against `^[a-zA-Z0-9_\-]{8,64}$` with automatic UUIDv4 generation for missing or malformed request IDs.
+    - Response header propagation (`X-Request-ID`) enabling seamless cross-stack tracing.
+  - **Structured Logging & Data Privacy Redaction:**
+    - Dual logging format (`LOG_FORMAT="auto"`): human-readable colorized text in development, single-line structured JSON in production (`APP_ENV=production`).
+    - Integrated `SensitiveDataFilter` actively redacting Authorization bearer tokens, JSON password fields, database connection credentials, and presigned object storage URLs before disk or stdout emission.
+  - **Low-Cardinality Metrics Registry (`MetricsRegistry`):**
+    - High-performance, thread-safe in-memory metrics registry operating with zero external daemon or SaaS dependencies.
+    - Strict label cardinality controls rejecting high-cardinality dimensions (user IDs, track IDs, emails, query strings); parameterized route normalization (`/api/v1/playlists/{playlist_id}`).
+    - Standard Prometheus exposition text format at `GET /metrics` supporting counters and summaries with p50, p95, and p99 quantiles.
+    - Structured JSON metrics summary endpoint at `GET /api/v1/metrics`.
+  - **Multi-Tier Orchestrator Health Probing:**
+    - Process Liveness (`GET /health/live`): Shallow, in-memory check verifying ASGI event loop responsiveness without touching external databases or caches, preventing cascade restart loops during maintenance.
+    - Dependency Readiness (`GET /health/ready`): Validates PostgreSQL, Redis, Celery broker, and object storage connectivity, returning HTTP 503 `{"status": "degraded"}` when dependencies are unreachable to gracefully remove degraded instances from load balancers.
+    - Backward-compatible root liveness (`GET /health`) and deep diagnostic health (`GET /api/v1/health`).
+  - **Database & Query Observability:**
+    - SQLAlchemy execution event listeners (`before_cursor_execute` and `after_cursor_execute`) measuring query durations and recording throughput metrics.
+    - Automatic slow query detection and structured warning emission for queries exceeding `DB_SLOW_QUERY_MS` (default 100ms) with parameter stripping to prevent credential leaks.
+    - Non-blocking connection pool monitoring via `get_db_pool_status` (`pool_size`, `checked_in`, `checked_out`, `overflow`).
+  - **Celery Background Worker Telemetry:**
+    - Attached Celery signals (`task_prerun`, `task_postrun`, `task_failure`, `task_retry`) tracking task durations, completion states, and worker events.
+    - Bounded failure classification (`timeout`, `network_infrastructure`, `media_codec_error`, `storage_error`, `authorization_error`, `application_error`).
+    - Redis queue depth monitoring (`get_celery_queue_depth`) alerting on task backlogs or worker starvation.
+  - **Flutter Client Telemetry Pipeline:**
+    - Non-blocking, batched mobile telemetry collector (`TelemetryService`) flushing playback events and non-fatal runtime errors every 30 seconds or 20 events.
+    - Fail-open network design preventing telemetry errors or timeouts from disrupting user audio playback or app navigation.
+    - Global unhandled exception capture via `FlutterError.onError` and `PlatformDispatcher.onError`.
+    - Server ingestion endpoint (`POST /api/v1/telemetry/events`) with DoS batch size bounding.
+  - **Operational Documentation & Test Verification:**
+    - Created 5 comprehensive observability operational documents in `docs/observability/`:
+      - `OBSERVABILITY_ARCHITECTURE.md`: Technical architecture and data flow diagrams.
+      - `ALERTS.md`: Production alert definitions, PromQL expressions, severity matrix, and SLOs.
+      - `DASHBOARDS.md`: Panel layouts and specifications for Grafana/Datadog dashboards.
+      - `OPERATIONS_RUNBOOK.md`: Step-by-step diagnostic and remediation procedures for on-call engineers.
+      - `DEPLOYMENT_CHECKLIST.md`: Pre-production verification and rollback criteria.
+    - Added automated backend observability test suite (`backend/tests/test_observability.py` with 19 tests, total 105/105 backend tests passing).
+    - Added Flutter mobile telemetry unit tests (`mobile/test/core/observability/telemetry_service_test.dart`, total 123/123 mobile tests passing).
 - **Production Performance Hardening & Resource Optimization (`feature/performance-hardening`):**
   - **Database Composite Indexes & Query Optimization:**
     - Alembic migration `20260924_f8957d4b8b3a` adding targeted composite indexes:

@@ -706,3 +706,57 @@ All API responses include defensive security headers:
 ### 12.5. Container Least Privilege
 * Containerized backend processes execute under an unprivileged user (`appuser`, UID 1000).
 * Root privileges are prohibited within application containers.
+
+---
+
+## 15. Production Observability & Telemetry Architecture
+
+Hums implements a high-throughput, low-overhead observability layer providing full visibility without external daemon or collector dependencies:
+
+```mermaid
+flowchart LR
+    subgraph Ingestion["Ingress & Processing"]
+        HTTP["HTTP Traffic\n(X-Request-ID)"]
+        CLIENT["Flutter Telemetry\n(Batched Events)"]
+        WORKER["Celery Tasks\n(Audio/AI)"]
+    end
+
+    subgraph Observability["Observability Engine"]
+        CTX["ContextVar Tracing"]
+        METRICS["MetricsRegistry\n(In-Memory Prometheus)"]
+        LOGS["Structured Logs\n(SensitiveDataFilter)"]
+        HOOKS["SQLAlchemy Cursor Hooks"]
+    end
+
+    subgraph Exposition["Exposition & Alerts"]
+        PROM["GET /metrics\n(Prometheus Exposition)"]
+        JSON_METRICS["GET /api/v1/metrics\n(JSON Summary)"]
+        HEALTH["/health/live\n/health/ready"]
+    end
+
+    HTTP --> CTX --> LOGS
+    HTTP --> METRICS
+    HTTP --> HOOKS
+    CLIENT --> METRICS
+    WORKER --> METRICS
+    METRICS --> PROM & JSON_METRICS
+    HOOKS --> LOGS & METRICS
+```
+
+### Architectural Principles:
+1. **Low-Cardinality Prometheus Registry:**
+   - In-memory registry provides atomic increments and bounded sliding-window histograms (computing p50, p95, and p99).
+   - Cardinality is strictly bounded: dynamic path variables (`/api/v1/playlists/{playlist_id}`) use normalized route templates rather than unique database IDs. High-cardinality values (user IDs, emails, query strings) are forbidden in labels.
+2. **Context-Aware Request Correlation:**
+   - Client-provided `X-Request-ID` headers are validated against `^[a-zA-Z0-9_\-]{8,64}$` or replaced with clean UUIDv4 identifiers.
+   - Preserved in Python `contextvars.ContextVar` across async call chains, emitted in every structured log, and echoed back in the response header.
+3. **Multi-Tier Orchestrator Health Probing:**
+   - **Liveness (`/health/live`):** Shallow, in-memory process check. Never checks downstream databases or caches, preventing cascade restart loops during transient database maintenance.
+   - **Readiness (`/health/ready`):** Validates PostgreSQL connection, Redis connection, Celery broker reachability, and object storage availability, returning HTTP 503 when degraded to gracefully withdraw from load balancer routing.
+4. **Database Execution Observability:**
+   - SQLAlchemy sync engine hooks (`before_cursor_execute` and `after_cursor_execute`) measure per-query execution durations and record query throughput.
+   - Emits structured warnings for slow queries (`duration >= DB_SLOW_QUERY_MS`) while stripping parameters to prevent secret and PII leakage.
+5. **Fail-Open Mobile Client Telemetry:**
+   - Client playback events and non-fatal runtime errors are batched and flushed periodically via `/api/v1/telemetry/events`.
+   - Client network failures fail open without affecting user audio playback or UI responsiveness.
+

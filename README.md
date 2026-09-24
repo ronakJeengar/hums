@@ -222,3 +222,22 @@ Detailed documentation is available in [`docs/security/`](docs/security/):
 * [Security Report](docs/security/SECURITY_REPORT.md)
 * [Security Checklist](docs/security/SECURITY_CHECKLIST.md)
 
+---
+
+## 10. Production Observability & Monitoring
+
+Hums features an integrated, low-overhead observability layer providing full visibility across the distributed system:
+* **Request Correlation:** Distributed tracing via `X-Request-ID` context propagation across all HTTP routes, background workers, and logs.
+* **Structured Logging & Redaction:** Auto-switching structured JSON logging in production and human-readable text in development, with active masking of bearer tokens, passwords, database credentials, and presigned object storage URLs.
+* **Low-Cardinality Metrics Registry:** High-performance in-memory registry exporting standard Prometheus exposition text (`GET /metrics`) and structured JSON summaries (`GET /api/v1/metrics`).
+* **Multi-Tier Health Checks:** Shallow process liveness probe (`GET /health/live`), dependency-aware readiness probe (`GET /health/ready`), and deep subsystem status (`GET /api/v1/health`).
+* **Database & Worker Telemetry:** Automatic SQLAlchemy query duration tracking, slow query alerting (`DB_SLOW_QUERY_MS`), connection pool monitoring, and Celery task lifecycle signal integration.
+* **Mobile Client Telemetry:** Non-blocking batched ingestion (`POST /api/v1/telemetry/events`) for playback events, buffer stalls, and crash reporting with fail-open client behavior.
+
+Comprehensive observability documentation:
+* [Observability Architecture](docs/observability/OBSERVABILITY_ARCHITECTURE.md)
+* [Alerting Rules & SLOs](docs/observability/ALERTS.md)
+* [Dashboard Specifications](docs/observability/DASHBOARDS.md)
+* [Operations Runbook](docs/observability/OPERATIONS_RUNBOOK.md)
+* [Deployment Checklist](docs/observability/DEPLOYMENT_CHECKLIST.md)
+

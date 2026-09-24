@@ -9,7 +9,11 @@ from app.core.logging import setup_logging
 from app.db.database import engine
 
 settings = get_settings()
-logger = setup_logging(settings.LOG_LEVEL)
+logger = setup_logging(
+    log_level=settings.LOG_LEVEL,
+    log_format=settings.LOG_FORMAT,
+    environment=settings.APP_ENV,
+)
 
 
 @asynccontextmanager
@@ -44,6 +48,10 @@ app.add_middleware(
 )
 
 
+from app.core.context import clear_request_id, set_request_id
+from app.core.metrics import metrics_registry
+
+
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
     """Enforces essential defensive HTTP security headers on all responses."""
@@ -59,40 +67,75 @@ async def security_headers_middleware(request: Request, call_next):
 
 
 @app.middleware("http")
-async def log_requests_middleware(request: Request, call_next):
-    """Measures request execution duration, attaches X-Process-Time header, and logs structured latency."""
+async def request_observability_middleware(request: Request, call_next):
+    """
+    Manages request correlation (X-Request-ID), measures execution latency,
+    records route-template low-cardinality metrics, and logs access events.
+    """
     import time
 
     start_time = time.perf_counter()
-    method = request.method
-    path = request.url.path
+
+    # Correlation ID
+    raw_req_id = request.headers.get("X-Request-ID")
+    req_id = set_request_id(raw_req_id)
+    request.state.request_id = req_id
 
     try:
         response = await call_next(request)
-        duration_ms = (time.perf_counter() - start_time) * 1000
+        duration_seconds = time.perf_counter() - start_time
+        duration_ms = duration_seconds * 1000.0
+
+        # Attach headers
+        response.headers["X-Request-ID"] = req_id
         response.headers["X-Process-Time"] = f"{duration_ms:.2f}ms"
 
-        # Avoid spamming logs for frequent shallow health probes unless in debug mode
-        if path != "/health" or settings.DEBUG:
+        # Determine route template for low-cardinality metrics
+        route = request.scope.get("route")
+        route_template = route.path if route and hasattr(route, "path") else request.url.path
+
+        # Record HTTP metrics
+        metrics_registry.record_http_request(
+            method=request.method,
+            endpoint=route_template,
+            status_code=response.status_code,
+            duration_seconds=duration_seconds,
+        )
+
+        # Log request (suppress health/metrics probe noise in production unless error)
+        is_probe = request.url.path in ("/health", "/health/live", "/metrics")
+        if not is_probe or response.status_code >= 400 or settings.DEBUG:
             logger.info(
-                f"{method} {path} [{response.status_code}] ({duration_ms:.2f}ms)"
+                f"{request.method} {request.url.path} [{response.status_code}] ({duration_ms:.2f}ms)"
             )
+
         return response
     except Exception as exc:
-        duration_ms = (time.perf_counter() - start_time) * 1000
-        logger.error(f"{method} {path} [FAILED] ({duration_ms:.2f}ms): {exc}")
+        duration_seconds = time.perf_counter() - start_time
+        duration_ms = duration_seconds * 1000.0
+        metrics_registry.record_http_request(
+            method=request.method,
+            endpoint=request.url.path,
+            status_code=500,
+            duration_seconds=duration_seconds,
+        )
+        logger.error(
+            f"{request.method} {request.url.path} [FAILED] ({duration_ms:.2f}ms): {exc}"
+        )
         raise
+    finally:
+        clear_request_id()
 
 
 # Register centralized error & validation handlers
 register_error_handlers(app)
 
 
-# Root Liveness Endpoint
+# Root Liveness & Readiness Endpoints
 @app.get(
     "/health",
     tags=["Health"],
-    summary="Shallow liveness probe",
+    summary="Shallow liveness probe (backward compatible)",
 )
 async def root_health():
     """Liveness probe for orchestrators and load balancers."""
@@ -100,6 +143,82 @@ async def root_health():
         "status": "healthy",
         "app": settings.APP_NAME,
         "environment": settings.APP_ENV,
+    }
+
+
+@app.get(
+    "/health/live",
+    tags=["Health"],
+    summary="Process liveness probe",
+)
+async def liveness_probe():
+    """Shallow process liveness probe."""
+    return {
+        "status": "alive",
+        "app": settings.APP_NAME,
+        "environment": settings.APP_ENV,
+    }
+
+
+@app.get(
+    "/health/ready",
+    tags=["Health"],
+    summary="Application readiness probe",
+)
+async def readiness_probe():
+    """Readiness probe verifying core dependencies (Postgres, Redis, Storage)."""
+    from fastapi.responses import JSONResponse
+    from app.db.database import check_db_health
+    from app.core.dependencies import check_celery_broker_health, check_redis_health, check_storage_health
+
+    db_ok = await check_db_health()
+    redis_ok = await check_redis_health()
+    celery_ok = await check_celery_broker_health()
+    storage_ok = await check_storage_health()
+
+    is_ready = db_ok and redis_ok
+    status_code = 200 if is_ready else 503
+
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "status": "ready" if is_ready else "degraded",
+            "app": settings.APP_NAME,
+            "environment": settings.APP_ENV,
+            "services": {
+                "database": "connected" if db_ok else "disconnected",
+                "redis": "connected" if redis_ok else "disconnected",
+                "celery_broker": "connected" if celery_ok else "disconnected",
+                "storage": "connected" if storage_ok else "disconnected",
+            },
+        },
+    )
+
+
+@app.get(
+    "/metrics",
+    tags=["Observability"],
+    summary="Prometheus metrics exposition endpoint",
+)
+async def metrics_endpoint():
+    """Exports metrics in standard Prometheus text format."""
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(
+        content=metrics_registry.generate_prometheus_metrics(),
+        media_type="text/plain; version=0.0.4; charset=utf-8",
+    )
+
+
+@app.get(
+    "/api/v1/metrics",
+    tags=["Observability"],
+    summary="Structured JSON metrics summary",
+)
+async def metrics_json_endpoint():
+    """Returns a structured JSON summary of metrics for monitoring dashboards."""
+    return {
+        "status": "healthy",
+        "metrics": metrics_registry.get_summary(),
     }
 
 

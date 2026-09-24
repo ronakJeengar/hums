@@ -11,6 +11,9 @@ celery_app = Celery(
     include=["app.workers.audio_tasks"],
 )
 
+# Connect observability signals
+from app.workers import observability  # noqa: F401
+
 celery_app.conf.update(
     task_serializer="json",
     accept_content=["json"],
