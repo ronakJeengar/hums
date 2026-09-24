@@ -17,6 +17,7 @@
 * Background audio processing (FFmpeg transcoding, waveform peak generation, metadata extraction).
 * Direct creator audio and podcast episode publishing.
 * Custom playlists, favorites, and listening history.
+* Native, high-performance catalog search across tracks, artists, and playlists with PostgreSQL trigram indexing.
 * Clean, warm, audio-centric mobile client built with Flutter and Riverpod.
 * Architectural readiness for future Google Gemini-powered transcripts and smart discovery.
 
