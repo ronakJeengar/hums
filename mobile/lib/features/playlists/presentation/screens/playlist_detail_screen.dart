@@ -21,7 +21,8 @@ class PlaylistDetailScreen extends ConsumerStatefulWidget {
   const PlaylistDetailScreen({super.key, required this.playlistId});
 
   @override
-  ConsumerState<PlaylistDetailScreen> createState() => _PlaylistDetailScreenState();
+  ConsumerState<PlaylistDetailScreen> createState() =>
+      _PlaylistDetailScreenState();
 }
 
 class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
@@ -62,7 +63,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
     int actualIndex = 0;
     if (startIndex > 0 && startIndex < detail.tracks.length) {
       final selectedTrack = detail.tracks[startIndex];
-      final found = queueItems.indexWhere((q) => q.trackId == selectedTrack.trackId);
+      final found = queueItems.indexWhere(
+        (q) => q.trackId == selectedTrack.trackId,
+      );
       if (found >= 0) {
         actualIndex = found;
       }
@@ -105,10 +108,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           side: const BorderSide(color: AppColors.border),
         ),
-        title: Text(
-          'Delete Playlist',
-          style: AppTypography.headlineMedium,
-        ),
+        title: Text('Delete Playlist', style: AppTypography.headlineMedium),
         content: const Text(
           'Are you sure you want to delete this playlist? This action cannot be undone.',
           style: AppTypography.bodyMedium,
@@ -156,7 +156,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(playlistDetailNotifierProvider(widget.playlistId));
-    final playerState = ref.watch(audioPlayerNotifierProvider);
+    final currentTrackId = ref.watch(
+      audioPlayerNotifierProvider.select((s) => s.track?.trackId),
+    );
 
     if (state.isLoading && state.detail == null) {
       return Scaffold(
@@ -199,7 +201,11 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                 const SizedBox(height: AppSpacing.lg),
                 ElevatedButton(
                   onPressed: () => ref
-                      .read(playlistDetailNotifierProvider(widget.playlistId).notifier)
+                      .read(
+                        playlistDetailNotifierProvider(
+                          widget.playlistId,
+                        ).notifier,
+                      )
                       .loadDetails(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -219,7 +225,6 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
 
     final playlist = detail.playlist;
     final tracks = detail.tracks;
-    final currentTrackId = playerState.track?.trackId;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -314,7 +319,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                     children: [
                       // Cover Artwork
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
                         child: Container(
                           width: 160,
                           height: 160,
@@ -324,6 +331,8 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                                   playlist.coverImageUrl!,
                                   width: 160,
                                   height: 160,
+                                  cacheWidth: 320,
+                                  cacheHeight: 320,
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) =>
                                       _buildPlaceholder(),
@@ -379,8 +388,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                                 vertical: AppSpacing.sm,
                               ),
                               shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(AppSpacing.radiusFull),
+                                borderRadius: BorderRadius.circular(
+                                  AppSpacing.radiusFull,
+                                ),
                               ),
                             ),
                             icon: const AppIcon(
@@ -398,8 +408,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                           const SizedBox(width: AppSpacing.md),
                           OutlinedButton.icon(
                             onPressed: () {
-                              final existingIds =
-                                  tracks.map((t) => t.trackId).toSet();
+                              final existingIds = tracks
+                                  .map((t) => t.trackId)
+                                  .toSet();
                               SelectTrackModal.show(
                                 context,
                                 playlistId: widget.playlistId,
@@ -414,8 +425,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                                 vertical: AppSpacing.sm,
                               ),
                               shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(AppSpacing.radiusFull),
+                                borderRadius: BorderRadius.circular(
+                                  AppSpacing.radiusFull,
+                                ),
                               ),
                             ),
                             icon: const AppIcon(
@@ -469,8 +481,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                           const SizedBox(height: AppSpacing.lg),
                           ElevatedButton.icon(
                             onPressed: () {
-                              final existingIds =
-                                  tracks.map((t) => t.trackId).toSet();
+                              final existingIds = tracks
+                                  .map((t) => t.trackId)
+                                  .toSet();
                               SelectTrackModal.show(
                                 context,
                                 playlistId: widget.playlistId,
@@ -514,8 +527,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                         onRemove: () async {
                           final success = await ref
                               .read(
-                                playlistDetailNotifierProvider(widget.playlistId)
-                                    .notifier,
+                                playlistDetailNotifierProvider(
+                                  widget.playlistId,
+                                ).notifier,
                               )
                               .removeTrack(track.trackId);
                           if (context.mounted && !success) {
@@ -533,9 +547,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                 ),
 
               // Bottom spacing for MiniPlayer
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 80),
-              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 80)),
             ],
           ),
         ),

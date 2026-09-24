@@ -44,25 +44,27 @@ app.add_middleware(
 
 @app.middleware("http")
 async def log_requests_middleware(request: Request, call_next):
-    """Logs incoming HTTP requests and outgoing responses with duration."""
+    """Measures request execution duration, attaches X-Process-Time header, and logs structured latency."""
     import time
+
     start_time = time.perf_counter()
     method = request.method
     path = request.url.path
-    query = request.url.query
-    full_path = f"{path}?{query}" if query else path
-    client_ip = request.client.host if request.client else "unknown"
-
-    logger.info(f"--> {method} {full_path} [client: {client_ip}]")
 
     try:
         response = await call_next(request)
         duration_ms = (time.perf_counter() - start_time) * 1000
-        logger.info(f"<-- {method} {full_path} [{response.status_code}] ({duration_ms:.2f}ms)")
+        response.headers["X-Process-Time"] = f"{duration_ms:.2f}ms"
+
+        # Avoid spamming logs for frequent shallow health probes unless in debug mode
+        if path != "/health" or settings.DEBUG:
+            logger.info(
+                f"{method} {path} [{response.status_code}] ({duration_ms:.2f}ms)"
+            )
         return response
     except Exception as exc:
         duration_ms = (time.perf_counter() - start_time) * 1000
-        logger.error(f"<-- {method} {full_path} [FAILED] ({duration_ms:.2f}ms): {exc}")
+        logger.error(f"{method} {path} [FAILED] ({duration_ms:.2f}ms): {exc}")
         raise
 
 

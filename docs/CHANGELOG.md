@@ -1,0 +1,239 @@
+# Changelog
+
+All notable changes to the **Hums** project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [Unreleased]
+
+### Added
+- **Production Performance Hardening & Resource Optimization (`feature/performance-hardening`):**
+  - **Database Composite Indexes & Query Optimization:**
+    - Alembic migration `20260924_f8957d4b8b3a` adding targeted composite indexes:
+      - `ix_tracks_status_created_at` (`tracks (status, created_at DESC)`): Speeds up public catalog query by 78.4% (0.356ms -> 0.077ms, query cost reduced from 29.27 to 11.86).
+      - `ix_tracks_owner_created_at` (`tracks (owner_id, created_at DESC)`): Speeds up user tracks listing by 64.8% (0.108ms -> 0.038ms, eliminating in-memory quicksort).
+      - `ix_playlists_owner_created_at` (`playlists (owner_id, created_at DESC)`): Speeds up user playlist listing queries.
+      - `ix_playlist_tracks_playlist_id_position` (`playlist_tracks (playlist_id, position ASC)`): Speeds up ordered playlist track retrieval by 73.3% (0.075ms -> 0.020ms).
+    - SQLAlchemy declarative model definitions in `Track`, `Playlist`, and `PlaylistTrack` updated with matching `Index` definitions.
+    - Single-query SQL aggregation in `PlaylistRepository.list_by_owner_with_aggregates` replacing N+1 `selectinload` and Python ORM model hydration with a single SQL query executing `COUNT(playlist_tracks.id)` and `COALESCE(SUM(tracks.duration_seconds), 0)` (1.92x speedup: 1.96ms -> 1.02ms).
+  - **Backend Connection Pooling & Observability:**
+    - Configured asyncpg connection pooling on `AsyncEngine` with `pool_size=20`, `max_overflow=10`, `pool_timeout=30`, `pool_recycle=1800`, and `pool_pre_ping=True`.
+    - Added `X-Process-Time` duration header to all HTTP responses for production observability.
+    - Suppressed redundant logging on health check probes (`/health`, `/api/v1/health`) to reduce hotpath log churn.
+  - **Celery & Redis Stability:**
+    - Configured `result_expires=86400` (24h TTL) to prevent unbounded memory growth in Redis DB 2.
+    - Configured `broker_transport_options={"visibility_timeout": 43200}` to prevent duplicate task redelivery during long-running audio transcode jobs.
+  - **Flutter Selective Rebuilding & Rendering Optimization:**
+    - Scoped Riverpod audio subscriptions with `.select(...)` in `PlaylistDetailScreen`, `UserTracksScreen`, and `MiniPlayer`, completely eliminating unnecessary widget rebuilds during 1Hz playback position ticks (0 dirty frames vs 10 dirty frames in benchmark).
+    - Isolated `_MiniPlayerProgressBar` into an autonomous render leaf watching `.select((s) => s.progress)`.
+  - **Flutter Image Memory Bounding:**
+    - Added `cacheWidth` and `cacheHeight` constraints to `Image.network` and `ResizeImage` across `PlaylistCard`, `PlaylistDetailScreen`, `EditPlaylistScreen`, and `ProfileScreen`, reducing decoded bitmap RAM footprint by >98% (from ~16.8 MB to ~160 KB per 2048x2048 asset).
+  - **Performance Verification & Benchmarks:**
+    - Created baseline specification in `docs/performance/PERFORMANCE_BASELINE.md`.
+    - Created comprehensive hardening report in `docs/performance/PERFORMANCE_REPORT.md`.
+    - Added automated Flutter rebuild benchmark in `mobile/test/performance/rebuild_benchmark_test.dart`.
+- **Catalog Search System & Mobile Discovery (`feature/search`):**
+  - High-performance, backend-driven full-text, substring, and trigram-ranked relevance search across Tracks, Artists/Creators, and Playlists.
+  - Native PostgreSQL search architecture with `pg_trgm` extension and GIN trigram indexes (`ix_tracks_title_trgm`, `ix_tracks_artist_name_trgm`, `ix_tracks_album_name_trgm`, `ix_tracks_genre_trgm`, `ix_playlists_name_trgm`, `ix_playlists_description_trgm`, `ix_users_username_trgm`, `ix_users_full_name_trgm`).
+  - Multi-criteria relevance scoring engine (Exact match > Prefix match > Substring match > `pg_trgm` `word_similarity` for typo tolerance) with deterministic total ordering.
+  - Strict privacy and visibility isolation:
+    - Audio tracks strictly restricted to `status == 'READY'`; unready/processing/failed tracks are completely hidden.
+    - Playlists filtered by `is_public == TRUE` OR `owner_id == current_user_id` (via optional authentication); private playlists of other users are never returned.
+    - Artists aggregated from active creator accounts and track metadata with ready track count badges.
+  - Query sanitization and validation: whitespace trimming, graceful empty query handling, limit bounds enforcement (default 20, max 50), SQL wildcard escaping (`%` and `_`), SQL injection immunity, and multilingual Unicode/UTF-8 support (Hindi, Hinglish, English, regional scripts).
+  - Search REST API endpoint:
+    - `GET /api/v1/search?q={query}&type={all|tracks|artists|playlists}&limit={limit}&skip={skip}`: Returns categorized search items with aggregate entity counts.
+  - Flutter Mobile Search Module (`mobile/lib/features/search/`):
+    - Clean Architecture implementation (Domain, Data, Presentation layers).
+    - 300ms query debouncing with generation ID race condition protection to prevent out-of-order response overwrites.
+    - Dynamic search bar with instant clear button, category filter chips (All, Tracks, Artists, Playlists).
+    - State-driven UI handling Initial prompt, Loading indicator, Populated grouped lists, No results found, and Error recovery with Retry button.
+    - Seamless global player integration: Tapping a track plays it directly via `audioPlayerNotifierProvider` with active playback indicators; tapping a playlist navigates to details; tapping an artist filters search.
+    - Home screen integration with AppBar search action button and quick-action search card.
+    - Centralized Widget Previews (`mobile/lib/previews/search_previews.dart`) covering Initial, Loading, Populated, Filtered, Empty, and Error states.
+    - 10 automated pytest tests in `backend/tests/test_search.py` (84/84 backend tests passing).
+    - 21 automated Flutter tests in `mobile/test/features/search/` (140/140 Flutter tests passing with 0 analyzer issues).
+- **Push Notification System & In-App Inbox (`feature/push-notifications`):**
+  - Production-ready, backend-driven push notification architecture with Celery asynchronous delivery workers and multi-platform device registration (`user_devices`).
+  - Pluggable Push Provider interface (`PushProvider`) with `MockPushProvider` for local dev/testing and `FCMPushProvider` using Firebase Admin SDK with automatic invalid token pruning and transient failure detection.
+  - Asynchronous background delivery task (`send_push_notification`) with bounded retries (max 3), late ack, and exponential backoff (`10 * 2^retries`).
+  - Comprehensive user notification preferences (`notification_preferences`) supporting master toggle (`push_enabled`) and fine-grained categories: `new_releases_enabled`, `playlist_updates_enabled`, `recommendations_enabled`, `processing_updates_enabled`.
+  - Notification history & in-app inbox (`notifications`) with persistent read/unread tracking, `unread-count` query, single mark-as-read, and bulk `read-all`.
+  - Event-driven audio processing notification dispatch: Automatically sends `UPLOAD_COMPLETE` push and inbox notification to track owner when audio transcoding completes.
+  - Idempotency key deduplication on notifications to prevent redundant deliveries for identical events.
+  - Relational database schema with Alembic migration `e51b99a81234` creating `user_devices`, `notifications`, and `notification_preferences` with composite indexes and cascade deletion.
+  - Complete REST API endpoints under `/api/v1/notifications`:
+    - `POST /api/v1/notifications/devices`: Register or update push token with device metadata.
+    - `DELETE /api/v1/notifications/devices/{id}`: Deactivate device registration.
+    - `DELETE /api/v1/notifications/devices`: Deactivate device by token on logout.
+    - `GET /api/v1/notifications/preferences`: Get user notification category preferences.
+    - `PUT /api/v1/notifications/preferences`: Update preferences and category toggles.
+    - `GET /api/v1/notifications`: Paginated notification history with read/unread filtering.
+    - `GET /api/v1/notifications/unread-count`: Fast unread count for badge indicators.
+    - `PATCH /api/v1/notifications/{id}/read`: Mark notification as read.
+    - `POST /api/v1/notifications/read-all`: Mark all notifications as read in bulk.
+  - Clean Architecture Flutter mobile notification module:
+    - Domain entities (`NotificationItemEntity`, `NotificationPreferencesEntity`) with relative timestamping (`timeAgo`), category icons/colors, and deep-link route resolution.
+    - Repository contracts (`NotificationRepository`) and implementation (`NotificationRepositoryImpl`).
+    - Data models (`NotificationItemModel`, `NotificationPreferencesModel`, `NotificationListModel`) and remote data source (`NotificationRemoteDataSourceImpl`).
+    - Riverpod state management (`NotificationInboxNotifier`, `NotificationPreferencesNotifier`, `unreadNotificationCountProvider`).
+    - `PushNotificationService` managing Firebase Cloud Messaging initialization, OS permission requests (Android 13+ & iOS), token registration/refresh, foreground message receipt, and background/terminated deep linking.
+    - UI screen (`NotificationScreen`): App bar with unread badge, "Read all" bulk action, filter chips (All / Unread), pull-to-refresh, empty and error states, and preference sheet (`NotificationPreferencesModal`).
+    - Home screen integration: Notification bell action with dynamic unread badge and routing to `/notifications`.
+    - Widget Previews (`lib/previews/notification_previews.dart`) covering Populated, Empty, Loading, Error, and Preferences modal states.
+  - Comprehensive automated test suite:
+    - 11 new backend unit, API, Celery worker, and token pruning tests (85/85 backend tests passing).
+    - 20 new Flutter unit, repository, notifier, and widget tests (139/139 Flutter tests passing with 0 analyzer issues).
+- **AI Recommendations Engine & Mobile Experience (`feature/ai-recommendations`):**
+  - Production-ready backend recommendation pipeline orchestrating user preference extraction, modular candidate generation, deterministic multi-signal scoring, optional semantic Gemini AI re-ranking, and diversity filtering.
+  - Multi-source candidate generation architecture (`CandidateSource` protocol) with `GenreCandidateSource`, `ArtistCandidateSource`, `PopularCandidateSource`, and `RecentCandidateSource`.
+  - Deterministic ranking engine with configurable normalized weights in `RecommendationWeights` (`genre=0.35`, `artist=0.25`, `popularity=0.20`, `freshness=0.20`).
+  - Google Gemini semantic re-ranking client (`GeminiRecommendationClient`) utilizing the modern official `google-genai` SDK (`gemini-2.5-flash`), centralized prompt version (`RECOMMENDATION_PROMPT_VERSION = "v1"`), and zero PII transmission.
+  - Resilient graceful fallback: Automatic fallback to deterministic ranking upon Gemini timeout, malformed output, rate limit, or absent API key, ensuring high availability.
+  - Cold-start handling for new listeners, serving curated trending, recent, and genre-diverse catalog sections.
+  - Diversity enforcement (`DiversityService`) capping maximum 2 tracks per artist and 4 tracks per genre to prevent recommendation repetition.
+  - Distributed caching & concurrency control in `RecommendationCacheService`: Redis caching (TTL 300s), 30-second refresh debounce key, and per-user distributed lock to eliminate request storms and redundant work.
+  - Asynchronous background recommendation generation Celery task (`generate_user_recommendations`) with safe async/thread isolation.
+  - Relational schema and Alembic migration `e2b918f3a541` introducing `recommendation_sets` and `recommendation_items` tables with cascade deletion, deduplication constraints, and indexed lookups, along with `ix_tracks_genre` on `tracks`.
+  - Recommendation REST API endpoints:
+    - `GET /api/v1/recommendations`: Retrieve personalized sections (`for-you`, `genre`, `trending`, `discover`) with optional filtering and force-refresh.
+    - `POST /api/v1/recommendations/refresh`: Enqueue background recommendation computation.
+  - Updated `AudioService.get_track_playback` to support platform-wide playback for any `READY` track, enabling listeners to stream recommended music uploaded across the community.
+  - Clean Architecture Flutter mobile recommendation module:
+    - Domain entities (`RecommendationTrackEntity`, `RecommendationSectionEntity`) with duration formatting and playability helpers.
+    - Repository contracts (`RecommendationRepository`) and implementation (`RecommendationRepositoryImpl`).
+    - Data models (`RecommendationTrackModel`, `RecommendationSectionModel`) and remote data source (`RecommendationRemoteDataSourceImpl`).
+    - Riverpod state management (`RecommendationNotifier`, `RecommendationState`) with reactive status, section items, and pull-to-refresh.
+    - Presentation widgets (`RecommendationTrackCard`, `RecommendationSectionWidget`, `RecommendationsView`) featuring horizontal carousel navigation, active track playing indicator, and "Play All" queue integration into the global audio player.
+    - Full integration into `HomeScreen` with pull-to-refresh (`RefreshIndicator`).
+  - Comprehensive automated test suite:
+    - 13 backend unit, integration, and security tests (87/87 total backend tests passing).
+    - 34 Flutter unit, repository, notifier, and widget tests (153/153 total Flutter tests passing with 0 analyzer issues).
+- **Playlists & Continuous Queue Playback (`feature/playlists`):**
+  - Backend relational playlist data model and Alembic migration `d7edb8b28e26` introducing `playlists` and `playlist_tracks` tables with cascade deletion, unique constraints `(playlist_id, track_id)`, and indexed positions.
+  - Playlist CRUD endpoints (`POST /api/v1/playlists`, `GET /api/v1/playlists`, `GET /api/v1/playlists/{id}`, `PATCH /api/v1/playlists/{id}`, `DELETE /api/v1/playlists/{id}`) enforcing strict user ownership isolation.
+  - Playlist track management (`POST /api/v1/playlists/{id}/tracks`, `DELETE /api/v1/playlists/{id}/tracks/{track_id}`) with automatic position normalization to preserve dense, zero-based sequencing.
+  - Atomic drag-and-drop track reordering (`PATCH /api/v1/playlists/{id}/tracks/reorder`) executing in a single database transaction with membership validation.
+  - Playlist cover artwork management (`POST /api/v1/playlists/{id}/cover`, `DELETE /api/v1/playlists/{id}/cover`) processing images via Pillow (800x800 WebP) and storing them in S3/MinIO.
+  - Dynamically derived playlist metadata (`track_count`, `duration_seconds`) from active track memberships.
+  - Clean Architecture Flutter playlist module:
+    - Domain entities (`PlaylistEntity`, `PlaylistTrackEntity`, `PlaylistDetailEntity`) and repository contracts (`PlaylistRepository`).
+    - Data models (`PlaylistModel`, `PlaylistTrackModel`, `PlaylistDetailModel`) and remote data source (`PlaylistRemoteDataSource`).
+    - Repository implementation (`PlaylistRepositoryImpl`).
+    - Presentation states (`PlaylistListState`, `PlaylistDetailState`, `PlaylistFormState`) and Riverpod providers (`playlistListNotifierProvider`, `playlistDetailNotifierProvider(id)`, `playlistFormNotifierProvider`).
+    - Custom SVG icon system expanded (`playlist.svg`, `add.svg`, `edit.svg`, `delete.svg`, `more.svg`, `drag.svg`, `remove.svg`, `next.svg`, `previous.svg`, `back.svg`).
+    - UI screens: `PlaylistListScreen` (pull-to-refresh, empty states, deletion dialogs), `PlaylistDetailScreen` (artwork header, play all, `SliverReorderableList` drag-and-drop reordering, track removal), `CreatePlaylistScreen` (form + cover picker), `EditPlaylistScreen` (metadata editing, cover replacement/removal).
+    - Modals: `SelectTrackModal` for adding tracks to current playlist, and `AddToPlaylistModal` for adding a track to any user playlist from `UserTracksScreen`.
+  - Continuous queue playback integration:
+    - Extended `PlayerQueue` and `QueueItem` domain entities.
+    - Updated `AudioPlayerNotifier` with `playQueue`, `skipToNext`, `skipToPrevious`, and automated playback advance when tracks reach `PlayerStatus.completed`.
+    - Mini Player and Full Player updated with Next/Previous skip controls reflecting active playlist queue state.
+  - Automated testing:
+    - 12 new backend tests covering CRUD, track addition/removal, reordering, security/ownership isolation, and cover art (74 total backend tests passing).
+    - 21 new Flutter unit and widget tests (119 total Flutter tests passing).
+- **Audio Streaming Player & UI (`feature/audio-player-ui`):**
+  - Production-ready Flutter audio playback engine integrating `just_audio` and `just_audio_background`.
+  - Background audio playback with lock screen / notification media controls on Android (`AudioServiceActivity`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK`) and iOS (`UIBackgroundModes: audio`).
+  - Backend playback endpoint `GET /api/v1/audio/tracks/{track_id}/playback` returning secure streaming URLs, track metadata, highest-quality available rendition, and waveform data for `READY` tracks (enforcing 409 Conflict if track is still processing).
+  - Clean Architecture mobile audio player module:
+    - Domain entities (`TrackPlaybackEntity`, `AudioSourceEntity`, `PlayerError`, `PlayerErrorType`) and repository contracts (`AudioPlayerRepository`).
+    - Data models (`TrackPlaybackModel`, `AudioSourceModel`) and remote data source (`AudioPlayerRemoteDataSource`).
+    - Service layer (`AudioPlayerService`) wrapping the underlying audio engine with position, duration, buffering, and playing streams.
+    - Repository implementation (`AudioPlayerRepositoryImpl`) handling error mapping (409 -> `sourceUnavailable`, 401 -> `unauthorized`, network errors).
+  - Riverpod state management (`AudioPlayerNotifier`) with reactive `PlayerState` data class tracking status (`idle`, `loading`, `ready`, `playing`, `paused`, `buffering`, `completed`, `error`), position, duration, buffering, and structured errors.
+  - Custom SVG icon system adhering to strict icon policy (`AppIcon`, `AppIcons` with `play.svg`, `pause.svg`, `seek_backward_10.svg`, `seek_forward_30.svg`, `waveform.svg`, `music_note.svg`, `close.svg`, `error.svg`).
+  - Persistent Mini Player widget (`MiniPlayer`) with active track display, progress bar, play/pause controls, and tap navigation to full player.
+  - Full Player Screen (`FullPlayerScreen`) with vinyl/artwork container, waveform visualization, interactive scrubber slider, timestamps, seek (-10s / +30s), quality/rendition indicator, and error banner with retry support.
+  - Seamless track playback integration in `UserTracksScreen` (tap `READY` tracks to play/pause) and `HomeScreen` (with `MiniPlayer` at bottom navigation bar).
+  - Automated test suite expanded:
+    - 2 new backend playback tests (62 total backend tests passing).
+    - 31 new Flutter unit and widget tests (98 total Flutter tests passing).
+- **Audio Transcoding & Waveform Generation Pipeline (`feature/audio-transcode`):**
+  - Celery background worker orchestration and asynchronous task `process_audio_track` with exponential backoff retries for transient errors.
+  - Safe FFmpeg and ffprobe integration via `AudioMetadataService`, `WaveformService`, and `AudioTranscodeService` using safe subprocess parameter arrays (`shell=False`).
+  - Audio metadata extraction (`ffprobe`): duration, sample rate, channels, codec, bitrate, and container format.
+  - Normalized waveform generation: 200 amplitude samples strictly bounded in `[0.0, 1.0]`, serialized to JSON and stored in object storage at `audio/waveforms/{track_id}.json`.
+  - AAC in M4A container transcoding with `+faststart` progressive streaming flag across standard multi-bitrate ladder (192k, 128k, 64k kbps).
+  - Processed renditions stored in S3/MinIO at `audio/processed/{track_id}/{rendition_id}.m4a`.
+  - Relational schema and Alembic migration `99d6d7e114e4` adding `audio_renditions` table and `waveform_key` column on `tracks`.
+  - Idempotency & concurrency protection: atomic row-level job claim (`claim_job_for_processing`) preventing race conditions and duplicate transcoding runs; safe no-op on already `READY` tracks.
+  - Transaction boundary isolation keeping long-running FFmpeg execution and S3 uploads outside open database sessions.
+  - Guaranteed temporary-file cleanup in `finally` blocks using `tempfile.TemporaryDirectory`.
+  - User-facing error sanitization stripping internal filesystem paths and secret keys on failure.
+  - New API endpoint `GET /api/v1/audio/tracks/{track_id}/waveform` returning normalized sample array; updated `GET /api/v1/audio/tracks/{track_id}` returning renditions ladder; updated `GET /api/v1/audio/tracks/{track_id}/status` returning `duration_seconds` and `waveform_key`.
+  - Docker Compose update adding `celery_worker` and `api` services with FFmpeg-enabled `backend/Dockerfile`.
+  - Mobile updates: `TrackEntity`, `TrackModel`, `TrackStatusEntity`, `TrackStatusModel` updated with `durationSeconds`, `waveformKey`, and `AudioRenditionEntity`. `UserTracksScreen` displaying formatted duration, rendition count, and waveform icon.
+  - Backend automated test suite expanded with 13 new transcode unit and integration tests (60 total backend tests passing, 67 mobile tests passing).
+- **Audio Upload & Ingestion Foundation (`feature/audio-upload`):**
+
+  - Audio file upload endpoint (`POST /api/v1/audio/upload`) with multipart form-data supporting MP3, WAV, FLAC, M4A, AAC, and OGG up to 100MB (`MAX_AUDIO_SIZE_MB`).
+  - Audio validation engine checking file size (100B min, 100MB max), MIME type, and audio magic bytes/headers (`ID3`, MPEG syncwords, `RIFF...WAVE`, `fLaC`, `OggS`, `ftyp`).
+  - S3/MinIO object storage integration saving original media to `audio/original/{user_id}/{track_id}/{file_uuid}.{canonical_ext}` with rollback cleanup upon failure.
+  - Relational schema and Alembic migration `489f5018efa3` creating `tracks`, `audio_files`, and `processing_jobs` tables with cascading foreign keys and indexes.
+  - Asynchronous processing job creation (`ProcessingJob` with `status: 'PENDING'`, `job_type: 'AUDIO_TRANSCODE'`) ready for upcoming Celery + FFmpeg transcoding pipeline.
+  - Track listing (`GET /api/v1/audio/tracks`), details (`GET /api/v1/audio/tracks/{track_id}`), track status (`GET /api/v1/audio/tracks/{track_id}/status`), and job status (`GET /api/v1/audio/jobs/{job_id}`) with strict user ownership isolation.
+  - Backend automated test suite with 10 audio tests covering validation, upload, listing, status, details, and cross-user isolation (47 total backend tests passing).
+  - Flutter Clean Architecture audio module:
+    - Domain entities (`TrackEntity`, `AudioFileEntity`, `ProcessingJobEntity`, `TrackStatusEntity`) and repository contracts (`AudioRepository`).
+    - Data models (`TrackModel`, `AudioFileModel`, `ProcessingJobModel`, `TrackStatusModel`).
+    - Cross-platform file picker integration (`file_picker: ^8.1.4`) with client-side extension and 100MB size validation.
+    - Remote datasource (`AudioRemoteDataSource`) with upload progress callbacks via Dio `onSendProgress`.
+    - Riverpod state management (`AudioUploadNotifier`) with Freezed `AudioUploadState` union (`initial`, `fileSelected`, `uploading`, `uploaded`, `failure`).
+    - Presentation UI: `UploadAudioScreen` with audio file card, metadata form (Title, Artist, Album, Genre, Description), progress bar, and completion summary; `UserTracksScreen` with track cards, status chips (`UPLOADED`, `READY`, `FAILED`), and pull-to-refresh.
+    - GoRouter routes (`/upload`, `/tracks`) and Creator Studio quick actions on `HomeScreen`.
+    - Flutter automated test suite with 18 new unit and widget tests (67 total Flutter tests passing).
+- **User Profile & Avatar Management (`feature/user-profile`):**
+  - Authenticated profile retrieval (`GET /api/v1/profile`) returning safe user metadata (excluding passwords, hashes, and tokens).
+  - Partial profile updates (`PATCH /api/v1/profile`) supporting name, email, and bio updates with server-side validation.
+  - Email uniqueness check preventing collisions when changing account email.
+  - Avatar upload and replacement (`POST /api/v1/profile/avatar`) supporting JPEG, PNG, WebP up to 5MB.
+  - Server-side image validation and processing using Pillow (magic bytes verification, dimension constraints 32x32 to 4096x4096, auto-orient, resize to max 1024x1024, EXIF metadata stripping, WebP encoding).
+  - S3/MinIO object storage integration via `S3StorageService` using boto3 executed in non-blocking thread pools (`asyncio.to_thread`) with unique object keys (`avatars/{user_id}/{uuid}.webp`).
+  - Avatar removal (`DELETE /api/v1/profile/avatar`) with S3 deletion and database cleanup.
+  - Alembic migration `88f62b57c422` adding `bio` column (`VARCHAR(500)`) to `users` table.
+  - Backend automated test suite with 14 profile tests covering retrieval, update, email conflict, avatar upload/replace/delete, and size/type validation (37 total backend tests passing).
+  - Flutter Clean Architecture profile module:
+    - Domain entities (`ProfileEntity`) and repository contracts (`ProfileRepository`).
+    - Data models with serialization (`ProfileModel`).
+    - Remote datasource (`ProfileRemoteDataSource`) and repository implementation (`ProfileRepositoryImpl`).
+    - Riverpod state management with Freezed `ProfileState` union (`initial`, `loading`, `loaded`, `updating`, `uploadingAvatar`, `failure`).
+    - Presentation UI: `ProfileScreen` with avatar display, initials fallback, camera badge for gallery picker, bio card, remove avatar dialog; `EditProfileScreen` with form validation.
+    - GoRouter routes (`/profile`, `/profile/edit`) and HomeScreen profile button.
+    - Flutter automated test suite with 17 new profile unit and widget tests (49 total Flutter tests passing).
+- **Authentication & Authorization (`feature/auth-signup-login`):**
+  - Self-sovereign user registration (`POST /api/v1/auth/register`) with Pydantic v2 input validation (email format, 8+ character password, full name).
+  - Credential authentication (`POST /api/v1/auth/login`) with enumeration-safe generic errors and `last_login_at` tracking.
+  - JWT access tokens (30-minute expiry) with cryptographic `jti` UUID tracking and SHA-256 hashed refresh tokens (7-day expiry).
+  - Strict refresh token rotation (`POST /api/v1/auth/refresh`) revoking old tokens upon exchange.
+  - Session revocation and explicit logout (`POST /api/v1/auth/logout`) with `revoked_at` timestamp.
+  - Authenticated user profile inspection (`GET /api/v1/auth/me` and alias `GET /api/v1/users/me`).
+  - Enumeration-safe single-use password reset foundation (`POST /api/v1/auth/forgot-password` and `POST /api/v1/auth/reset-password`).
+  - Alembic migration `0788ba9a1d82` adding `last_login_at` and nullable `username` to `users`, `revoked_at` to `refresh_tokens`, and creating `password_reset_tokens` table.
+  - Comprehensive backend unit and integration test suite (23 tests passing with 100% auth coverage).
+  - Flutter Clean Architecture authentication module:
+    - Domain entities (`UserEntity`, `AuthTokensEntity`) and repository contracts (`AuthRepository`).
+    - Data models with serialization (`UserModel`, `AuthTokensModel`).
+    - Secure storage datasource using `FlutterSecureStorage` (iOS Keychain / Android Keystore).
+    - Remote datasource and Dio `AuthInterceptor` with transparent 401 retry, token refresh mutex synchronization, and infinite-loop prevention.
+    - Riverpod state management with Freezed `AuthState` union (`initial`, `loading`, `authenticated`, `unauthenticated`, `failure`).
+    - Presentation UI: `LoginScreen`, `SignupScreen`, `ForgotPasswordScreen`, `ResetPasswordScreen`, and reusable `AuthTextField`.
+    - GoRouter integration with `RouterNotifier` (`refreshListenable`) preventing teardowns and securing app navigation.
+    - Flutter test suite with 32 unit and widget tests covering repositories, datasources, interceptors, notifiers, and UI screens.
+- Initial Hums project foundation
+- Complete product documentation (`PRD.md`, `ARCHITECTURE.md`, `API_SPEC.md`, `DB_SCHEMA.md`, `CONTRIBUTING.md`, `README.md`)
+- FastAPI asynchronous backend foundation with Pydantic v2 and SQLAlchemy 2.0
+- Asynchronous database engine with asyncpg and connection session management
+- Alembic database migration environment configured with async engine
+- Unified API response envelope and centralized exception handling
+- System health checks (`/health` and `/api/v1/health`) validating DB and Redis connectivity
+- Celery distributed worker foundation configured with Redis broker
+- Flutter mobile project foundation adhering to clean architecture and feature-first structure
+- Core Hums design system (colors, typography, spacing, dimensions, theme)
+- Unified Dio API client with interceptors and error handling in Flutter
+- GoRouter declarative routing foundation with initial splash, home, and error screens
+- Development Docker Compose environment supporting PostgreSQL 16, Redis 7, and MinIO S3 object storage
+- Backend automated test suite with pytest, pytest-asyncio, and httpx
+- Flutter automated unit and widget test suite

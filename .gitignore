@@ -8,8 +8,13 @@
 *.crt
 credentials.json
 
-# Documentation & Specifications (local AI reference directory, not committed)
-docs/
+# Documentation & Specifications
+docs/*
+!docs/performance/
+!docs/performance/**
+!docs/CHANGELOG.md
+!docs/ARCHITECTURE.md
+!docs/DB_SCHEMA.md
 
 # Python
 __pycache__/

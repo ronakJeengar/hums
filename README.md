@@ -162,6 +162,17 @@ cd mobile
 flutter test
 ```
 
+### Performance Benchmarks
+```bash
+# Run Flutter widget rebuild benchmark
+cd mobile
+flutter test test/performance/rebuild_benchmark_test.dart
+```
+
+Comprehensive performance baselines, execution plans, and optimization reports are documented in:
+* [`docs/performance/PERFORMANCE_BASELINE.md`](docs/performance/PERFORMANCE_BASELINE.md)
+* [`docs/performance/PERFORMANCE_REPORT.md`](docs/performance/PERFORMANCE_REPORT.md)
+
 ---
 
 ## 7. Database Migrations (Alembic)

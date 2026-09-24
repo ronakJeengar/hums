@@ -1,13 +1,19 @@
 import io
 import logging
 import uuid
-from typing import List, Optional
+from typing import List
+
 from fastapi import UploadFile
 from PIL import Image, ImageOps
 
 from app.core.config import get_settings
-from app.core.errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
-from app.db.models.playlist import Playlist, PlaylistTrack
+from app.core.errors import (
+    BadRequestError,
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+)
+from app.db.models.playlist import Playlist
 from app.db.models.user import User
 from app.repositories.audio_repository import TrackRepository
 from app.repositories.playlist_repository import PlaylistRepository
@@ -53,15 +59,20 @@ class PlaylistService:
         """Converts Playlist DB model to PlaylistResponse schema."""
         cover_url = None
         if playlist.cover_image_key:
-            cover_url = await self.storage_service.get_download_url(playlist.cover_image_key)
+            cover_url = await self.storage_service.get_download_url(
+                playlist.cover_image_key
+            )
 
         from sqlalchemy import inspect
+
         insp = inspect(playlist)
         if "playlist_tracks" in insp.unloaded:
             track_count = 0
             duration_seconds = 0
         else:
-            track_count = len(playlist.playlist_tracks) if playlist.playlist_tracks else 0
+            track_count = (
+                len(playlist.playlist_tracks) if playlist.playlist_tracks else 0
+            )
             duration_seconds = sum(
                 (pt.track.duration_seconds or 0)
                 for pt in (playlist.playlist_tracks or [])
@@ -86,7 +97,9 @@ class PlaylistService:
         """Converts Playlist DB model to PlaylistDetailResponse with ordered track items."""
         cover_url = None
         if playlist.cover_image_key:
-            cover_url = await self.storage_service.get_download_url(playlist.cover_image_key)
+            cover_url = await self.storage_service.get_download_url(
+                playlist.cover_image_key
+            )
 
         tracks: List[PlaylistTrackItem] = []
         duration_seconds = 0
@@ -155,9 +168,33 @@ class PlaylistService:
     async def list_playlists(
         self, user: User, skip: int = 0, limit: int = 50
     ) -> List[PlaylistResponse]:
-        """Lists all playlists owned by the authenticated user."""
-        playlists = await self.playlist_repo.list_by_owner(user.id, skip=skip, limit=limit)
-        return [await self._to_response(p) for p in playlists]
+        """Lists all playlists owned by the authenticated user with pre-aggregated counts and durations."""
+        records = await self.playlist_repo.list_by_owner_with_aggregates(
+            user.id, skip=skip, limit=limit
+        )
+        responses: List[PlaylistResponse] = []
+        for playlist, track_count, duration_seconds in records:
+            cover_url = None
+            if playlist.cover_image_key:
+                cover_url = await self.storage_service.get_download_url(
+                    playlist.cover_image_key
+                )
+            responses.append(
+                PlaylistResponse(
+                    id=playlist.id,
+                    owner_id=playlist.owner_id,
+                    name=playlist.name,
+                    description=playlist.description,
+                    cover_image_key=playlist.cover_image_key,
+                    cover_image_url=cover_url,
+                    is_public=playlist.is_public,
+                    track_count=track_count,
+                    duration_seconds=duration_seconds,
+                    created_at=playlist.created_at,
+                    updated_at=playlist.updated_at,
+                )
+            )
+        return responses
 
     async def get_playlist_details(
         self, playlist_id: uuid.UUID, user: User
@@ -197,9 +234,7 @@ class PlaylistService:
         await self.playlist_repo.session.refresh(playlist)
         return await self._to_response(playlist)
 
-    async def delete_playlist(
-        self, playlist_id: uuid.UUID, user: User
-    ) -> None:
+    async def delete_playlist(self, playlist_id: uuid.UUID, user: User) -> None:
         """Deletes a playlist and cascades to memberships, cleaning up cover storage."""
         playlist = await self.playlist_repo.get_by_id(playlist_id)
         if not playlist:
@@ -212,7 +247,9 @@ class PlaylistService:
             try:
                 await self.storage_service.delete_file(playlist.cover_image_key)
             except Exception as e:
-                logger.warning(f"Failed to delete cover image {playlist.cover_image_key}: {e}")
+                logger.warning(
+                    f"Failed to delete cover image {playlist.cover_image_key}: {e}"
+                )
 
         await self.playlist_repo.delete(playlist.id)
 
@@ -274,7 +311,10 @@ class PlaylistService:
 
             img = ImageOps.exif_transpose(img)
             if width > TARGET_MAX_DIMENSION or height > TARGET_MAX_DIMENSION:
-                img.thumbnail((TARGET_MAX_DIMENSION, TARGET_MAX_DIMENSION), Image.Resampling.LANCZOS)
+                img.thumbnail(
+                    (TARGET_MAX_DIMENSION, TARGET_MAX_DIMENSION),
+                    Image.Resampling.LANCZOS,
+                )
 
             output_stream = io.BytesIO()
             if img.mode not in ("RGB", "RGBA"):
@@ -287,7 +327,9 @@ class PlaylistService:
             raise
         except Exception as e:
             logger.warning(f"Playlist cover image validation failed: {e}")
-            raise BadRequestError("Invalid or corrupted image file.", code="INVALID_IMAGE")
+            raise BadRequestError(
+                "Invalid or corrupted image file.", code="INVALID_IMAGE"
+            )
 
         # Generate unique storage key
         unique_id = uuid.uuid4().hex
@@ -359,7 +401,9 @@ class PlaylistService:
             raise NotFoundError("Track not found")
 
         # Check for duplicate track in playlist
-        existing = await self.playlist_repo.get_playlist_track(playlist_id, data.track_id)
+        existing = await self.playlist_repo.get_playlist_track(
+            playlist_id, data.track_id
+        )
         if existing:
             raise ConflictError(
                 "Track is already in this playlist",

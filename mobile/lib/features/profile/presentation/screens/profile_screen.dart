@@ -80,7 +80,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text(
               'Cancel',
-              style: AppTypography.labelLarge.copyWith(color: AppColors.textSecondary),
+              style: AppTypography.labelLarge.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           TextButton(
@@ -118,10 +120,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       next.whenOrNull(
         failure: (message, code, _) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              backgroundColor: AppColors.error,
-            ),
+            SnackBar(content: Text(message), backgroundColor: AppColors.error),
           );
         },
       );
@@ -148,8 +147,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: CircularProgressIndicator(color: AppColors.primary),
               )
             : profile == null
-                ? _buildErrorState()
-                : _buildProfileContent(profile, state),
+            ? _buildErrorState()
+            : _buildProfileContent(profile, state),
       ),
     );
   }
@@ -203,7 +202,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   radius: 56,
                   backgroundColor: AppColors.surfaceElevated,
                   backgroundImage: profile.avatarUrl != null
-                      ? NetworkImage(profile.avatarUrl!)
+                      ? ResizeImage(
+                          NetworkImage(profile.avatarUrl!),
+                          width: 224,
+                          height: 224,
+                        )
                       : null,
                   child: profile.avatarUrl == null
                       ? Text(
@@ -260,10 +263,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           if (profile.avatarUrl != null)
             TextButton.icon(
               onPressed: state.isBusy ? null : _confirmRemoveAvatar,
-              icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+              icon: const Icon(
+                Icons.delete_outline,
+                size: 18,
+                color: AppColors.error,
+              ),
               label: Text(
                 'Remove Avatar',
-                style: AppTypography.labelLarge.copyWith(color: AppColors.error),
+                style: AppTypography.labelLarge.copyWith(
+                  color: AppColors.error,
+                ),
               ),
             ),
           const SizedBox(height: AppSpacing.lg),
@@ -279,7 +288,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           // Email
           Text(
             profile.email,
-            style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.xl),
@@ -298,11 +309,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.info_outline, size: 18, color: AppColors.primary),
+                    const Icon(
+                      Icons.info_outline,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
                     const SizedBox(width: AppSpacing.sm),
                     Text(
                       'About',
-                      style: AppTypography.labelLarge.copyWith(color: AppColors.primary),
+                      style: AppTypography.labelLarge.copyWith(
+                        color: AppColors.primary,
+                      ),
                     ),
                   ],
                 ),

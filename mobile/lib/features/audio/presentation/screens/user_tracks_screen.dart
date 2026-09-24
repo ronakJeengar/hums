@@ -44,7 +44,10 @@ class UserTracksScreen extends ConsumerWidget {
         title: 'My Uploads',
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.textPrimary),
+            icon: const Icon(
+              Icons.refresh_rounded,
+              color: AppColors.textPrimary,
+            ),
             tooltip: 'Refresh',
             onPressed: () => ref.invalidate(userTracksProvider),
           ),
@@ -132,8 +135,11 @@ class UserTracksScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline,
-                      color: AppColors.error, size: 48),
+                  const Icon(
+                    Icons.error_outline,
+                    color: AppColors.error,
+                    size: 48,
+                  ),
                   const SizedBox(height: AppSpacing.md),
                   Text(
                     'Failed to load tracks',
@@ -170,12 +176,19 @@ class UserTracksScreen extends ConsumerWidget {
   }
 
   Widget _buildTrackCard(
-      BuildContext context, WidgetRef ref, TrackEntity track) {
+    BuildContext context,
+    WidgetRef ref,
+    TrackEntity track,
+  ) {
     final statusColor = _getStatusColor(track.status);
     final jobStatus = track.latestJob?.status;
     final isReady = track.status.toUpperCase() == 'READY';
-    final playerState = ref.watch(audioPlayerNotifierProvider);
-    final isCurrentTrack = playerState.track?.trackId == track.id;
+    final isCurrentTrack = ref.watch(
+      audioPlayerNotifierProvider.select((s) => s.track?.trackId == track.id),
+    );
+    final isPlaying =
+        isCurrentTrack &&
+        ref.watch(audioPlayerNotifierProvider.select((s) => s.isPlaying));
 
     return Card(
       shape: RoundedRectangleBorder(
@@ -219,9 +232,7 @@ class UserTracksScreen extends ConsumerWidget {
                     child: Center(
                       child: isCurrentTrack
                           ? AppIcon(
-                              icon: playerState.isPlaying
-                                  ? AppIcons.pause
-                                  : AppIcons.play,
+                              icon: isPlaying ? AppIcons.pause : AppIcons.play,
                               color: AppColors.primary,
                               size: 24,
                             )
@@ -308,62 +319,63 @@ class UserTracksScreen extends ConsumerWidget {
                   ],
                 ],
               ),
-            if (track.description != null && track.description!.isNotEmpty) ...[
+              if (track.description != null &&
+                  track.description!.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  track.description!,
+                  style: AppTypography.labelSmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
               const SizedBox(height: AppSpacing.sm),
-              Text(
-                track.description!,
-                style: AppTypography.labelSmall,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-            const SizedBox(height: AppSpacing.sm),
-            const Divider(),
-            const SizedBox(height: AppSpacing.xxs),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    if (track.genre != null)
-                      Text(
-                        'Genre: ${track.genre}',
-                        style: AppTypography.labelSmall.copyWith(
-                          color: AppColors.textSecondary,
+              const Divider(),
+              const SizedBox(height: AppSpacing.xxs),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      if (track.genre != null)
+                        Text(
+                          'Genre: ${track.genre}',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
-                      ),
-                    if (track.renditions.isNotEmpty) ...[
-                      const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        '•  ${track.renditions.length} renditions',
-                        style: AppTypography.labelSmall.copyWith(
+                      if (track.renditions.isNotEmpty) ...[
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(
+                          '•  ${track.renditions.length} renditions',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                      if (track.waveformKey != null) ...[
+                        const SizedBox(width: AppSpacing.xs),
+                        const Icon(
+                          Icons.graphic_eq_rounded,
+                          size: 14,
                           color: AppColors.primary,
                         ),
-                      ),
+                      ],
                     ],
-                    if (track.waveformKey != null) ...[
-                      const SizedBox(width: AppSpacing.xs),
-                      const Icon(
-                        Icons.graphic_eq_rounded,
-                        size: 14,
-                        color: AppColors.primary,
-                      ),
-                    ],
-                  ],
-                ),
-                if (jobStatus != null)
-                  Text(
-                    'Job: $jobStatus',
-                    style: AppTypography.labelSmall.copyWith(
-                      color: _getStatusColor(jobStatus),
-                    ),
                   ),
-              ],
-            ),
-          ],
+                  if (jobStatus != null)
+                    Text(
+                      'Job: $jobStatus',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: _getStatusColor(jobStatus),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

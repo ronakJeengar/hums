@@ -12,13 +12,26 @@ class MiniPlayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final playerState = ref.watch(audioPlayerNotifierProvider);
+    final hasTrack = ref.watch(
+      audioPlayerNotifierProvider.select((s) => s.hasTrack),
+    );
 
-    if (!playerState.hasTrack) {
+    if (!hasTrack) {
       return const SizedBox.shrink();
     }
 
-    final track = playerState.track!;
+    final track = ref.watch(
+      audioPlayerNotifierProvider.select((s) => s.track!),
+    );
+    final isPlaying = ref.watch(
+      audioPlayerNotifierProvider.select((s) => s.isPlaying),
+    );
+    final isBuffering = ref.watch(
+      audioPlayerNotifierProvider.select((s) => s.isLoading || s.isBuffering),
+    );
+    final hasNext = ref.watch(
+      audioPlayerNotifierProvider.select((s) => s.hasNext),
+    );
 
     return GestureDetector(
       onTap: () {
@@ -41,13 +54,8 @@ class MiniPlayer extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Linear Progress Indicator
-            LinearProgressIndicator(
-              value: playerState.progress,
-              backgroundColor: AppColors.surfaceHighlight,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-              minHeight: 2.5,
-            ),
+            // Linear Progress Indicator isolated to prevent full row rebuilds
+            const _MiniPlayerProgressBar(),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
@@ -100,7 +108,7 @@ class MiniPlayer extends ConsumerWidget {
                   ),
 
                   // Buffering / Loading Indicator or Play/Pause Button
-                  if (playerState.isLoading || playerState.isBuffering)
+                  if (isBuffering)
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 12),
                       child: SizedBox(
@@ -108,17 +116,16 @@ class MiniPlayer extends ConsumerWidget {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(AppColors.primary),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.primary,
+                          ),
                         ),
                       ),
                     )
                   else
                     IconButton(
                       icon: AppIcon(
-                        icon: playerState.isPlaying
-                            ? AppIcons.pause
-                            : AppIcons.play,
+                        icon: isPlaying ? AppIcons.pause : AppIcons.play,
                         size: 26,
                         color: AppColors.primaryLight,
                       ),
@@ -131,7 +138,7 @@ class MiniPlayer extends ConsumerWidget {
                     ),
 
                   // Next Track Button (if queue has next)
-                  if (playerState.hasNext)
+                  if (hasNext)
                     IconButton(
                       icon: const AppIcon(
                         icon: AppIcons.next,
@@ -164,6 +171,26 @@ class MiniPlayer extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Dedicated progress indicator isolated from parent to avoid rebuilds of
+/// track metadata, control buttons, and decorative containers during continuous playback.
+class _MiniPlayerProgressBar extends ConsumerWidget {
+  const _MiniPlayerProgressBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final progress = ref.watch(
+      audioPlayerNotifierProvider.select((s) => s.progress),
+    );
+
+    return LinearProgressIndicator(
+      value: progress,
+      backgroundColor: AppColors.surfaceHighlight,
+      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+      minHeight: 2.5,
     );
   }
 }

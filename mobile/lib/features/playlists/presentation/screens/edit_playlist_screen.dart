@@ -92,8 +92,9 @@ class _EditPlaylistScreenState extends ConsumerState<EditPlaylistScreen> {
     final description = _descriptionController.text.trim();
 
     final formNotifier = ref.read(playlistFormNotifierProvider.notifier);
-    final detailNotifier =
-        ref.read(playlistDetailNotifierProvider(widget.playlistId).notifier);
+    final detailNotifier = ref.read(
+      playlistDetailNotifierProvider(widget.playlistId).notifier,
+    );
 
     // If user asked to remove existing cover and didn't select a new one
     if (_removeExistingCover && _newImagePath == null) {
@@ -109,7 +110,9 @@ class _EditPlaylistScreenState extends ConsumerState<EditPlaylistScreen> {
     );
 
     if (updated != null && mounted) {
-      ref.read(playlistListNotifierProvider.notifier).addOrUpdatePlaylist(updated);
+      ref
+          .read(playlistListNotifierProvider.notifier)
+          .addOrUpdatePlaylist(updated);
       await detailNotifier.loadDetails();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -125,8 +128,9 @@ class _EditPlaylistScreenState extends ConsumerState<EditPlaylistScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final detailState =
-        ref.watch(playlistDetailNotifierProvider(widget.playlistId));
+    final detailState = ref.watch(
+      playlistDetailNotifierProvider(widget.playlistId),
+    );
     final formState = ref.watch(playlistFormNotifierProvider);
 
     if (detailState.isLoading && detailState.detail == null) {
@@ -187,11 +191,15 @@ class _EditPlaylistScreenState extends ConsumerState<EditPlaylistScreen> {
                       height: 140,
                       decoration: BoxDecoration(
                         color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
                         border: Border.all(color: AppColors.border),
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
                         child: _buildCoverWidget(playlist!),
                       ),
                     ),
@@ -203,7 +211,9 @@ class _EditPlaylistScreenState extends ConsumerState<EditPlaylistScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       TextButton(
-                        onPressed: formState.isSubmitting ? null : _pickCoverImage,
+                        onPressed: formState.isSubmitting
+                            ? null
+                            : _pickCoverImage,
                         child: Text(
                           'Change Cover',
                           style: AppTypography.bodyMedium.copyWith(
@@ -212,7 +222,8 @@ class _EditPlaylistScreenState extends ConsumerState<EditPlaylistScreen> {
                           ),
                         ),
                       ),
-                      if (playlist.coverImageUrl != null || _newImagePath != null) ...[
+                      if (playlist.coverImageUrl != null ||
+                          _newImagePath != null) ...[
                         const SizedBox(width: AppSpacing.md),
                         TextButton(
                           onPressed: formState.isSubmitting
@@ -350,7 +361,9 @@ class _EditPlaylistScreenState extends ConsumerState<EditPlaylistScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.md,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                     ),
@@ -394,6 +407,8 @@ class _EditPlaylistScreenState extends ConsumerState<EditPlaylistScreen> {
         playlist.coverImageUrl!,
         width: 140,
         height: 140,
+        cacheWidth: 280,
+        cacheHeight: 280,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
       );
