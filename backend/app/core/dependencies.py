@@ -1,5 +1,5 @@
 import uuid
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import redis.asyncio as aioredis
@@ -9,6 +9,7 @@ from app.core.config import get_settings
 from app.core.errors import AuthenticationError
 from app.core.security import decode_token
 from app.db.database import get_db
+from app.db.models.user import User
 from app.repositories.audio_repository import (
     AudioFileRepository,
     ProcessingJobRepository,
@@ -155,9 +156,9 @@ async def get_current_user(
         user_id = uuid.UUID(user_id_str)
     except AuthenticationError:
         raise
-    except Exception as exc:
+    except Exception:
         raise AuthenticationError(
-            f"Invalid or expired token: {str(exc)}",
+            "Invalid or expired token",
             code="UNAUTHORIZED",
         )
 

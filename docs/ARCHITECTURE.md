@@ -55,7 +55,6 @@ flowchart TD
 ```
 
 ---
-
 ## 2. Technology Stack & Rationale
 
 | Domain | Technology | Justification |
@@ -675,5 +674,35 @@ flowchart TD
 5. **Bounded Redis Memory Retention:**
    - Celery background workers storing results in Redis must declare explicit TTL expiration (`result_expires = 86400`) to guarantee that ephemeral task outcomes do not consume persistent memory.
 
+---
 
+## 12. Security Architecture & Threat Defenses
 
+### 12.1. Authentication & Token Management
+* **JWT Access & Refresh Tokens:** High-entropy HMAC-SHA256 tokens.
+* **Sliding Refresh Sessions:** Refresh tokens are single-use, rotated on consumption, and stored with cryptographic hashes.
+* **Password Hashing:** Passwords hashed with high-cost Bcrypt/Argon2. Password inputs are strictly bounded to 128 characters to prevent CPU starvation attacks.
+
+### 12.2. Rate Limiting & Abuse Prevention
+* **Engine:** Distributed Redis-backed sliding/fixed-window counter (`RateLimiter`).
+* **Granular Scopes:** Applied per user ID (for authenticated callers) or per client IP (for unauthenticated callers).
+* **Feedback:** Emits RFC 6585-compliant `Retry-After: {seconds}` headers on HTTP 429 status codes.
+* **Resilience:** Graceful fail-open mechanism ensures Redis network partitions never cause total service denial.
+
+### 12.3. File Upload Safety & Resource Bounds
+* **Bounded Stream Reading:** Streaming reader (`read_upload_file_bounded`) consumes incoming file chunks up to specified maximum byte limits, aborting immediately upon threshold violation.
+* **Image Processing Security:** Image covers and avatars are decoded with Pillow, verifying valid MIME types and headers while bounding maximum pixel dimensions to neutralize decompression bombs.
+* **Storage Isolation:** Uploads are stored under UUID keys; arbitrary client filenames are never used as filesystem or storage paths.
+
+### 12.4. Defensive HTTP Headers
+All API responses include defensive security headers:
+* `X-Content-Type-Options: nosniff`
+* `X-Frame-Options: DENY`
+* `X-XSS-Protection: 1; mode=block`
+* `Referrer-Policy: strict-origin-when-cross-origin`
+* `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+* `Strict-Transport-Security: max-age=31536000; includeSubDomains` (in production)
+
+### 12.5. Container Least Privilege
+* Containerized backend processes execute under an unprivileged user (`appuser`, UID 1000).
+* Root privileges are prohibited within application containers.

@@ -1,6 +1,6 @@
 from functools import lru_cache
 from typing import List, Union
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     APP_PORT: int = 8001
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
+
+    # Security & Rate Limiting
+    RATE_LIMIT_ENABLED: bool = True
 
     # Security & JWT Tokens
     SECRET_KEY: str = "dev-secret-key-must-be-changed-in-production-min-32-chars"
@@ -92,6 +95,23 @@ class Settings(BaseSettings):
         elif isinstance(v, (list, str)):
             return v
         raise ValueError(v)
+
+    @model_validator(mode="after")
+    def validate_production_settings(self) -> "Settings":
+        if self.APP_ENV.lower() == "production":
+            insecure_defaults = [
+                "dev-secret-key-must-be-changed-in-production-min-32-chars",
+                "change-this-insecure-secret-key-for-development-only-min-32-chars",
+                "secret",
+                "password",
+            ]
+            if self.SECRET_KEY in insecure_defaults or len(self.SECRET_KEY) < 32:
+                raise ValueError("SECRET_KEY must be securely configured with at least 32 characters in production.")
+            if self.DEBUG:
+                raise ValueError("DEBUG must be False in production.")
+            if any(origin == "*" for origin in self.CORS_ORIGINS):
+                raise ValueError("Wildcard '*' CORS origins are forbidden in production.")
+        return self
 
 
 @lru_cache()

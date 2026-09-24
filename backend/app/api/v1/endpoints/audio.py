@@ -1,7 +1,10 @@
 import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
+from app.core.config import get_settings
 from app.core.dependencies import get_current_user, get_audio_service
+from app.core.errors import BadRequestError
+from app.core.rate_limit import RateLimiter
 from app.db.models.user import User
 from app.schemas.audio import (
     ProcessingJobResponse,
@@ -12,8 +15,9 @@ from app.schemas.audio import (
 )
 from app.schemas.common import ApiResponse
 from app.services.audio_service import AudioService
+from app.utils.upload import read_upload_file_bounded
 
-
+settings = get_settings()
 router = APIRouter()
 
 
@@ -23,6 +27,7 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     summary="Upload audio track",
     description="Validates and uploads an audio file (MP3, WAV, FLAC, M4A, AAC, OGG up to 100MB) with metadata and queues processing.",
+    dependencies=[Depends(RateLimiter(requests=10, window_seconds=60, action="audio_upload"))],
 )
 async def upload_audio(
     file: UploadFile = File(...),
@@ -34,13 +39,49 @@ async def upload_audio(
     current_user: User = Depends(get_current_user),
     audio_service: AudioService = Depends(get_audio_service),
 ) -> ApiResponse[TrackResponse]:
-    content = await file.read()
+    # Validate string input lengths to prevent DB truncation or DoS
+    clean_title = title.strip()
+    if not clean_title or len(clean_title) > 255:
+        raise BadRequestError(
+            "Track title must be between 1 and 255 characters.",
+            code="INVALID_TRACK_DATA",
+        )
+    if description and len(description.strip()) > 2000:
+        raise BadRequestError(
+            "Track description must not exceed 2000 characters.",
+            code="INVALID_TRACK_DATA",
+        )
+    if artist_name and len(artist_name.strip()) > 255:
+        raise BadRequestError(
+            "Artist name must not exceed 255 characters.",
+            code="INVALID_TRACK_DATA",
+        )
+    if album_name and len(album_name.strip()) > 255:
+        raise BadRequestError(
+            "Album name must not exceed 255 characters.",
+            code="INVALID_TRACK_DATA",
+        )
+    if genre and len(genre.strip()) > 100:
+        raise BadRequestError(
+            "Genre must not exceed 100 characters.",
+            code="INVALID_TRACK_DATA",
+        )
+
+    # Stream file bytes bounded by MAX_AUDIO_SIZE_MB to prevent memory exhaustion
+    max_bytes = settings.MAX_AUDIO_SIZE_MB * 1024 * 1024
+    content = await read_upload_file_bounded(
+        file,
+        max_bytes=max_bytes,
+        error_code="AUDIO_TOO_LARGE",
+        error_message=f"Audio file exceeds maximum allowed size of {settings.MAX_AUDIO_SIZE_MB}MB.",
+    )
+
     track = await audio_service.upload_audio(
         user_id=current_user.id,
         file_bytes=content,
         filename=file.filename or "track.mp3",
         content_type=file.content_type or "audio/mpeg",
-        title=title,
+        title=clean_title,
         description=description,
         artist_name=artist_name,
         album_name=album_name,

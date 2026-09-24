@@ -12,6 +12,10 @@ credentials.json
 docs/*
 !docs/performance/
 !docs/performance/**
+!docs/security/
+!docs/security/**
+!docs/observability/
+!docs/observability/**
 !docs/CHANGELOG.md
 !docs/ARCHITECTURE.md
 !docs/DB_SCHEMA.md

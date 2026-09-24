@@ -11,6 +11,7 @@ from app.db.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.schemas.profile import ProfileResponse, ProfileUpdateRequest
 from app.utils.storage import BaseStorageService
+from app.utils.upload import read_upload_file_bounded
 
 logger = logging.getLogger("hums.profile_service")
 settings = get_settings()
@@ -128,20 +129,19 @@ class ProfileService:
                 code="UNSUPPORTED_IMAGE_TYPE",
             )
 
-        # 2. Validate file size
+        # 2. Validate file size with bounded streaming
         max_bytes = settings.MAX_AVATAR_SIZE_MB * 1024 * 1024
-        file_bytes = await file.read()
+        file_bytes = await read_upload_file_bounded(
+            file,
+            max_bytes=max_bytes,
+            error_code="IMAGE_TOO_LARGE",
+            error_message=f"Avatar image exceeds the {settings.MAX_AVATAR_SIZE_MB}MB size limit.",
+        )
 
         if len(file_bytes) == 0:
             raise BadRequestError(
                 "Avatar image cannot be empty.",
                 code="INVALID_IMAGE",
-            )
-
-        if len(file_bytes) > max_bytes:
-            raise BadRequestError(
-                f"Avatar image exceeds the {settings.MAX_AVATAR_SIZE_MB}MB size limit.",
-                code="IMAGE_TOO_LARGE",
             )
 
         # 3. Validate image integrity and format with Pillow
