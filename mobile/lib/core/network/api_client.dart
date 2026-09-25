@@ -46,6 +46,22 @@ class ApiClient {
               ),
             );
           }
+          if (error.type == DioExceptionType.connectionError ||
+              error.type == DioExceptionType.connectionTimeout) {
+            final host = error.requestOptions.uri.host;
+            final port = error.requestOptions.uri.port;
+            final customException = ApiException.network(
+              'Unable to connect to Hums backend at $host:$port. Please verify the FastAPI server is running on port $port.',
+            );
+            return handler.reject(
+              DioException(
+                requestOptions: error.requestOptions,
+                response: error.response,
+                error: customException,
+                type: error.type,
+              ),
+            );
+          }
           return handler.next(error);
         },
       ),
