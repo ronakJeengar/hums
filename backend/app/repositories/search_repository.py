@@ -1,5 +1,6 @@
 import uuid
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
+
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -25,7 +26,7 @@ class SearchRepository:
         query_str: str,
         limit: int = 20,
         skip: int = 0,
-    ) -> Tuple[List[Track], int]:
+    ) -> tuple[list[Track], int]:
         """
         Searches audio tracks using exact, prefix, substring, and pg_trgm word_similarity matching.
         Strictly enforces status == 'READY'.
@@ -93,10 +94,10 @@ class SearchRepository:
     async def search_playlists(
         self,
         query_str: str,
-        current_user_id: Optional[uuid.UUID] = None,
+        current_user_id: uuid.UUID | None = None,
         limit: int = 20,
         skip: int = 0,
-    ) -> Tuple[List[Tuple[Playlist, int]], int]:
+    ) -> tuple[list[tuple[Playlist, int]], int]:
         """
         Searches playlists by name and description with visibility filtering:
         is_public == True OR owner_id == current_user_id.
@@ -113,9 +114,9 @@ class SearchRepository:
 
         # Privacy visibility enforcement
         if current_user_id is not None:
-            vis_cond = or_(Playlist.is_public == True, Playlist.owner_id == current_user_id)  # noqa: E712
+            vis_cond = or_(Playlist.is_public == True, Playlist.owner_id == current_user_id)
         else:
-            vis_cond = Playlist.is_public == True  # noqa: E712
+            vis_cond = Playlist.is_public == True
 
         # Relevance ranking expression
         score_expr = (
@@ -163,7 +164,7 @@ class SearchRepository:
         query_str: str,
         limit: int = 20,
         skip: int = 0,
-    ) -> Tuple[List[Dict[str, Any]], int]:
+    ) -> tuple[list[dict[str, Any]], int]:
         """
         Searches creators and artists from registered users and track artist metadata.
         Aggregates track counts for each artist entity.
@@ -197,7 +198,7 @@ class SearchRepository:
         )
 
         user_match_cond = and_(
-            User.is_active == True,  # noqa: E712
+            User.is_active == True,
             or_(
                 func.coalesce(User.full_name, "").ilike(substr_q),
                 func.coalesce(User.username, "").ilike(substr_q),
@@ -218,7 +219,7 @@ class SearchRepository:
         user_res = await self.session.execute(user_stmt)
         user_rows = user_res.all()
 
-        artists_list: List[Dict[str, Any]] = []
+        artists_list: list[dict[str, Any]] = []
         seen_names = set()
 
         for user, track_count, score in user_rows:
@@ -269,7 +270,6 @@ class SearchRepository:
             lower_name = artist_name.strip().lower()
             if lower_name not in seen_names:
                 seen_names.add(lower_name)
-                # Deterministic synthetic UUID or hash based on artist name
                 artist_id = f"artist_{uuid.uuid5(uuid.NAMESPACE_DNS, lower_name)}"
                 artists_list.append({
                     "id": artist_id,
@@ -291,3 +291,187 @@ class SearchRepository:
             a.pop("_score", None)
 
         return paginated_artists, total_count
+
+    async def search_albums(
+        self,
+        query_str: str,
+        limit: int = 20,
+        skip: int = 0,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """
+        Searches distinct music albums based on Track.album_name with track counts.
+        """
+        clean_q = query_str.strip()
+        if not clean_q:
+            return [], 0
+
+        exact_q = clean_q.lower()
+        escaped_q = self._escape_like_pattern(clean_q)
+        prefix_q = f"{escaped_q}%"
+        substr_q = f"%{escaped_q}%"
+        raw_q = clean_q
+
+        album_score_expr = (
+            case((func.lower(Track.album_name) == exact_q, 100.0), else_=0.0)
+            + case((Track.album_name.ilike(prefix_q), 50.0), else_=0.0)
+            + case((Track.album_name.ilike(substr_q), 25.0), else_=0.0)
+            + case((func.coalesce(Track.artist_name, "").ilike(substr_q), 15.0), else_=0.0)
+            + (func.word_similarity(raw_q, Track.album_name) * 20.0)
+        )
+
+        album_match_cond = and_(
+            Track.status == "READY",
+            Track.album_name.isnot(None),
+            Track.album_name != "",
+            or_(
+                Track.album_name.ilike(substr_q),
+                func.coalesce(Track.artist_name, "").ilike(substr_q),
+                func.word_similarity(raw_q, Track.album_name) > 0.35,
+            ),
+        )
+
+        album_stmt = (
+            select(
+                Track.album_name,
+                Track.artist_name,
+                func.count(Track.id).label("track_count"),
+                album_score_expr.label("score"),
+            )
+            .where(album_match_cond)
+            .group_by(Track.album_name, Track.artist_name)
+            .order_by(album_score_expr.desc(), Track.album_name.asc())
+        )
+        res = await self.session.execute(album_stmt)
+        rows = res.all()
+
+        albums_list: list[dict[str, Any]] = []
+        for album_name, artist_name, count, score in rows:
+            lower_name = album_name.strip().lower()
+            album_id = f"album_{uuid.uuid5(uuid.NAMESPACE_DNS, lower_name)}"
+            albums_list.append({
+                "id": album_id,
+                "title": album_name.strip(),
+                "artist_name": artist_name.strip() if artist_name else None,
+                "track_count": count or 0,
+                "cover_image_key": None,
+                "cover_image_url": None,
+                "_score": float(score),
+            })
+
+        total_count = len(albums_list)
+        paginated = albums_list[skip : skip + limit]
+        for a in paginated:
+            a.pop("_score", None)
+
+        return paginated, total_count
+
+    async def get_suggestions(
+        self,
+        query_str: str,
+        limit: int = 8,
+        current_user_id: uuid.UUID | None = None,
+    ) -> list[str]:
+        """
+        Returns rapid, ranked autocomplete suggestions across tracks, artists, albums, and playlists.
+        """
+        clean_q = query_str.strip()
+        if not clean_q or len(clean_q) < 1:
+            return []
+
+        escaped_q = self._escape_like_pattern(clean_q)
+        prefix_q = f"{escaped_q}%"
+        substr_q = f"%{escaped_q}%"
+        exact_q = clean_q.lower()
+        limit = max(1, min(limit, 20))
+
+        candidates: list[tuple[str, float]] = []
+        seen = set()
+
+        # 1. Track titles
+        track_stmt = (
+            select(Track.title)
+            .where(
+                and_(
+                    Track.status == "READY",
+                    or_(Track.title.ilike(prefix_q), Track.title.ilike(substr_q)),
+                )
+            )
+            .limit(limit * 2)
+        )
+        track_res = await self.session.execute(track_stmt)
+        for (title,) in track_res.all():
+            if title and title.strip().lower() not in seen:
+                clean_title = title.strip()
+                seen.add(clean_title.lower())
+                score = 100.0 if clean_title.lower() == exact_q else (50.0 if clean_title.lower().startswith(exact_q) else 25.0)
+                candidates.append((clean_title, score))
+
+        # 2. Artist names
+        artist_stmt = (
+            select(Track.artist_name)
+            .where(
+                and_(
+                    Track.status == "READY",
+                    Track.artist_name.isnot(None),
+                    or_(Track.artist_name.ilike(prefix_q), Track.artist_name.ilike(substr_q)),
+                )
+            )
+            .distinct()
+            .limit(limit * 2)
+        )
+        artist_res = await self.session.execute(artist_stmt)
+        for (artist_name,) in artist_res.all():
+            if artist_name and artist_name.strip().lower() not in seen:
+                clean_artist = artist_name.strip()
+                seen.add(clean_artist.lower())
+                score = 95.0 if clean_artist.lower() == exact_q else (48.0 if clean_artist.lower().startswith(exact_q) else 24.0)
+                candidates.append((clean_artist, score))
+
+        # 3. Album names
+        album_stmt = (
+            select(Track.album_name)
+            .where(
+                and_(
+                    Track.status == "READY",
+                    Track.album_name.isnot(None),
+                    or_(Track.album_name.ilike(prefix_q), Track.album_name.ilike(substr_q)),
+                )
+            )
+            .distinct()
+            .limit(limit * 2)
+        )
+        album_res = await self.session.execute(album_stmt)
+        for (album_name,) in album_res.all():
+            if album_name and album_name.strip().lower() not in seen:
+                clean_album = album_name.strip()
+                seen.add(clean_album.lower())
+                score = 90.0 if clean_album.lower() == exact_q else (45.0 if clean_album.lower().startswith(exact_q) else 22.0)
+                candidates.append((clean_album, score))
+
+        # 4. Playlists
+        if current_user_id is not None:
+            vis_cond = or_(Playlist.is_public == True, Playlist.owner_id == current_user_id)
+        else:
+            vis_cond = Playlist.is_public == True
+
+        playlist_stmt = (
+            select(Playlist.name)
+            .where(
+                and_(
+                    vis_cond,
+                    or_(Playlist.name.ilike(prefix_q), Playlist.name.ilike(substr_q)),
+                )
+            )
+            .limit(limit * 2)
+        )
+        playlist_res = await self.session.execute(playlist_stmt)
+        for (p_name,) in playlist_res.all():
+            if p_name and p_name.strip().lower() not in seen:
+                clean_pname = p_name.strip()
+                seen.add(clean_pname.lower())
+                score = 85.0 if clean_pname.lower() == exact_q else (40.0 if clean_pname.lower().startswith(exact_q) else 20.0)
+                candidates.append((clean_pname, score))
+
+        # Sort candidates by score descending, then by length ascending (shorter matches first)
+        candidates.sort(key=lambda c: (-c[1], len(c[0])))
+        return [c[0] for c in candidates[:limit]]

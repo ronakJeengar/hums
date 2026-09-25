@@ -37,5 +37,6 @@ abstract class ApiEndpoints {
 
   // Search Endpoints
   static const String search = '/api/v1/search';
+  static const String searchSuggestions = '/api/v1/search/suggestions';
 }
 

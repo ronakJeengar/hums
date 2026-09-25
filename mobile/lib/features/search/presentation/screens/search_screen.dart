@@ -9,10 +9,14 @@ import 'package:hums_mobile/features/audio_player/presentation/providers/audio_p
 import 'package:hums_mobile/features/audio_player/presentation/widgets/mini_player.dart';
 import 'package:hums_mobile/features/search/domain/entities/search_result_entity.dart';
 import 'package:hums_mobile/features/search/presentation/providers/search_provider.dart';
+import 'package:hums_mobile/features/search/presentation/states/search_state.dart';
+import 'package:hums_mobile/features/search/presentation/widgets/recent_searches_widget.dart';
+import 'package:hums_mobile/features/search/presentation/widgets/search_album_tile.dart';
 import 'package:hums_mobile/features/search/presentation/widgets/search_artist_tile.dart';
 import 'package:hums_mobile/features/search/presentation/widgets/search_bar_widget.dart';
 import 'package:hums_mobile/features/search/presentation/widgets/search_filter_chips.dart';
 import 'package:hums_mobile/features/search/presentation/widgets/search_playlist_tile.dart';
+import 'package:hums_mobile/features/search/presentation/widgets/search_suggestions_list.dart';
 import 'package:hums_mobile/features/search/presentation/widgets/search_track_tile.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
@@ -64,7 +68,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         title: SearchBarWidget(
           controller: _controller,
           onChanged: (val) => notifier.onQueryChanged(val),
-          onClear: () => notifier.clearSearch(),
+          onClear: () {
+            _controller.clear();
+            notifier.clearSearch();
+          },
           onSubmitted: () => notifier.searchNow(),
         ),
       ),
@@ -105,7 +112,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   Widget _buildBody(
     BuildContext context,
-    dynamic searchState,
+    SearchState searchState,
     SearchNotifier notifier,
     String? currentPlayingTrackId,
     bool isPlaying,
@@ -118,7 +125,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             CircularProgressIndicator(color: AppColors.primary),
             SizedBox(height: AppSpacing.md),
             Text(
-              'Searching Hums...',
+              'Searching Hums catalog...',
               style: AppTypography.bodyMedium,
             ),
           ],
@@ -133,19 +140,23 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 48),
+              const Icon(
+                Icons.cloud_off_rounded,
+                color: AppColors.error,
+                size: 48,
+              ),
               const SizedBox(height: AppSpacing.md),
               Text(
-                'Search Failed',
-                style: AppTypography.headlineMedium.copyWith(color: AppColors.error),
+                "Couldn't load search results.",
+                style: AppTypography.headlineMedium.copyWith(color: AppColors.textPrimary),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                searchState.errorMessage ?? 'An error occurred while searching.',
+                'Please check your network connection and try again.',
                 style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.md),
               HumsButton(
                 label: 'Retry',
                 variant: HumsButtonVariant.outline,
@@ -157,38 +168,70 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       );
     }
 
+    // Show suggestions list if typing and suggestions are available
+    if (searchState.suggestions.isNotEmpty && searchState.query.isNotEmpty && !searchState.isLoaded) {
+      return SingleChildScrollView(
+        child: SearchSuggestionsList(
+          suggestions: searchState.suggestions,
+          onSelect: (sugg) {
+            _controller.text = sugg;
+            notifier.selectSuggestion(sugg);
+          },
+        ),
+      );
+    }
+
     if (searchState.isInitial) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceElevated,
-                  shape: BoxShape.circle,
+      return SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Recent searches widget
+            if (searchState.recentSearches.isNotEmpty)
+              RecentSearchesWidget(
+                recentSearches: searchState.recentSearches,
+                onSelect: (query) {
+                  _controller.text = query;
+                  notifier.selectRecentSearch(query);
+                },
+                onRemove: (query) => notifier.removeRecentSearch(query),
+                onClearAll: () => notifier.clearRecentSearches(),
+              ),
+
+            // Explore empty prompt
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Center(
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      decoration: const BoxDecoration(
+                        color: AppColors.surfaceElevated,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.search_rounded,
+                        color: AppColors.primary,
+                        size: 40,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    const Text(
+                      'Explore the Catalog',
+                      style: AppTypography.headlineMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Search for songs, artists, albums, and playlists across Hums.',
+                      style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
-                child: const Icon(
-                  Icons.search_rounded,
-                  color: AppColors.primary,
-                  size: 48,
-                ),
               ),
-              const SizedBox(height: AppSpacing.lg),
-              const Text(
-                'Explore the Catalog',
-                style: AppTypography.headlineMedium,
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Search for songs, creators, playlists, and genres across Hums.',
-                style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
@@ -206,15 +249,46 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 size: 48,
               ),
               const SizedBox(height: AppSpacing.md),
-              Text(
+              const Text(
                 'No Results Found',
                 style: AppTypography.headlineMedium,
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'No matches found for "${searchState.query}". Try a different keyword or check spelling.',
+                'No matches found for "${searchState.query}".',
                 style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
                 textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Try:',
+                      style: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      '• Checking your spelling',
+                      style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary),
+                    ),
+                    Text(
+                      '• Searching by artist or singer name',
+                      style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary),
+                    ),
+                    Text(
+                      '• Searching by song title or album',
+                      style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -222,16 +296,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       );
     }
 
-    // Has results: render categorized list
-    final results = searchState.results as SearchResultEntity;
+    final results = searchState.results;
 
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       children: [
-        // Tracks Section
+        // Tracks (Songs) Section
         if (results.tracks.isNotEmpty) ...[
           _buildSectionHeader(
-            title: 'Tracks',
+            title: 'Songs',
             count: results.totalTracks,
             showSeeAll: searchState.category == SearchCategory.all && results.totalTracks > results.tracks.length,
             onSeeAll: () => notifier.onCategoryChanged(SearchCategory.tracks),
@@ -268,6 +341,27 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               onTap: () {
                 _controller.text = artist.name;
                 notifier.onQueryChanged(artist.name);
+                notifier.onCategoryChanged(SearchCategory.tracks);
+              },
+            );
+          }),
+          const SizedBox(height: AppSpacing.md),
+        ],
+
+        // Albums Section
+        if (results.albums.isNotEmpty) ...[
+          _buildSectionHeader(
+            title: 'Albums',
+            count: results.totalAlbums,
+            showSeeAll: searchState.category == SearchCategory.all && results.totalAlbums > results.albums.length,
+            onSeeAll: () => notifier.onCategoryChanged(SearchCategory.albums),
+          ),
+          ...results.albums.map((album) {
+            return SearchAlbumTile(
+              album: album,
+              onTap: () {
+                _controller.text = album.title;
+                notifier.onQueryChanged(album.title);
                 notifier.onCategoryChanged(SearchCategory.tracks);
               },
             );

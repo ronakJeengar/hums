@@ -21,8 +21,12 @@ from app.schemas.search import (
     SearchType,
     SearchTrackItem,
     SearchArtistItem,
+    SearchAlbumItem,
     SearchPlaylistItem,
+    SearchPodcastItem,
+    SearchEpisodeItem,
     SearchResponse,
+    SearchSuggestionsResponse,
 )
 
 __all__ = [
@@ -42,6 +46,10 @@ __all__ = [
     "SearchType",
     "SearchTrackItem",
     "SearchArtistItem",
+    "SearchAlbumItem",
     "SearchPlaylistItem",
+    "SearchPodcastItem",
+    "SearchEpisodeItem",
     "SearchResponse",
+    "SearchSuggestionsResponse",
 ]

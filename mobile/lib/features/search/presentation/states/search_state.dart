@@ -12,6 +12,9 @@ class SearchState {
   final String query;
   final SearchCategory category;
   final SearchResultEntity results;
+  final List<String> recentSearches;
+  final List<String> suggestions;
+  final bool isSuggestionsLoading;
   final String? errorMessage;
 
   const SearchState({
@@ -19,6 +22,9 @@ class SearchState {
     this.query = '',
     this.category = SearchCategory.all,
     this.results = SearchResultEntity.empty,
+    this.recentSearches = const [],
+    this.suggestions = const [],
+    this.isSuggestionsLoading = false,
     this.errorMessage,
   });
 
@@ -35,6 +41,9 @@ class SearchState {
     String? query,
     SearchCategory? category,
     SearchResultEntity? results,
+    List<String>? recentSearches,
+    List<String>? suggestions,
+    bool? isSuggestionsLoading,
     String? errorMessage,
   }) {
     return SearchState(
@@ -42,6 +51,9 @@ class SearchState {
       query: query ?? this.query,
       category: category ?? this.category,
       results: results ?? this.results,
+      recentSearches: recentSearches ?? this.recentSearches,
+      suggestions: suggestions ?? this.suggestions,
+      isSuggestionsLoading: isSuggestionsLoading ?? this.isSuggestionsLoading,
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }

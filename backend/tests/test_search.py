@@ -1,11 +1,9 @@
 import uuid
+
 import pytest
 from httpx import AsyncClient
 
 from app.db.database import AsyncSessionLocal
-from app.db.models.audio import Track
-from app.db.models.playlist import Playlist
-from app.db.models.user import User
 from app.repositories.audio_repository import TrackRepository
 from app.repositories.playlist_repository import PlaylistRepository
 
@@ -351,3 +349,83 @@ class TestSearchApi:
         assert res.status_code == 200
         tracks = res.json()["data"]["tracks"]
         assert any(track["id"] == str(t.id) for track in tracks)
+
+    async def test_search_albums(self, async_client: AsyncClient, search_user1):
+        """Verifies searching albums aggregated from tracks."""
+        album_title = f"Aashiqui_{uuid.uuid4().hex[:6]}"
+        async with AsyncSessionLocal() as session:
+            track_repo = TrackRepository(session)
+            await track_repo.create(
+                id=uuid.uuid4(),
+                owner_id=search_user1["id"],
+                title="Tum Hi Ho",
+                artist_name="Arijit Singh",
+                album_name=album_title,
+                genre="Bollywood",
+                status="READY",
+            )
+            await track_repo.create(
+                id=uuid.uuid4(),
+                owner_id=search_user1["id"],
+                title="Chahun Main Ya Naa",
+                artist_name="Arijit Singh",
+                album_name=album_title,
+                genre="Bollywood",
+                status="READY",
+            )
+            await session.commit()
+
+        res = await async_client.get(f"/api/v1/search?q={album_title}&type=albums")
+        assert res.status_code == 200
+        data = res.json()["data"]
+        assert data["total_albums"] >= 1
+        assert len(data["albums"]) >= 1
+        album = next((a for a in data["albums"] if a["title"] == album_title), None)
+        assert album is not None
+        assert album["track_count"] == 2
+        assert album["artist_name"] == "Arijit Singh"
+
+    async def test_search_suggestions(self, async_client: AsyncClient, search_user1):
+        """Verifies /api/v1/search/suggestions returns fast, relevant string completions."""
+        prefix_tag = f"Sugg_{uuid.uuid4().hex[:6]}"
+        song_title = f"{prefix_tag} Romantic Ballad"
+        async with AsyncSessionLocal() as session:
+            track_repo = TrackRepository(session)
+            await track_repo.create(
+                id=uuid.uuid4(),
+                owner_id=search_user1["id"],
+                title=song_title,
+                artist_name=f"{prefix_tag} Star Singer",
+                album_name=f"{prefix_tag} Golden Hits",
+                status="READY",
+            )
+            await session.commit()
+
+        # Query with prefix
+        res = await async_client.get(f"/api/v1/search/suggestions?q={prefix_tag}")
+        assert res.status_code == 200
+        data = res.json()["data"]
+        assert data["query"] == prefix_tag
+        assert isinstance(data["suggestions"], list)
+        assert len(data["suggestions"]) >= 1
+        assert any(song_title in s for s in data["suggestions"])
+
+        # Empty suggestions query returns empty list
+        empty_res = await async_client.get("/api/v1/search/suggestions?q=")
+        assert empty_res.status_code == 200
+        assert empty_res.json()["data"]["suggestions"] == []
+
+    async def test_search_podcasts_and_episodes_graceful_empty(self, async_client: AsyncClient):
+        """Podcasts and episodes filters return clean empty arrays when tables are not yet present."""
+        res_pod = await async_client.get("/api/v1/search?q=technology&type=podcasts")
+        assert res_pod.status_code == 200
+        data_pod = res_pod.json()["data"]
+        assert data_pod["podcasts"] == []
+        assert data_pod["total_podcasts"] == 0
+
+        res_ep = await async_client.get("/api/v1/search?q=interview&type=episodes")
+        assert res_ep.status_code == 200
+        data_ep = res_ep.json()["data"]
+        assert data_ep["episodes"] == []
+        assert data_ep["total_episodes"] == 0
+

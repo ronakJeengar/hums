@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:hums_mobile/features/audio_player/presentation/providers/audio_player_provider.dart';
 import 'package:hums_mobile/features/audio_player/presentation/states/player_state.dart';
+import 'package:hums_mobile/features/search/domain/entities/search_album_entity.dart';
 import 'package:hums_mobile/features/search/domain/entities/search_artist_entity.dart';
 import 'package:hums_mobile/features/search/domain/entities/search_playlist_entity.dart';
 import 'package:hums_mobile/features/search/domain/entities/search_result_entity.dart';
@@ -22,10 +23,22 @@ class MockAudioPlayerNotifier extends StateNotifier<PlayerState>
 class MockSearchRepository extends Mock implements SearchRepository {}
 
 class FakeSearchNotifier extends SearchNotifier {
-  FakeSearchNotifier(super.repository, {SearchState? initial}) {
+  final bool overrideRecents;
+
+  FakeSearchNotifier(
+    super.repository, {
+    SearchState? initial,
+    this.overrideRecents = false,
+  }) {
     if (initial != null) {
       state = initial;
     }
+  }
+
+  @override
+  Future<void> loadRecentSearches() async {
+    if (overrideRecents) return;
+    await super.loadRecentSearches();
   }
 
   void setStateForTest(SearchState newState) {
@@ -54,11 +67,18 @@ void main() {
     updatedAt: DateTime(2026, 9, 20),
   );
 
-  final sampleArtist = const SearchArtistEntity(
+  const sampleArtist = SearchArtistEntity(
     id: 'artist-201',
     name: 'Arijit Singh',
     trackCount: 15,
     bio: 'Playback singer',
+  );
+
+  const sampleAlbum = SearchAlbumEntity(
+    id: 'album-401',
+    title: 'Aashiqui 2',
+    artistName: 'Arijit Singh',
+    trackCount: 11,
   );
 
   final samplePlaylist = SearchPlaylistEntity(
@@ -75,6 +95,8 @@ void main() {
   setUp(() {
     mockPlayerNotifier = MockAudioPlayerNotifier(const PlayerState());
     mockSearchRepo = MockSearchRepository();
+    when(() => mockSearchRepo.getRecentSearches()).thenAnswer((_) async => []);
+    when(() => mockSearchRepo.saveRecentSearch(any())).thenAnswer((_) async {});
   });
 
   Widget createWidgetUnderTest(FakeSearchNotifier notifier) {
@@ -100,13 +122,34 @@ void main() {
 
       expect(find.text('Explore the Catalog'), findsOneWidget);
       expect(
-        find.text('Search for songs, creators, playlists, and genres across Hums.'),
+        find.text('Search for songs, artists, albums, and playlists across Hums.'),
         findsOneWidget,
       );
       expect(find.text('All'), findsOneWidget);
-      expect(find.text('Tracks'), findsOneWidget);
+      expect(find.text('Songs'), findsOneWidget);
       expect(find.text('Artists'), findsOneWidget);
+      expect(find.text('Albums'), findsOneWidget);
       expect(find.text('Playlists'), findsOneWidget);
+    });
+
+    testWidgets('renders recent searches when present in initial state',
+        (WidgetTester tester) async {
+      final notifier = FakeSearchNotifier(
+        mockSearchRepo,
+        overrideRecents: true,
+        initial: const SearchState(
+          status: SearchStatus.initial,
+          recentSearches: ['Arijit Singh', 'Tum Hi Ho'],
+        ),
+      );
+
+      await tester.pumpWidget(createWidgetUnderTest(notifier));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Recent searches'), findsOneWidget);
+      expect(find.text('Arijit Singh'), findsOneWidget);
+      expect(find.text('Tum Hi Ho'), findsOneWidget);
+      expect(find.text('Clear all'), findsOneWidget);
     });
 
     testWidgets('renders loading indicator when search is loading',
@@ -123,7 +166,7 @@ void main() {
       await tester.pump();
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.text('Searching Hums...'), findsOneWidget);
+      expect(find.text('Searching Hums catalog...'), findsOneWidget);
     });
 
     testWidgets('renders error message and taps retry button',
@@ -145,8 +188,11 @@ void main() {
       await tester.pumpWidget(createWidgetUnderTest(notifier));
       await tester.pumpAndSettle();
 
-      expect(find.text('Search Failed'), findsOneWidget);
-      expect(find.text('Server timeout during query'), findsOneWidget);
+      expect(find.text("Couldn't load search results."), findsOneWidget);
+      expect(
+        find.text('Please check your network connection and try again.'),
+        findsOneWidget,
+      );
 
       final retryButton = find.text('Retry');
       expect(retryButton, findsOneWidget);
@@ -175,12 +221,13 @@ void main() {
 
       expect(find.text('No Results Found'), findsOneWidget);
       expect(
-        find.text('No matches found for "NonExistentTitle". Try a different keyword or check spelling.'),
+        find.text('No matches found for "NonExistentTitle".'),
         findsOneWidget,
       );
+      expect(find.text('• Checking your spelling'), findsOneWidget);
     });
 
-    testWidgets('renders categorized search results and triggers playback on track tap',
+    testWidgets('renders categorized search results with albums and triggers playback on track tap',
         (WidgetTester tester) async {
       when(() => mockPlayerNotifier.playTrack('track-101'))
           .thenAnswer((_) async {});
@@ -195,9 +242,11 @@ void main() {
             query: 'Arijit',
             totalTracks: 1,
             totalArtists: 1,
+            totalAlbums: 1,
             totalPlaylists: 1,
             tracks: [sampleTrack],
             artists: [sampleArtist],
+            albums: [sampleAlbum],
             playlists: [samplePlaylist],
           ),
         ),
@@ -213,6 +262,10 @@ void main() {
       // Verify Artist item rendered
       expect(find.text('Arijit Singh'), findsWidgets);
       expect(find.text('15 tracks'), findsOneWidget);
+
+      // Verify Album item rendered
+      expect(find.text('Aashiqui 2'), findsOneWidget);
+      expect(find.text('Arijit Singh • 11 songs'), findsOneWidget);
 
       // Verify Playlist item rendered
       expect(find.text('Soulful Evenings'), findsOneWidget);
@@ -244,8 +297,8 @@ void main() {
       await tester.pumpWidget(createWidgetUnderTest(notifier));
       await tester.pumpAndSettle();
 
-      // Tap Tracks chip
-      await tester.tap(find.text('Tracks'));
+      // Tap Songs chip
+      await tester.tap(find.text('Songs'));
       await tester.pump();
 
       expect(notifier.state.category, SearchCategory.tracks);

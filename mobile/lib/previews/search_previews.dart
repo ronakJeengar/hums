@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hums_mobile/core/theme/app_theme.dart';
+import 'package:hums_mobile/features/search/domain/entities/search_album_entity.dart';
 import 'package:hums_mobile/features/search/domain/entities/search_artist_entity.dart';
 import 'package:hums_mobile/features/search/domain/entities/search_playlist_entity.dart';
 import 'package:hums_mobile/features/search/domain/entities/search_result_entity.dart';
@@ -24,6 +25,21 @@ class _MockSearchRepository implements SearchRepository {
   }) async {
     return _resultBuilder();
   }
+
+  @override
+  Future<List<String>> getSuggestions({required String query, int limit = 8}) async => [];
+
+  @override
+  Future<List<String>> getRecentSearches() async => [];
+
+  @override
+  Future<void> saveRecentSearch(String query) async {}
+
+  @override
+  Future<void> removeRecentSearch(String query) async {}
+
+  @override
+  Future<void> clearRecentSearches() async {}
 }
 
 class SearchPreviewWrapper extends StatelessWidget {
@@ -62,6 +78,11 @@ class _PresetSearchNotifier extends SearchNotifier {
   _PresetSearchNotifier(SearchState preset)
       : super(_MockSearchRepository(() => preset.results)) {
     state = preset;
+  }
+
+  @override
+  Future<void> loadRecentSearches() async {
+    // Keep preset recent searches without wiping
   }
 }
 
@@ -108,6 +129,21 @@ final _sampleArtists = [
   ),
 ];
 
+final _sampleAlbums = [
+  const SearchAlbumEntity(
+    id: 'album-1',
+    title: 'Brahmastra',
+    artistName: 'Arijit Singh, Pritam',
+    trackCount: 6,
+  ),
+  const SearchAlbumEntity(
+    id: 'album-2',
+    title: 'Aashiqui 2',
+    artistName: 'Arijit Singh, Mithoon',
+    trackCount: 11,
+  ),
+];
+
 final _samplePlaylists = [
   SearchPlaylistEntity(
     id: 'playlist-1',
@@ -127,6 +163,7 @@ Widget searchInitialPreview() {
     initialState: SearchState(
       status: SearchStatus.initial,
       query: '',
+      recentSearches: ['Arijit Singh', 'Kesariya', 'Bollywood Hits'],
     ),
   );
 }
@@ -153,9 +190,11 @@ Widget searchResultsPreview() {
         category: SearchCategory.all,
         totalTracks: 2,
         totalArtists: 2,
+        totalAlbums: 2,
         totalPlaylists: 1,
         tracks: _sampleTracks,
         artists: _sampleArtists,
+        albums: _sampleAlbums,
         playlists: _samplePlaylists,
       ),
     ),
