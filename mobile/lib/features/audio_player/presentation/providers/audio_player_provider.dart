@@ -8,6 +8,7 @@ import 'package:hums_mobile/features/audio_player/domain/entities/player_error.d
 import 'package:hums_mobile/features/audio_player/domain/entities/player_queue.dart';
 import 'package:hums_mobile/features/audio_player/domain/repositories/audio_player_repository.dart';
 import 'package:hums_mobile/features/audio_player/presentation/states/player_state.dart';
+import 'package:hums_mobile/features/downloads/presentation/providers/download_manager_provider.dart';
 
 final audioPlayerRemoteDataSourceProvider =
     Provider<AudioPlayerRemoteDataSource>((ref) {
@@ -26,7 +27,8 @@ final audioPlayerServiceProvider = Provider<AudioPlayerService>((ref) {
 final audioPlayerRepositoryProvider = Provider<AudioPlayerRepository>((ref) {
   final remoteDataSource = ref.watch(audioPlayerRemoteDataSourceProvider);
   final service = ref.watch(audioPlayerServiceProvider);
-  return AudioPlayerRepositoryImpl(remoteDataSource, service);
+  final downloadLocal = ref.watch(downloadLocalDataSourceProvider);
+  return AudioPlayerRepositoryImpl(remoteDataSource, service, downloadLocal);
 });
 
 final audioPlayerNotifierProvider =

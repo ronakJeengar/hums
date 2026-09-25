@@ -51,6 +51,13 @@ class HomeScreen extends ConsumerWidget {
             },
           ),
           IconButton(
+            icon: const Icon(Icons.download_for_offline_outlined, color: AppColors.textPrimary),
+            tooltip: 'Downloads',
+            onPressed: () {
+              context.push(RouteNames.downloadsPath);
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.library_music_outlined, color: AppColors.textPrimary),
             tooltip: 'My Tracks',
             onPressed: () {

@@ -8,6 +8,7 @@ from app.core.rate_limit import RateLimiter
 from app.db.models.user import User
 from app.schemas.audio import (
     ProcessingJobResponse,
+    TrackDownloadResponse,
     TrackPlaybackResponse,
     TrackResponse,
     TrackStatusResponse,
@@ -179,6 +180,25 @@ async def get_track_playback(
         track_id=track_id, user_id=current_user.id
     )
     return ApiResponse(data=playback_data)
+
+
+@router.get(
+    "/tracks/{track_id}/download",
+    response_model=ApiResponse[TrackDownloadResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Get authorized track download resource",
+    description="Validates track download eligibility and returns a short-lived authorized download URL with audio metadata.",
+    dependencies=[Depends(RateLimiter(requests=30, window_seconds=60, action="audio_download"))],
+)
+async def get_track_download(
+    track_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    audio_service: AudioService = Depends(get_audio_service),
+) -> ApiResponse[TrackDownloadResponse]:
+    download_data = await audio_service.get_track_download(
+        track_id=track_id, user=current_user
+    )
+    return ApiResponse(data=download_data)
 
 
 @router.get(

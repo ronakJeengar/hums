@@ -1,10 +1,13 @@
 import logging
 import os
 import uuid
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 from app.core.config import get_settings
-from app.core.errors import AppException, BadRequestError, NotFoundError
+from app.core.errors import AppException, BadRequestError, ForbiddenError, NotFoundError
+from app.core.metrics import metrics_registry
 from app.db.models.audio import AudioFile, ProcessingJob, Track
+from app.db.models.user import User
 from app.repositories.audio_repository import (
     AudioFileRepository,
     ProcessingJobRepository,
@@ -12,6 +15,7 @@ from app.repositories.audio_repository import (
 )
 from app.schemas.audio import (
     AudioPlaybackSourceResponse,
+    TrackDownloadResponse,
     TrackPlaybackResponse,
     TrackStatusResponse,
 )
@@ -335,5 +339,104 @@ class AudioService:
             audio=source,
             waveform_samples=waveform_samples,
         )
+
+    async def can_download_track(
+        self, track_id: uuid.UUID, user: User
+    ) -> Tuple[bool, Optional[str], Optional[Track]]:
+        """
+        Authoritative backend rule for whether a track can be downloaded.
+
+        Evaluates:
+        1. User authentication and active status.
+        2. Track existence.
+        3. Track readiness (status == 'READY').
+        4. Track accessibility / permissions.
+        5. Audio source presence.
+        """
+        if not user or not user.is_active:
+            return False, "User account is suspended or inactive.", None
+
+        track = await self.track_repo.get_by_id_with_relations(track_id)
+        if not track:
+            return False, "Track not found.", None
+
+        if track.status != "READY":
+            return False, f"Track is not ready for download (current status: {track.status}).", track
+
+        # Access control: User can only download accessible tracks (owner or entitled)
+        if track.owner_id != user.id:
+            return False, "You do not have permission to download this private track.", track
+
+        if not track.renditions and not track.audio_files:
+            return False, "No audio media files available for this track.", track
+
+        return True, None, track
+
+    async def get_track_download(
+        self, track_id: uuid.UUID, user: User
+    ) -> TrackDownloadResponse:
+        """
+        Validates download eligibility and generates a short-lived authorized download resource.
+        """
+        can_dl, reason, track = await self.can_download_track(track_id, user)
+        if not can_dl or not track:
+            if not track:
+                raise NotFoundError("Track not found", details={"track_id": str(track_id)})
+            elif track.status != "READY":
+                raise AppException(
+                    reason or f"Track is not ready for download (current status: {track.status})",
+                    code="TRACK_NOT_READY",
+                    status_code=409,
+                )
+            else:
+                raise ForbiddenError(reason or "Track is not eligible for download.")
+
+        # Select highest quality primary rendition (renditions are pre-sorted by bitrate_kbps DESC)
+        primary_rendition = track.renditions[0] if track.renditions else None
+        expires_in = 900  # 15 minutes short-lived expiry
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
+
+        if primary_rendition:
+            download_url = await self.storage_service.get_presigned_download_url(
+                primary_rendition.storage_key, expires_in=expires_in
+            )
+            source_format = primary_rendition.format
+            source_codec = primary_rendition.codec
+            source_bitrate = primary_rendition.bitrate_kbps
+            source_file_size = primary_rendition.file_size_bytes
+            source_duration = primary_rendition.duration_seconds or track.duration_seconds
+        else:
+            orig_file = track.audio_files[0]
+            download_url = await self.storage_service.get_presigned_download_url(
+                orig_file.object_key, expires_in=expires_in
+            )
+            source_format = "mp3"
+            source_codec = "mp3"
+            source_bitrate = 128
+            source_file_size = orig_file.file_size_bytes
+            source_duration = track.duration_seconds
+
+        waveform_samples = await self.get_track_waveform(track_id, user.id)
+
+        # Track observability metric
+        metrics_registry.playback_events_total.inc(event_type="download_authorized", platform="backend")
+
+        return TrackDownloadResponse(
+            track_id=track.id,
+            title=track.title,
+            artist_name=track.artist_name,
+            album_name=track.album_name,
+            genre=track.genre,
+            duration_seconds=source_duration,
+            status=track.status,
+            format=source_format,
+            codec=source_codec,
+            bitrate_kbps=source_bitrate,
+            file_size_bytes=source_file_size,
+            download_url=download_url,
+            expires_at=expires_at,
+            waveform_samples=waveform_samples,
+        )
+
 
 

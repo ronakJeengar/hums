@@ -760,3 +760,56 @@ flowchart LR
    - Client playback events and non-fatal runtime errors are batched and flushed periodically via `/api/v1/telemetry/events`.
    - Client network failures fail open without affecting user audio playback or UI responsiveness.
 
+---
+
+## 13. Offline Downloads & Offline Playback Subsystem
+
+The offline downloads subsystem allows authenticated mobile clients to download tracks and playlists to local sandboxed storage and stream them with zero network dependencies.
+
+```mermaid
+flowchart LR
+    subgraph Mobile ["Flutter Mobile Client"]
+        UI["UI Screens\n(Downloads, Playlist, Player)"]
+        DM["DownloadManager\n(FIFO Queue, Max 2 Concurrent)"]
+        LDS[("Local DB\n(downloads_db.json)")]
+        FS[("Sandboxed Storage\n{appDocDir}/downloads/{userId}/{trackId}/")]
+        AP["AudioPlayerRepositoryImpl"]
+    end
+
+    subgraph Backend ["FastAPI & Storage"]
+        API["GET /api/v1/tracks/{trackId}/download"]
+        S3[("S3 / CDN Audio Assets")]
+    end
+
+    UI -->|Enqueue| DM
+    DM -->|1. Authorize Download| API
+    API -->|Signed URL (15m expiry)| DM
+    DM -->|2. Range HTTP Stream| S3
+    DM -->|Write bytes to .part file| FS
+    DM -->|Atomic Rename to audio.m4a| FS
+    DM -->|Persist Metadata| LDS
+    AP -->|Inspect Local File| LDS
+    AP -->|Load file:// path| FS
+```
+
+### Architectural Principles:
+1. **Authoritative Backend Eligibility:**
+   - Client never assumes a track can be downloaded. It calls `GET /api/v1/tracks/{trackId}/download`, which verifies track status is `READY`, user account is active, and track ownership/access permissions allow download.
+   - S3 presigned URLs expire after 15 minutes (`expires_in = 900s`).
+2. **Byte-Resilient Range Downloads:**
+   - Downloads stream to an intermediate `.part` file.
+   - If paused or disconnected, subsequent resumption uses `Range: bytes={existingBytes}-` headers to avoid redundant byte re-transfer.
+   - On completion, byte lengths are validated before an **atomic filesystem rename** to `audio.<format>`, preventing corrupted or incomplete files from entering the offline library.
+3. **Strict Multi-User Isolation:**
+   - Physical audio files reside under `${appDocDir}/downloads/${userId}/${trackId}/`.
+   - On user logout or session switch, in-flight streams are cancelled and in-memory caches purged. User B cannot access or enumerate User A's offline files.
+4. **Zero-Bifurcation Audio Player:**
+   - No separate offline audio player exists.
+   - `AudioPlayerRepositoryImpl.getPlaybackSource(trackId)` transparently inspects `DownloadLocalDataSource`. If a valid completed download is present, it constructs `TrackPlaybackEntity` pointing to the local file path and passes it to the standard `AudioPlayerService` via `AudioSource.file(localPath)`.
+   - Equalizer settings, lock screen media controls, playlists, and progress scrubbing function identically online and offline.
+5. **Technical References:**
+   - [OFFLINE_ARCHITECTURE.md](downloads/OFFLINE_ARCHITECTURE.md)
+   - [DOWNLOAD_STATE_MACHINE.md](downloads/DOWNLOAD_STATE_MACHINE.md)
+   - [PLATFORM_LIMITATIONS.md](downloads/PLATFORM_LIMITATIONS.md)
+
+

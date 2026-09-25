@@ -121,4 +121,24 @@ class TrackPlaybackResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class TrackDownloadResponse(BaseModel):
+    """Authorized track download resource response."""
+    track_id: uuid.UUID
+    title: str
+    artist_name: Optional[str] = None
+    album_name: Optional[str] = None
+    genre: Optional[str] = None
+    duration_seconds: Optional[int] = None
+    status: str
+    format: str
+    codec: str
+    bitrate_kbps: int
+    file_size_bytes: int
+    download_url: str
+    expires_at: datetime
+    waveform_samples: List[float] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 

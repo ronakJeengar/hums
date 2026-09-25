@@ -4,6 +4,7 @@ import 'package:hums_mobile/core/theme/app_icons.dart';
 import 'package:hums_mobile/core/theme/app_spacing.dart';
 import 'package:hums_mobile/core/theme/app_typography.dart';
 import 'package:hums_mobile/core/widgets/app_icon.dart';
+import 'package:hums_mobile/features/downloads/presentation/widgets/download_button.dart';
 import 'package:hums_mobile/features/playlists/domain/entities/playlist_entity.dart';
 
 class PlaylistTrackTile extends StatelessWidget {
@@ -135,6 +136,17 @@ class PlaylistTrackTile extends StatelessWidget {
                 fontSize: 12,
               ),
             ),
+            if (isPlayable) ...[
+              const SizedBox(width: AppSpacing.xs),
+              DownloadButton(
+                trackId: track.trackId,
+                title: track.title,
+                artistName: track.artistName,
+                albumName: track.albumName,
+                durationSeconds: track.durationSeconds,
+                size: 20,
+              ),
+            ],
             if (onRemove != null) ...[
               const SizedBox(width: AppSpacing.xs),
               IconButton(

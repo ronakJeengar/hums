@@ -16,9 +16,12 @@ docs/*
 !docs/security/**
 !docs/observability/
 !docs/observability/**
+!docs/downloads/
+!docs/downloads/**
 !docs/CHANGELOG.md
 !docs/ARCHITECTURE.md
 !docs/DB_SCHEMA.md
+!docs/API_SPEC.md
 
 # Python
 __pycache__/
@@ -29,7 +32,7 @@ __pycache__/
 build/
 develop-eggs/
 dist/
-downloads/
+/downloads/
 eggs/
 .eggs/
 /lib/

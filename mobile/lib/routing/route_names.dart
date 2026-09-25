@@ -48,5 +48,8 @@ abstract class RouteNames {
 
   static const String editPlaylist = 'edit-playlist';
   static const String editPlaylistPath = '/playlists/:id/edit';
+
+  static const String downloads = 'downloads';
+  static const String downloadsPath = '/downloads';
 }
 

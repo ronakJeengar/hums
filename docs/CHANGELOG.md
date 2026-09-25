@@ -10,6 +10,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Offline Downloads & Offline Playback (`feature/offline-downloads`):**
+  - **Backend Download Authorization & Presigned Delivery:**
+    - Dedicated authorization endpoint `GET /api/v1/tracks/{track_id}/download` (and mounted alias `/api/v1/audio/tracks/{track_id}/download`).
+    - Authoritative download eligibility checks in `AudioService.can_download_track`: validates track existence, active user status, `status == READY`, access permissions (Security Rule 61: private tracks cannot be downloaded by third parties), and media availability.
+    - S3/object storage presigned download URLs with 15-minute expiration (`expires_in = 900s`).
+    - Endpoint rate limiting via Redis sliding window (`30 requests per 60s`).
+  - **Resilient Mobile Download Engine:**
+    - FIFO download queue with configurable concurrency limit (`maxConcurrentDownloads = 2`).
+    - Range request resumption support via `Dio` (`Range: bytes={existingBytes}-`) writing to temporary `.part` file.
+    - Atomic file finalization (`audio.part` atomically renamed to `audio.m4a`) only upon full byte verification.
+    - Throttled Riverpod state notifications (max 250ms interval) to protect 60fps UI rendering during high-speed downloads.
+    - Multi-user data isolation: downloads stored in isolated filesystem paths (`${appDocDir}/downloads/${userId}/${trackId}/`).
+    - Persistent file-backed JSON database (`downloads_db.json`) resilient across app crashes and phone restarts.
+    - Complete download management actions: Pause, Resume, Cancel, Retry, Remove, and Clear All Downloads.
+  - **Zero-Bifurcation Audio Player Integration:**
+    - `AudioPlayerRepositoryImpl.getPlaybackSource` checks local storage first and seamlessly supplies local file URI to `just_audio` without network requests.
+    - Unified player experience: the exact same player, audio service, equalizer, and notification controls handle both streaming and offline audio.
+  - **UI Surfaces & Design System Integration:**
+    - `DownloadsScreen`: Tabbed view featuring offline music library, active queue, and live storage usage indicator with clear all downloads dialog.
+    - `DownloadButton`: Contextual state-aware button dynamically rendering queued, downloading (with progress circle), paused, completed (check circle), and failed states.
+    - Integration across `FullPlayerScreen`, `PlaylistDetailScreen` (per track and "Download All"), and `UserTracksScreen`.
+  - **Automated Verification & Operational Documentation:**
+    - 6 new backend tests in `backend/tests/test_audio_download.py` (total 111/111 backend tests passing).
+    - 13 new mobile tests across `download_local_data_source_test.dart`, `download_manager_test.dart`, and `audio_player_offline_test.dart` (total 136/136 mobile tests passing).
+    - 3 dedicated operational documents in `docs/downloads/`: `OFFLINE_ARCHITECTURE.md`, `DOWNLOAD_STATE_MACHINE.md`, and `PLATFORM_LIMITATIONS.md`.
 - **Production Observability & Monitoring (`feature/observability-monitoring`):**
   - **Context-Aware Request Correlation:**
     - Asynchronous `ContextVar` propagation of `X-Request-ID` across all FastAPI routes, database queries, background workers, and logs.

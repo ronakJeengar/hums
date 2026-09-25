@@ -10,6 +10,9 @@ import 'package:hums_mobile/core/widgets/hums_app_bar.dart';
 import 'package:hums_mobile/features/audio_player/domain/entities/player_queue.dart';
 import 'package:hums_mobile/features/audio_player/presentation/providers/audio_player_provider.dart';
 import 'package:hums_mobile/features/audio_player/presentation/widgets/mini_player.dart';
+import 'package:hums_mobile/features/downloads/domain/entities/download_item.dart';
+import 'package:hums_mobile/features/downloads/domain/entities/download_status.dart';
+import 'package:hums_mobile/features/downloads/presentation/providers/download_manager_provider.dart';
 import 'package:hums_mobile/features/playlists/domain/entities/playlist_entity.dart';
 import 'package:hums_mobile/features/playlists/presentation/providers/playlist_provider.dart';
 import 'package:hums_mobile/features/playlists/presentation/widgets/add_track_to_playlist_modal.dart';
@@ -97,6 +100,39 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
     ref
         .read(playlistDetailNotifierProvider(widget.playlistId).notifier)
         .reorderTracks(reorderedTrackIds);
+  }
+
+  void _downloadAllTracks(PlaylistDetailEntity detail) {
+    final trackItems = detail.playableTracks
+        .map(
+          (t) => DownloadItem(
+            id: 'dl_${t.trackId}',
+            trackId: t.trackId,
+            userId: '',
+            title: t.title,
+            artistName: t.artistName,
+            albumName: t.albumName,
+            durationSeconds: t.durationSeconds,
+            status: DownloadStatus.queued,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        )
+        .toList();
+
+    ref
+        .read(downloadManagerProvider.notifier)
+        .downloadPlaylistTracks(trackItems);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Downloading ${trackItems.length} tracks for offline listening',
+        ),
+        backgroundColor: AppColors.surfaceElevated,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   void _confirmDelete() {
@@ -442,6 +478,18 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                               ),
                             ),
                           ),
+                          if (detail.playableTracks.isNotEmpty) ...[
+                            const SizedBox(width: AppSpacing.sm),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.arrow_circle_down_outlined,
+                                color: AppColors.primary,
+                                size: 28,
+                              ),
+                              tooltip: 'Download Playlist',
+                              onPressed: () => _downloadAllTracks(detail),
+                            ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: AppSpacing.md),
