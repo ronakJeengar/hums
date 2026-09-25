@@ -127,12 +127,12 @@ pip install -r requirements.txt
 alembic upgrade head
 
 # Start FastAPI server with live reload
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 ```
 Interactive API documentation will be available at:
-* Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
-* ReDoc: [http://localhost:8000/redoc](http://localhost:8000/redoc)
-* Health Check: [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
+* Swagger UI: [http://localhost:8001/docs](http://localhost:8001/docs)
+* ReDoc: [http://localhost:8001/redoc](http://localhost:8001/redoc)
+* Health Check: [http://localhost:8001/api/v1/health](http://localhost:8001/api/v1/health)
 
 ### Step 4: Mobile App Setup (Flutter)
 In a new terminal:
