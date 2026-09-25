@@ -224,3 +224,14 @@ async def metrics_json_endpoint():
 
 # Mount Versioned API Routes under /api
 app.include_router(api_router, prefix="/api")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "app.main:app",
+        host=settings.APP_HOST,
+        port=settings.APP_PORT,
+        reload=settings.DEBUG,
+    )
+
