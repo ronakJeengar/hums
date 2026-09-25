@@ -242,3 +242,21 @@ Comprehensive observability documentation:
 * [Operations Runbook](docs/observability/OPERATIONS_RUNBOOK.md)
 * [Deployment Checklist](docs/observability/DEPLOYMENT_CHECKLIST.md)
 
+---
+
+## 11. Listening History & Playback Progress Sync
+
+Hums provides seamless cross-device track resumption, persistent listening history, and resilient offline playback event synchronization:
+* **Two-Tier Architecture:** High-water mark state table (`playback_progress`) for instant cross-device position resumption paired with an append-only event stream (`playback_events`) for analytics and audit trails.
+* **Idempotent Client-Driven Deduplication:** Client-generated RFC 4122 v4 `event_id` with `UNIQUE (user_id, event_id)` constraints guarantees zero duplicate counts during offline batch synchronization or retries.
+* **Intelligent Debounced Checkpointing:** Eliminates database write storms by checkpointing every 15 seconds during continuous playback, on discrete player transitions (`pause`, `seek`, `skip`, `complete`, `stop`), and on app backgrounding.
+* **Smart Track Resumption:** Completed tracks ($\ge 95\%$) automatically restart from `0:00`, while uncompleted tracks ($> 3\text{s}$) resume directly from the saved millisecond position.
+* **Resilient Offline Queue:** Sandboxed atomic JSON queue (`offline_events.json` and `offline_progress.json`) buffers playback events during network outages and automatically syncs in batches of 50 upon reconnection.
+* **Implicit Recommendation Signals:** Exposes aggregated consumption signals (completion rate, repeat listens, early skips) to feed the hybrid recommendation engine.
+
+Playback documentation:
+* [Playback History Architecture](docs/playback/PLAYBACK_HISTORY_ARCHITECTURE.md)
+* [Playback Sync Protocol](docs/playback/PLAYBACK_SYNC.md)
+* [Playback Event Model](docs/playback/PLAYBACK_EVENT_MODEL.md)
+
+

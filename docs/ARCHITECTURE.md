@@ -812,4 +812,76 @@ flowchart LR
    - [DOWNLOAD_STATE_MACHINE.md](downloads/DOWNLOAD_STATE_MACHINE.md)
    - [PLATFORM_LIMITATIONS.md](downloads/PLATFORM_LIMITATIONS.md)
 
+---
+
+## 14. Playback Progress Sync & Listening History Subsystem
+
+The Playback Progress Sync & Listening History subsystem provides cross-device track resumption, persistent chronological listening history, and resilient offline event buffering that automatically synchronizes when connectivity is restored.
+
+```mermaid
+flowchart TD
+    subgraph Client ["Flutter Mobile Client"]
+        Player["Global AudioPlayerNotifier\n(just_audio)"]
+        Debounce["15s Periodic Debounce Timer\n+ State Transition Triggers"]
+        LocalQueue[("Offline JSON Queue\n{appDocDir}/history/{userId}/offline_events.json")]
+        LocalProgress[("Offline Progress Cache\n{appDocDir}/history/{userId}/offline_progress.json")]
+        HistoryRepo["HistoryRepositoryImpl\n(Network-Aware Flush)"]
+    end
+
+    subgraph Backend ["FastAPI Backend"]
+        PProgressAPI["PUT /api/v1/playback/progress\n(Upsert High-Water Mark)"]
+        PEventsAPI["POST /api/v1/playback/events/batch\n(Idempotent Batch Sync)"]
+        PHistoryAPI["GET /api/v1/playback/history\n(Chronological Aggregation)"]
+        RecSignalsAPI["GET /api/v1/playback/signals\n(Taste Aggregation)"]
+    end
+
+    subgraph Storage ["PostgreSQL Database"]
+        DB_Progress[("playback_progress Table\nUNIQUE(user_id, track_id)\nposition_ms, is_completed")]
+        DB_Events[("playback_events Table\nUNIQUE(user_id, event_id)\nImmutable Log")]
+    end
+
+    subgraph Engine ["Recommendation Engine"]
+        RecEngine["Hybrid Recommendation Pipeline\n(Genre affinity, implicit feedback)"]
+    end
+
+    Player -->|1. State transition or 15s tick| Debounce
+    Debounce -->|Online| PProgressAPI
+    Debounce -->|Online| PEventsAPI
+    Debounce -->|Offline / Error| LocalQueue
+    Debounce -->|Atomic Cache Write| LocalProgress
+    LocalQueue -->|On Connectivity Restored (Batch of 50)| HistoryRepo
+    HistoryRepo -->|Flush Queue| PEventsAPI
+
+    PProgressAPI -->|Upsert latest position| DB_Progress
+    PEventsAPI -->|ON CONFLICT DO NOTHING| DB_Events
+    PEventsAPI -->|Update high-water mark| DB_Progress
+
+    PHistoryAPI -->|Query recent tracks| DB_Progress
+    RecSignalsAPI -->|Aggregate plays/completions/skips| DB_Events
+    RecEngine -->|Consume signals| RecSignalsAPI
+```
+
+### Architectural Principles:
+1. **Two-Tier Data Model:**
+   - **`playback_progress` (Current State):** One record per `(user_id, track_id)`. Stores the latest playback position, completion status, and device metadata. Overwritten monotonically using timestamp comparisons.
+   - **`playback_events` (Immutable Stream):** Append-only event log recording every discrete lifecycle event (`start`, `pause`, `resume`, `seek`, `checkpoint`, `skip`, `complete`, `stop`) for auditing, history analytics, and recommendation modeling.
+2. **Idempotent Client-Driven Deduplication:**
+   - Clients generate RFC 4122 v4 UUIDs (`event_id`) at the moment an event occurs.
+   - The database enforces `UNIQUE (user_id, event_id)`. Batched or replayed sync requests use `ON CONFLICT (user_id, event_id) DO NOTHING`, guaranteeing that offline retries or intermittent duplicate network dispatches never duplicate play counts or analytics.
+3. **Replay & Completion Semantics:**
+   - When a track reaches $\ge 95\%$ duration, it is marked `is_completed = true`.
+   - On subsequent playback from a library or playlist, completed tracks restart from the beginning (`0:00`), whereas partially played tracks ($> 3000\text{ ms}$ and $< 95\%$) automatically resume from `position_ms`.
+4. **Intelligent Debounced Checkpointing:**
+   - No per-second database writes or network calls. Checkpoints trigger only on periodic 15-second timers during continuous playback, on explicit state transitions (`pause`, `seek`, `skip`, `complete`, `stop`), and upon app backgrounding via Flutter's `AppLifecycleState.paused`.
+5. **Resilient Local Buffering:**
+   - When network connectivity is absent or requests fail, events are appended to a sandboxed file (`offline_events.json`) and progress is cached to `offline_progress.json` using atomic temporary file write and rename semantics (`.tmp` $\to$ target).
+   - Once network connectivity is re-established, the repository flushes queued events to the backend in chunks of up to 50 items.
+6. **Recommendation Engine Integration:**
+   - Playback events serve as implicit taste signals. Tracks with high completion rates and repeat plays increase artist and genre affinity scores, while tracks skipped within the first 10 seconds reduce recommendation weights.
+7. **Technical References:**
+   - [PLAYBACK_HISTORY_ARCHITECTURE.md](playback/PLAYBACK_HISTORY_ARCHITECTURE.md)
+   - [PLAYBACK_SYNC.md](playback/PLAYBACK_SYNC.md)
+   - [PLAYBACK_EVENT_MODEL.md](playback/PLAYBACK_EVENT_MODEL.md)
+
+
 

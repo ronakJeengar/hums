@@ -10,6 +10,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Listening History & Playback Progress Sync (`feature/listening-history-sync`):**
+  - **Backend Progress Persistence & Cross-Device Sync:**
+    - New `playback_progress` table (`TrackPlaybackProgress` model) with composite unique constraint `UNIQUE (user_id, track_id)` and index on `(user_id, updated_at DESC)`.
+    - Upsert endpoint `PUT /api/v1/playback/progress` ensuring monotonic high-water mark updates via timestamp comparison. Tracks $\ge 95\%$ auto-marked `is_completed = true`.
+    - Single track progress lookup `GET /api/v1/playback/progress/{track_id}` for seamless resume across mobile, tablet, and web sessions.
+  - **Immutable Playback Event Stream & Idempotent Sync:**
+    - New `playback_events` table (`PlaybackEvent` model) storing discrete player lifecycle events (`start`, `pause`, `resume`, `seek`, `checkpoint`, `skip`, `complete`, `stop`) with client-provided RFC 4122 v4 UUID `event_id` and unique constraint `UNIQUE (user_id, event_id)`.
+    - Single event ingestion `POST /api/v1/playback/events` and batched offline sync `POST /api/v1/playback/events/batch` with `ON CONFLICT (user_id, event_id) DO NOTHING` preventing duplicate metrics.
+  - **Chronological Listening History & Clear History:**
+    - Paginated listening history endpoint `GET /api/v1/playback/history` (and alias `/api/v1/history`) with eager-loaded Track relationships.
+    - History deletion endpoint `DELETE /api/v1/playback/history` (and alias `/api/v1/history`) allowing users to wipe history and progress.
+  - **Implicit Recommendation Taste Signals:**
+    - Aggregation endpoint `GET /api/v1/playback/signals` exposing play counts, completion counts, skip counts, and total listening milliseconds to the recommendation engine.
+  - **Mobile Player Integration & Resilient Offline Queue:**
+    - Player debounced checkpointing (15-second interval timer during continuous playback, state transitions on pause/seek/skip/complete/stop, and app backgrounding via `AppLifecycleListener`).
+    - Smart resumption: completed tracks ($\ge 95\%$) restart at 0:00; uncompleted tracks ($> 3\text{s}$) resume from saved `position_ms`.
+    - Offline JSON-backed event queue (`${appDocDir}/history/${userId}/offline_events.json`) and progress cache (`offline_progress.json`) utilizing atomic `.tmp` + rename file operations.
+    - Automatic queue flushing in batches of 50 upon network reconnect.
+  - **Dedicated UI Surfaces & Navigation:**
+    - `ListeningHistoryScreen` featuring chronological groupings ("Today", "Yesterday", "Earlier this week", "Older"), progress percentage indicators, 1-tap track playback, pull-to-refresh, clear-all confirmation dialog, and offline queued sync banner.
+    - `HistoryTrackTile` component adhering to Hums acoustic design language.
+    - Integrated navigation: accessible via App Bar history icon & Quick Action card on `HomeScreen`, `ProfileScreen` menu item, and route `/history`.
+  - **Automated Verification & Operational Documentation:**
+    - 13 new backend tests in `backend/tests/test_playback_history.py` (124/124 backend tests passing).
+    - 18 new mobile tests across data sources, repository, notifier, and UI screens (154/154 mobile tests passing, 0 analyzer issues).
+    - 3 dedicated operational documents in `docs/playback/`: `PLAYBACK_HISTORY_ARCHITECTURE.md`, `PLAYBACK_SYNC.md`, and `PLAYBACK_EVENT_MODEL.md`.
 - **Offline Downloads & Offline Playback (`feature/offline-downloads`):**
   - **Backend Download Authorization & Presigned Delivery:**
     - Dedicated authorization endpoint `GET /api/v1/tracks/{track_id}/download` (and mounted alias `/api/v1/audio/tracks/{track_id}/download`).

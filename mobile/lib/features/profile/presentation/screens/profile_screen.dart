@@ -340,6 +340,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           const SizedBox(height: AppSpacing.xxl),
 
+          // Listening History Button
+          SizedBox(
+            width: double.infinity,
+            child: HumsButton(
+              label: 'Listening History',
+              icon: Icons.history_rounded,
+              variant: HumsButtonVariant.secondary,
+              onPressed: () => context.push(RouteNames.historyPath),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+
           // Edit Profile Button
           SizedBox(
             width: double.infinity,

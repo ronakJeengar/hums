@@ -51,5 +51,9 @@ abstract class RouteNames {
 
   static const String downloads = 'downloads';
   static const String downloadsPath = '/downloads';
+
+  static const String history = 'history';
+  static const String historyPath = '/history';
 }
+
 

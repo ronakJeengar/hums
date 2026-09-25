@@ -36,6 +36,14 @@ abstract class ApiEndpoints {
   static String playlistTracksReorder(String playlistId) =>
       '/api/v1/playlists/$playlistId/tracks/reorder';
 
+  // Playback & History Endpoints
+  static const String playbackHistory = '/api/v1/playback/history';
+  static const String playbackEvents = '/api/v1/playback/events';
+  static String playbackProgress(String trackId) => '/api/v1/playback/progress/$trackId';
+  static String playbackBatchProgress(List<String> trackIds) =>
+      '/api/v1/playback/progress?track_ids=${trackIds.join(',')}';
+  static String playbackHistoryItem(String trackId) => '/api/v1/playback/history/$trackId';
+
   // Telemetry & Observability
   static const String telemetryEvents = '/api/v1/telemetry/events';
 }

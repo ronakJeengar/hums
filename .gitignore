@@ -18,6 +18,8 @@ docs/*
 !docs/observability/**
 !docs/downloads/
 !docs/downloads/**
+!docs/playback/
+!docs/playback/**
 !docs/CHANGELOG.md
 !docs/ARCHITECTURE.md
 !docs/DB_SCHEMA.md

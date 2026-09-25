@@ -348,6 +348,53 @@ To support high-throughput, typo-tolerant, and multilingual relevance queries ac
 
 ---
 
+### 2.16 `playback_progress`
+Stores the active resume position and completion state for a user and track, powering cross-device resumption and the recently played history feed.
+
+| Column | Type | Nullable | Constraints | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `UUID` | No | PK | Primary Key |
+| `user_id` | `UUID` | No | FK -> `users(id)` ON DELETE CASCADE, INDEX | User owner |
+| `track_id` | `UUID` | No | FK -> `tracks(id)` ON DELETE CASCADE, INDEX | Target track |
+| `position_ms` | `INTEGER` | No | Default `0` | Saved resume position in milliseconds |
+| `duration_ms` | `INTEGER` | No | Default `0` | Total duration in milliseconds |
+| `completed` | `BOOLEAN` | No | Default `FALSE` | Track completion indicator (>= 95% progress) |
+| `created_at` | `TIMESTAMPTZ` | No | Default `NOW()` | Initial play creation timestamp |
+| `updated_at` | `TIMESTAMPTZ` | No | Default `NOW()` | Last checkpoint modification timestamp |
+
+**Constraints & Indexes:**
+* `uq_playback_progress_user_track` (UNIQUE): Enforces one active progress record per (user, track).
+* `ix_playback_progress_user_updated` (btree composite): `(user_id, updated_at DESC)` for high-throughput pagination of recently played tracks.
+* `ix_playback_progress_user_id` (btree): For user-scoped cascades.
+* `ix_playback_progress_track_id` (btree): For track-scoped cascades.
+
+---
+
+### 2.17 `playback_events`
+Maintains an immutable append-only event log of playback lifecycle actions with client-side idempotency keys for reliable offline synchronization.
+
+| Column | Type | Nullable | Constraints | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `UUID` | No | PK | Primary Key |
+| `user_id` | `UUID` | No | FK -> `users(id)` ON DELETE CASCADE, INDEX | User owner |
+| `track_id` | `UUID` | No | FK -> `tracks(id)` ON DELETE CASCADE, INDEX | Target track |
+| `event_id` | `UUID` | No | UNIQUE, INDEX | Client-generated UUID v4 idempotency key |
+| `event_type` | `VARCHAR(50)` | No | | `PLAY_STARTED`, `PROGRESS_CHECKPOINT`, `PAUSED`, etc. |
+| `position_ms` | `INTEGER` | No | Default `0` | Playback position when event occurred |
+| `duration_ms` | `INTEGER` | No | Default `0` | Track duration in milliseconds |
+| `source` | `VARCHAR(50)` | No | Default `'player'` | Event origin (`player`, `offline_sync`) |
+| `device_id` | `VARCHAR(100)` | Yes | | Client device identifier |
+| `played_at` | `TIMESTAMPTZ` | No | | Client timestamp in UTC |
+| `created_at` | `TIMESTAMPTZ` | No | Default `NOW()` | Server ingestion timestamp |
+| `updated_at` | `TIMESTAMPTZ` | No | Default `NOW()` | Modification timestamp |
+
+**Constraints & Indexes:**
+* `uq_playback_events_user_event_id` (UNIQUE): Enforces client idempotency to prevent duplicate plays.
+* `ix_playback_events_user_played_at` (btree composite): `(user_id, played_at DESC)` for chronological event history.
+* `ix_playback_events_user_track` (btree composite): `(user_id, track_id)` for recommendation signal aggregation.
+
+---
+
 ## 3. Planned Future Tables (Roadmap)
 
 These schemas are architecturally planned for subsequent features and are intentionally NOT created during project foundation to avoid premature schema bloat:
@@ -357,7 +404,7 @@ These schemas are architecturally planned for subsequent features and are intent
 * `albums` (Collections of musical tracks)
 * `podcasts` & `episodes` (Serialized talk shows and chapter markers)
 * `likes` (Polymorphic favorites for tracks, albums, and playlists)
-* `listening_history` (Continuous playback logs for analytics and recommendations)
+
 
 
 

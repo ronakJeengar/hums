@@ -17,6 +17,18 @@ from app.schemas.profile import (
     ProfileResponse,
     ProfileUpdateRequest,
 )
+from app.schemas.playback import (
+    PlaybackEventType,
+    PlaybackProgressUpdateRequest,
+    PlaybackProgressResponse,
+    PlaybackBatchProgressResponse,
+    PlaybackEventCreateRequest,
+    PlaybackBatchEventsRequest,
+    PlaybackEventsIngestResponse,
+    ListeningHistoryItemResponse,
+    ListeningHistoryListResponse,
+    RecommendationListeningSignal,
+)
 
 __all__ = [
     "ApiResponse",
@@ -32,4 +44,14 @@ __all__ = [
     "TokenPayload",
     "ProfileResponse",
     "ProfileUpdateRequest",
+    "PlaybackEventType",
+    "PlaybackProgressUpdateRequest",
+    "PlaybackProgressResponse",
+    "PlaybackBatchProgressResponse",
+    "PlaybackEventCreateRequest",
+    "PlaybackBatchEventsRequest",
+    "PlaybackEventsIngestResponse",
+    "ListeningHistoryItemResponse",
+    "ListeningHistoryListResponse",
+    "RecommendationListeningSignal",
 ]

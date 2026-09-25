@@ -1302,9 +1302,238 @@ Executes backend-driven full-text, substring, and trigram-ranked relevance searc
   }
   ```
 
+---
 
+## 10. Playback & Listening History Sync Endpoints
 
+All playback and listening history endpoints require authentication via standard JWT Bearer header: `Authorization: Bearer <access_token>`.
 
+### 10.1 Upsert Playback Progress
+Records or updates the current playback position for a track, supporting cross-device resumption. Protects against stale out-of-order writes using timestamp comparisons. Tracks played to $\ge 95\%$ are automatically marked `is_completed = true`.
 
+* **Method:** `PUT`
+* **Path:** `/api/v1/playback/progress`
+* **Authentication:** `Bearer <access_token>`
+* **Request Body:**
+  ```json
+  {
+    "track_id": "7b0a9d94-d456-425b-b9f4-18889bf656a8",
+    "position_ms": 74500,
+    "duration_ms": 210000,
+    "is_completed": false,
+    "device_info": "Pixel 8 Pro (Android 14)"
+  }
+  ```
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "e3a1b2c4-d5e6-7890-abcd-1234567890ab",
+      "track_id": "7b0a9d94-d456-425b-b9f4-18889bf656a8",
+      "position_ms": 74500,
+      "duration_ms": 210000,
+      "progress_percent": 0.3548,
+      "is_completed": false,
+      "device_info": "Pixel 8 Pro (Android 14)",
+      "updated_at": "2026-09-25T20:15:00Z"
+    },
+    "meta": { "timestamp": "2026-09-25T20:15:00Z", "version": "1.0.0" }
+  }
+  ```
 
+---
+
+### 10.2 Get Playback Progress for Track
+Retrieves the saved playback position for a specific track for the authenticated user.
+
+* **Method:** `GET`
+* **Path:** `/api/v1/playback/progress/{track_id}`
+* **Authentication:** `Bearer <access_token>`
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "e3a1b2c4-d5e6-7890-abcd-1234567890ab",
+      "track_id": "7b0a9d94-d456-425b-b9f4-18889bf656a8",
+      "position_ms": 74500,
+      "duration_ms": 210000,
+      "progress_percent": 0.3548,
+      "is_completed": false,
+      "device_info": "Pixel 8 Pro (Android 14)",
+      "updated_at": "2026-09-25T20:15:00Z"
+    },
+    "meta": { "timestamp": "2026-09-25T20:15:00Z", "version": "1.0.0" }
+  }
+  ```
+* **Response (404 Not Found):** If no progress record exists for this track.
+
+---
+
+### 10.3 Record Single Playback Event
+Appends a single playback lifecycle event (`start`, `pause`, `resume`, `seek`, `checkpoint`, `skip`, `complete`, `stop`) to the immutable audit event log. Client provides RFC 4122 v4 UUID `event_id` ensuring idempotent replay.
+
+* **Method:** `POST`
+* **Path:** `/api/v1/playback/events`
+* **Authentication:** `Bearer <access_token>`
+* **Request Body:**
+  ```json
+  {
+    "event_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+    "track_id": "7b0a9d94-d456-425b-b9f4-18889bf656a8",
+    "event_type": "checkpoint",
+    "position_ms": 45000,
+    "duration_ms": 210000,
+    "source": "online",
+    "device_info": "iPhone 15 Pro (iOS 17.5)",
+    "played_at": "2026-09-25T20:14:45Z"
+  }
+  ```
+* **Response (201 Created):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "event_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+      "status": "recorded"
+    },
+    "meta": { "timestamp": "2026-09-25T20:14:45Z", "version": "1.0.0" }
+  }
+  ```
+
+---
+
+### 10.4 Ingest Offline / Batched Playback Events
+Synchronizes a batch of playback events collected offline or buffered locally. Ingestion is idempotent using `ON CONFLICT (user_id, event_id) DO NOTHING` and updates the high-water mark progress state.
+
+* **Method:** `POST`
+* **Path:** `/api/v1/playback/events/batch`
+* **Authentication:** `Bearer <access_token>`
+* **Request Body:**
+  ```json
+  {
+    "events": [
+      {
+        "event_id": "a1b2c3d4-0001-4000-8000-000000000001",
+        "track_id": "7b0a9d94-d456-425b-b9f4-18889bf656a8",
+        "event_type": "start",
+        "position_ms": 0,
+        "duration_ms": 210000,
+        "source": "offline",
+        "device_info": "Pixel 8",
+        "played_at": "2026-09-25T18:00:00Z"
+      },
+      {
+        "event_id": "a1b2c3d4-0002-4000-8000-000000000002",
+        "track_id": "7b0a9d94-d456-425b-b9f4-18889bf656a8",
+        "event_type": "complete",
+        "position_ms": 210000,
+        "duration_ms": 210000,
+        "source": "offline",
+        "device_info": "Pixel 8",
+        "played_at": "2026-09-25T18:03:30Z"
+      }
+    ]
+  }
+  ```
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "accepted_count": 2,
+      "failed_count": 0
+    },
+    "meta": { "timestamp": "2026-09-25T20:15:00Z", "version": "1.0.0" }
+  }
+  ```
+
+---
+
+### 10.5 Get Listening History
+Returns paginated list of recently played tracks with last played timestamp, last position, and completion status. Supports `/api/v1/playback/history` and the alias `/api/v1/history`.
+
+* **Method:** `GET`
+* **Path:** `/api/v1/playback/history` (or `/api/v1/history`)
+* **Authentication:** `Bearer <access_token>`
+* **Query Parameters:**
+  * `skip` (integer, optional, default: `0`, min: `0`)
+  * `limit` (integer, optional, default: `50`, min: `1`, max: `100`)
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "items": [
+        {
+          "track_id": "7b0a9d94-d456-425b-b9f4-18889bf656a8",
+          "title": "Midnight Echoes",
+          "artist_name": "Luna Sol",
+          "album_name": "Solitude",
+          "genre": "Ambient",
+          "duration_seconds": 210,
+          "waveform_key": "waveforms/7b0a9d94.json",
+          "artwork_url": "https://cdn.hums.audio/artwork/7b0a9d94.jpg",
+          "last_position_ms": 74500,
+          "is_completed": false,
+          "last_played_at": "2026-09-25T20:15:00Z",
+          "device_info": "Pixel 8 Pro"
+        }
+      ],
+      "total": 1,
+      "skip": 0,
+      "limit": 50
+    },
+    "meta": { "timestamp": "2026-09-25T20:15:00Z", "version": "1.0.0" }
+  }
+  ```
+
+---
+
+### 10.6 Clear Listening History
+Permanently clears the user's playback history and progress records.
+
+* **Method:** `DELETE`
+* **Path:** `/api/v1/playback/history` (or `/api/v1/history`)
+* **Authentication:** `Bearer <access_token>`
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "cleared": true,
+      "message": "Playback history cleared successfully"
+    },
+    "meta": { "timestamp": "2026-09-25T20:15:00Z", "version": "1.0.0" }
+  }
+  ```
+
+---
+
+### 10.7 Recommendation Listening Signals
+Internal/service-facing aggregation endpoint providing structured listening signals (completion count, play count, skip count, total listening duration) consumed by the recommendation engine.
+
+* **Method:** `GET`
+* **Path:** `/api/v1/playback/signals`
+* **Authentication:** `Bearer <access_token>`
+* **Query Parameters:**
+  * `limit` (integer, optional, default: `50`, min: `1`, max: `200`)
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "track_id": "7b0a9d94-d456-425b-b9f4-18889bf656a8",
+        "play_count": 5,
+        "completion_count": 4,
+        "skip_count": 0,
+        "total_listened_ms": 980000,
+        "last_played_at": "2026-09-25T20:15:00Z"
+      }
+    ],
+    "meta": { "timestamp": "2026-09-25T20:15:00Z", "version": "1.0.0" }
+  }
+  ```
 

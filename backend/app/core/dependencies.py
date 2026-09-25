@@ -15,6 +15,7 @@ from app.repositories.audio_repository import (
     ProcessingJobRepository,
     TrackRepository,
 )
+from app.repositories.playback_repository import PlaybackRepository
 from app.repositories.playlist_repository import PlaylistRepository
 from app.repositories.user_repository import (
     PasswordResetTokenRepository,
@@ -23,6 +24,7 @@ from app.repositories.user_repository import (
 )
 from app.services.audio_service import AudioService
 from app.services.auth_service import AuthService
+from app.services.playback_service import PlaybackService
 from app.services.playlist_service import PlaylistService
 from app.services.profile_service import ProfileService
 from app.services.user_service import UserService
@@ -154,6 +156,18 @@ def get_playlist_service(
     storage_service: BaseStorageService = Depends(get_storage_service),
 ) -> PlaylistService:
     return PlaylistService(playlist_repo, track_repo, storage_service)
+
+
+def get_playback_repository(
+    session: AsyncSession = Depends(get_db),
+) -> PlaybackRepository:
+    return PlaybackRepository(session)
+
+
+def get_playback_service(
+    session: AsyncSession = Depends(get_db),
+) -> PlaybackService:
+    return PlaybackService(session)
 
 
 async def get_current_user(
