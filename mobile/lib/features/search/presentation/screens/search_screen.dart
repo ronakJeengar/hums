@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hums_mobile/core/theme/app_colors.dart';
+import 'package:hums_mobile/core/theme/app_radii.dart';
 import 'package:hums_mobile/core/theme/app_spacing.dart';
 import 'package:hums_mobile/core/theme/app_typography.dart';
 import 'package:hums_mobile/core/widgets/hums_button.dart';
@@ -231,6 +232,116 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ),
               ),
             ),
+
+            // Spotify-style "Browse All / Genres" Grid
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Browse All',
+                    style: AppTypography.titleLarge,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: AppSpacing.sm,
+                    crossAxisSpacing: AppSpacing.sm,
+                    childAspectRatio: 1.8,
+                    children: [
+                      _buildGenreCard(
+                        context,
+                        title: 'Acoustic\nSessions',
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFF6633), Color(0xFFC2410C)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        icon: Icons.album_rounded,
+                        onTap: () {
+                          _controller.text = 'Acoustic';
+                          notifier.onQueryChanged('Acoustic');
+                        },
+                      ),
+                      _buildGenreCard(
+                        context,
+                        title: 'Podcasts\n& Audio',
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFA855F7), Color(0xFF6B21A8)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        icon: Icons.mic_rounded,
+                        onTap: () {
+                          _controller.text = 'Podcast';
+                          notifier.onQueryChanged('Podcast');
+                        },
+                      ),
+                      _buildGenreCard(
+                        context,
+                        title: 'Indie &\nFolk',
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF10B981), Color(0xFF065F46)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        icon: Icons.music_note_rounded,
+                        onTap: () {
+                          _controller.text = 'Indie';
+                          notifier.onQueryChanged('Indie');
+                        },
+                      ),
+                      _buildGenreCard(
+                        context,
+                        title: 'Ambient &\nFocus',
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF38BDF8), Color(0xFF0369A1)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        icon: Icons.graphic_eq_rounded,
+                        onTap: () {
+                          _controller.text = 'Ambient';
+                          notifier.onQueryChanged('Ambient');
+                        },
+                      ),
+                      _buildGenreCard(
+                        context,
+                        title: 'New\nReleases',
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFF43F5E), Color(0xFF9F1239)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        icon: Icons.auto_awesome_rounded,
+                        onTap: () {
+                          _controller.text = 'New';
+                          notifier.onQueryChanged('New');
+                        },
+                      ),
+                      _buildGenreCard(
+                        context,
+                        title: 'Chill &\nRelax',
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF6366F1), Color(0xFF3730A3)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        icon: Icons.nightlife_rounded,
+                        onTap: () {
+                          _controller.text = 'Chill';
+                          notifier.onQueryChanged('Chill');
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                ],
+              ),
+            ),
           ],
         ),
       );
@@ -446,6 +557,59 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               child: const Text('See All'),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildGenreCard(
+    BuildContext context, {
+    required String title,
+    required Gradient gradient,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadii.md),
+      child: Container(
+        height: 84,
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(AppRadii.md),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+                height: 1.2,
+              ),
+            ),
+            Positioned(
+              right: -6,
+              bottom: -6,
+              child: Transform.rotate(
+                angle: 0.2,
+                child: Icon(
+                  icon,
+                  size: 40,
+                  color: Colors.white.withValues(alpha: 0.35),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

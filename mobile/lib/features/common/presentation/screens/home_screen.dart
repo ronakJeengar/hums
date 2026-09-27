@@ -39,10 +39,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     'All',
     'Trending',
     'Acoustic',
-    'Indie',
+    'Chill',
+    'Focus',
+    'Energy',
     'Podcasts',
-    'Ambient',
+    'Indie',
   ];
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -138,7 +147,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Category Filter Chips Ribbon
+                // 1. Time-based Greeting & User Badge (Spotify & Apple Music style)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xs),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _getGreeting(),
+                        style: AppTypography.displayMedium.copyWith(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.6,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceHighlight.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(AppRadii.pill),
+                          border: Border.all(color: AppColors.borderSubtle),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.music_note_rounded, size: 14, color: AppColors.primary),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Hi, ${userName.split(' ').first}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: AppSpacing.xs),
+
+                // 2. Mood & Activity Filter Chips Ribbon (YouTube Music style)
                 SizedBox(
                   height: 48,
                   child: ListView.separated(
@@ -162,7 +213,81 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                 const SizedBox(height: AppSpacing.sm),
 
-                // Hero Featured Card
+                // 3. Spotify-Style 2-Column Heavy Rotation Grid
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildQuickActionCard(
+                              context,
+                              icon: Icons.favorite_rounded,
+                              label: 'Liked Songs',
+                              iconBgGradient: const LinearGradient(
+                                colors: [Color(0xFFFF5722), Color(0xFF9E1B1B)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              onTap: () => context.push(RouteNames.likedSongsPath),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: _buildQuickActionCard(
+                              context,
+                              icon: Icons.collections_bookmark_rounded,
+                              label: 'Your Library',
+                              iconBgGradient: const LinearGradient(
+                                colors: [Color(0xFF10B981), Color(0xFF047857)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              onTap: () => context.push(RouteNames.libraryPath),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildQuickActionCard(
+                              context,
+                              icon: Icons.download_done_rounded,
+                              label: 'Downloaded',
+                              iconBgGradient: const LinearGradient(
+                                colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              onTap: () => context.push(RouteNames.downloadsPath),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: _buildQuickActionCard(
+                              context,
+                              icon: Icons.history_rounded,
+                              label: 'History',
+                              iconBgGradient: const LinearGradient(
+                                colors: [Color(0xFFA855F7), Color(0xFF7E22CE)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              onTap: () => context.push(RouteNames.historyPath),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: AppSpacing.lg),
+
+                // 4. Hero Editorial Featured Banner (Apple Music style)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                   child: Container(
@@ -245,48 +370,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ],
                     ),
-                  ),
-                ),
-
-                const SizedBox(height: AppSpacing.xl),
-
-                // Quick Access Shortcuts Grid
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  child: Row(
-                    children: [
-                      _buildQuickActionCard(
-                        context,
-                        icon: Icons.favorite_rounded,
-                        label: 'Liked Songs',
-                        color: AppColors.primary,
-                        onTap: () => context.push(RouteNames.likedSongsPath),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      _buildQuickActionCard(
-                        context,
-                        icon: Icons.collections_bookmark_rounded,
-                        label: 'Library',
-                        color: AppColors.accentMint,
-                        onTap: () => context.push(RouteNames.libraryPath),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      _buildQuickActionCard(
-                        context,
-                        icon: Icons.download_done_rounded,
-                        label: 'Downloads',
-                        color: AppColors.accentBlue,
-                        onTap: () => context.push(RouteNames.downloadsPath),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      _buildQuickActionCard(
-                        context,
-                        icon: Icons.history_rounded,
-                        label: 'History',
-                        color: AppColors.accentPurple,
-                        onTap: () => context.push(RouteNames.historyPath),
-                      ),
-                    ],
                   ),
                 ),
 
@@ -375,37 +458,60 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     BuildContext context, {
     required IconData icon,
     required String label,
-    required Color color,
+    required Gradient iconBgGradient,
     required VoidCallback onTap,
   }) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadii.md),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm + 2, horizontal: AppSpacing.xs),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppRadii.md),
-            border: Border.all(color: AppColors.borderSubtle, width: 1),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 22, color: color),
-              const SizedBox(height: 6),
-              Text(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadii.sm),
+      child: Container(
+        height: 54,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadii.sm),
+          border: Border.all(color: AppColors.borderSubtle, width: 1),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Row(
+          children: [
+            Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                gradient: iconBgGradient,
+              ),
+              child: Center(
+                child: Icon(icon, size: 22, color: Colors.white),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
                 label,
                 style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-            ],
-          ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(Icons.play_arrow_rounded, size: 16, color: AppColors.primary),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

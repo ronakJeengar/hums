@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -35,22 +36,24 @@ class MiniPlayer extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.surfaceElevated.withValues(alpha: 0.94),
         borderRadius: BorderRadius.circular(AppRadii.lg),
         border: Border.all(color: AppColors.borderSubtle, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.45),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.5),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadii.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             InkWell(
               onTap: () {
                 context.pushNamed(RouteNames.player);
@@ -181,8 +184,9 @@ class MiniPlayer extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _MiniPlayerProgressBar extends ConsumerWidget {
