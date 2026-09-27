@@ -7,7 +7,7 @@ import 'package:hums_mobile/core/theme/app_spacing.dart';
 import 'package:hums_mobile/core/theme/app_typography.dart';
 import 'package:hums_mobile/core/widgets/app_icon.dart';
 import 'package:hums_mobile/core/widgets/hums_app_bar.dart';
-import 'package:hums_mobile/features/audio_player/presentation/widgets/mini_player.dart';
+import 'package:hums_mobile/core/widgets/hums_bottom_nav_bar.dart';
 import 'package:hums_mobile/features/playlists/domain/entities/playlist_entity.dart';
 import 'package:hums_mobile/features/playlists/presentation/providers/playlist_provider.dart';
 import 'package:hums_mobile/features/playlists/presentation/widgets/playlist_card.dart';
@@ -119,19 +119,12 @@ class _PlaylistListScreenState extends ConsumerState<PlaylistListScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primary,
-        foregroundColor: Colors.black,
-        icon: const AppIcon(
-          icon: AppIcons.add,
-          size: AppIconSizes.md,
-          color: Colors.black,
-        ),
-        label: Text(
-          'New Playlist',
-          style: AppTypography.labelLarge.copyWith(color: Colors.black),
-        ),
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_rounded, size: 22, color: Colors.white),
+        label: const Text('New Playlist', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
         onPressed: () => context.push('/playlists/create'),
       ),
-      bottomNavigationBar: const MiniPlayer(),
+      bottomNavigationBar: const HumsBottomNavBar(currentIndex: 3),
     );
   }
 

@@ -5,8 +5,8 @@ import 'package:hums_mobile/core/theme/app_colors.dart';
 import 'package:hums_mobile/core/theme/app_spacing.dart';
 import 'package:hums_mobile/core/theme/app_typography.dart';
 import 'package:hums_mobile/core/widgets/hums_button.dart';
-import 'package:hums_mobile/features/audio_player/presentation/providers/audio_player_provider.dart';
 import 'package:hums_mobile/features/audio_player/presentation/widgets/mini_player.dart';
+import 'package:hums_mobile/features/audio_player/presentation/providers/audio_player_provider.dart';
 import 'package:hums_mobile/features/search/domain/entities/search_result_entity.dart';
 import 'package:hums_mobile/features/search/presentation/providers/search_provider.dart';
 import 'package:hums_mobile/features/search/presentation/states/search_state.dart';
@@ -62,7 +62,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.background,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         title: SearchBarWidget(
@@ -81,7 +81,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           children: [
             // Filter chips header
             Container(
-              color: AppColors.surface,
+              color: AppColors.background,
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.md,
                 vertical: AppSpacing.sm,
@@ -91,7 +91,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 onCategorySelected: (cat) => notifier.onCategoryChanged(cat),
               ),
             ),
-            const Divider(height: 1, color: AppColors.border),
+            const Divider(height: 1, color: AppColors.divider),
 
             // Content body
             Expanded(

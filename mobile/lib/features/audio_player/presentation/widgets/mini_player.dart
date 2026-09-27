@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hums_mobile/core/theme/app_colors.dart';
-import 'package:hums_mobile/core/theme/app_icons.dart';
-import 'package:hums_mobile/core/widgets/app_icon.dart';
+import 'package:hums_mobile/core/theme/app_radii.dart';
 import 'package:hums_mobile/features/audio_player/presentation/providers/audio_player_provider.dart';
 import 'package:hums_mobile/routing/route_names.dart';
 
@@ -33,141 +32,152 @@ class MiniPlayer extends ConsumerWidget {
       audioPlayerNotifierProvider.select((s) => s.hasNext),
     );
 
-    return GestureDetector(
-      onTap: () {
-        context.pushNamed(RouteNames.player);
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surfaceElevated,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-          border: const Border(
-            top: BorderSide(color: AppColors.border, width: 1),
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: AppColors.borderSubtle, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.45),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
-        ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadii.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Linear Progress Indicator isolated to prevent full row rebuilds
-            const _MiniPlayerProgressBar(),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  // Track Thumbnail / Icon
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceHighlight,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    alignment: Alignment.center,
-                    child: const AppIcon(
-                      icon: AppIcons.musicNote,
-                      size: 22,
-                      color: AppColors.primaryLight,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-
-                  // Title & Artist
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          track.title,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          track.artistName ?? 'Unknown Artist',
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Buffering / Loading Indicator or Play/Pause Button
-                  if (isBuffering)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12),
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            AppColors.primary,
-                          ),
-                        ),
+            InkWell(
+              onTap: () {
+                context.pushNamed(RouteNames.player);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(
+                  children: [
+                    // Track Artwork Thumbnail
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceHighlight,
+                        borderRadius: BorderRadius.circular(AppRadii.sm),
                       ),
-                    )
-                  else
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.music_note_rounded,
+                        size: 22,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // Title & Artist
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            track.title,
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            track.artistName ?? 'Unknown Artist',
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Buffering or Play / Pause
+                    if (isBuffering)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 10),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      IconButton(
+                        icon: Icon(
+                          isPlaying
+                              ? Icons.pause_circle_filled_rounded
+                              : Icons.play_circle_fill_rounded,
+                          size: 36,
+                          color: AppColors.primary,
+                        ),
+                        onPressed: () {
+                          ref
+                              .read(audioPlayerNotifierProvider.notifier)
+                              .togglePlayPause();
+                        },
+                        splashRadius: 22,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      ),
+
+                    // Next Track
+                    if (hasNext)
+                      IconButton(
+                        icon: const Icon(
+                          Icons.skip_next_rounded,
+                          size: 24,
+                          color: AppColors.textPrimary,
+                        ),
+                        onPressed: () {
+                          ref
+                              .read(audioPlayerNotifierProvider.notifier)
+                              .skipToNext();
+                        },
+                        splashRadius: 20,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      ),
+
+                    // Close / Stop
                     IconButton(
-                      icon: AppIcon(
-                        icon: isPlaying ? AppIcons.pause : AppIcons.play,
-                        size: 26,
-                        color: AppColors.primaryLight,
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: AppColors.textTertiary,
                       ),
                       onPressed: () {
-                        ref
-                            .read(audioPlayerNotifierProvider.notifier)
-                            .togglePlayPause();
+                        ref.read(audioPlayerNotifierProvider.notifier).stop();
                       },
-                      splashRadius: 22,
+                      splashRadius: 18,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                     ),
-
-                  // Next Track Button (if queue has next)
-                  if (hasNext)
-                    IconButton(
-                      icon: const AppIcon(
-                        icon: AppIcons.next,
-                        size: 20,
-                        color: AppColors.textPrimary,
-                      ),
-                      onPressed: () {
-                        ref
-                            .read(audioPlayerNotifierProvider.notifier)
-                            .skipToNext();
-                      },
-                      splashRadius: 20,
-                    ),
-
-                  // Stop / Close Button
-                  IconButton(
-                    icon: const AppIcon(
-                      icon: AppIcons.close,
-                      size: 18,
-                      color: AppColors.textTertiary,
-                    ),
-                    onPressed: () {
-                      ref.read(audioPlayerNotifierProvider.notifier).stop();
-                    },
-                    splashRadius: 18,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
+            // Progress Bar
+            const _MiniPlayerProgressBar(),
           ],
         ),
       ),
@@ -175,8 +185,6 @@ class MiniPlayer extends ConsumerWidget {
   }
 }
 
-/// Dedicated progress indicator isolated from parent to avoid rebuilds of
-/// track metadata, control buttons, and decorative containers during continuous playback.
 class _MiniPlayerProgressBar extends ConsumerWidget {
   const _MiniPlayerProgressBar();
 
@@ -188,9 +196,9 @@ class _MiniPlayerProgressBar extends ConsumerWidget {
 
     return LinearProgressIndicator(
       value: progress,
-      backgroundColor: AppColors.surfaceHighlight,
+      backgroundColor: AppColors.surfaceHighlight.withValues(alpha: 0.5),
       valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-      minHeight: 2.5,
+      minHeight: 2.0,
     );
   }
 }

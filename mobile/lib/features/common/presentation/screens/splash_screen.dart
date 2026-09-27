@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hums_mobile/core/theme/app_colors.dart';
+import 'package:hums_mobile/core/theme/app_radii.dart';
 import 'package:hums_mobile/core/theme/app_spacing.dart';
 import 'package:hums_mobile/core/theme/app_typography.dart';
 import 'package:hums_mobile/features/auth/presentation/providers/auth_provider.dart';
@@ -50,7 +51,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               height: 80,
               decoration: BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                borderRadius: BorderRadius.circular(AppRadii.xl),
                 border: Border.all(color: AppColors.primary, width: 2),
                 boxShadow: [
                   BoxShadow(

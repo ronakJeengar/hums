@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hums_mobile/core/theme/app_colors.dart';
+import 'package:hums_mobile/core/theme/app_radii.dart';
 import 'package:hums_mobile/core/theme/app_spacing.dart';
 import 'package:hums_mobile/core/theme/app_typography.dart';
+import 'package:hums_mobile/core/widgets/hums_button.dart';
+import 'package:hums_mobile/core/widgets/hums_empty_state.dart';
+import 'package:hums_mobile/core/widgets/hums_track_tile.dart';
 import 'package:hums_mobile/features/audio_player/domain/entities/player_queue.dart';
 import 'package:hums_mobile/features/audio_player/presentation/providers/audio_player_provider.dart';
 import 'package:hums_mobile/features/audio_player/presentation/widgets/mini_player.dart';
@@ -11,7 +15,6 @@ import 'package:hums_mobile/features/downloads/presentation/widgets/download_but
 import 'package:hums_mobile/features/library/domain/entities/liked_track_entity.dart';
 import 'package:hums_mobile/features/library/presentation/providers/library_provider.dart';
 import 'package:hums_mobile/features/library/presentation/providers/like_notifier.dart';
-import 'package:hums_mobile/features/library/presentation/widgets/like_button.dart';
 import 'package:hums_mobile/features/playlists/presentation/widgets/add_track_to_playlist_modal.dart';
 import 'package:hums_mobile/routing/route_names.dart';
 
@@ -78,7 +81,7 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
       context: context,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusMd)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xxl)),
       ),
       builder: (bottomSheetContext) {
         return SafeArea(
@@ -94,7 +97,7 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
                       height: 44,
                       decoration: BoxDecoration(
                         color: AppColors.surfaceHighlight,
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                        borderRadius: BorderRadius.circular(AppRadii.sm),
                       ),
                       child: const Icon(Icons.music_note_rounded, color: AppColors.primary),
                     ),
@@ -163,6 +166,8 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(likedTracksNotifierProvider);
+    final playerState = ref.watch(audioPlayerNotifierProvider);
+    final currentPlayingTrackId = playerState.track?.trackId;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -175,7 +180,8 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
               // 1. App Bar
               SliverAppBar(
                 pinned: true,
-                backgroundColor: AppColors.surface,
+                backgroundColor: AppColors.background,
+                elevation: 0,
                 leading: IconButton(
                   icon: const Icon(
                     Icons.arrow_back_ios_new_rounded,
@@ -184,88 +190,86 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
                   ),
                   onPressed: () => context.pop(),
                 ),
-                title: Text(
+                title: const Text(
                   'Liked Songs',
-                  style: AppTypography.headlineMedium.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTypography.headlineLarge,
                 ),
               ),
 
               // 2. Hero Header Card
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFE5484D), Color(0xFFB82830)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.error.withValues(alpha: 0.3),
-                              blurRadius: 16,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.favorite_rounded,
-                            color: Colors.white,
-                            size: 48,
-                          ),
-                        ),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFE5484D), Color(0xFF7A1C20)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Liked Songs',
-                              style: AppTypography.displayMedium.copyWith(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.bold,
-                              ),
+                      borderRadius: BorderRadius.circular(AppRadii.xl),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFE5484D).withValues(alpha: 0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 84,
+                          height: 84,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(AppRadii.lg),
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.favorite_rounded,
+                              color: Colors.white,
+                              size: 44,
                             ),
-                            const SizedBox(height: AppSpacing.xxs),
-                            Text(
-                              '${state.tracks.length} ${state.tracks.length == 1 ? "song" : "songs"}',
-                              style: AppTypography.labelLarge.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            if (state.tracks.isNotEmpty)
-                              ElevatedButton.icon(
-                                onPressed: () => _playQueue(state.tracks, 0),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.md,
-                                    vertical: AppSpacing.xs,
-                                  ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Liked Songs',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
                                 ),
-                                icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                                label: const Text('Play All'),
                               ),
-                          ],
+                              const SizedBox(height: 4),
+                              Text(
+                                '${state.tracks.length} ${state.tracks.length == 1 ? "track" : "tracks"} saved',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              if (state.tracks.isNotEmpty)
+                                HumsButton(
+                                  label: 'Play All',
+                                  icon: Icons.play_arrow_rounded,
+                                  variant: HumsButtonVariant.primary,
+                                  height: 38,
+                                  onPressed: () => _playQueue(state.tracks, 0),
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -301,14 +305,12 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: AppSpacing.md),
-                          ElevatedButton(
+                          HumsButton(
+                            label: 'Retry',
+                            variant: HumsButtonVariant.primary,
                             onPressed: () {
                               ref.read(likedTracksNotifierProvider.notifier).refresh();
                             },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                            ),
-                            child: const Text('Retry'),
                           ),
                         ],
                       ),
@@ -318,121 +320,42 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
               ] else if (state.tracks.isEmpty) ...[
                 SliverFillRemaining(
                   hasScrollBody: false,
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.xl),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.favorite_border_rounded,
-                            size: 64,
-                            color: AppColors.textTertiary.withValues(alpha: 0.6),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          Text(
-                            "No liked songs yet.",
-                            style: AppTypography.headlineMedium.copyWith(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            "Tap ❤️ on songs you love and they'll appear here.",
-                            style: AppTypography.bodyMedium.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-                          ElevatedButton(
-                            onPressed: () => context.push(RouteNames.searchPath),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                            ),
-                            child: const Text('Discover Music'),
-                          ),
-                        ],
-                      ),
-                    ),
+                  child: HumsEmptyState(
+                    icon: Icons.favorite_border_rounded,
+                    title: 'No liked songs yet.',
+                    description: "Tap ❤️ on songs you love and they'll appear here.",
+                    actionLabel: 'Discover Music',
+                    onAction: () => context.push(RouteNames.searchPath),
                   ),
                 ),
               ] else ...[
-                // Track list
+                // Track list using HumsTrackTile
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
                       final track = state.tracks[index];
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
-                          vertical: AppSpacing.xxs,
-                        ),
-                        leading: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceHighlight,
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '${index + 1}',
-                              style: AppTypography.labelLarge.copyWith(
-                                color: AppColors.textTertiary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          track.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.titleMedium.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        subtitle: Text(
-                          '${track.artistName ?? "Unknown Artist"} • ${track.formattedDuration}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.labelSmall.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            LikeButton(
-                              trackId: track.id,
-                              initialLiked: true,
-                              initialCount: track.likesCount,
-                              trackTitle: track.title,
-                            ),
-                            DownloadButton(
-                              trackId: track.id,
-                              title: track.title,
-                              artistName: track.artistName,
-                              albumName: track.albumName,
-                              durationSeconds: track.durationSeconds,
-                              size: 20,
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.more_vert_rounded,
-                                color: AppColors.textSecondary,
-                                size: 20,
-                              ),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              onPressed: () => _showTrackMenu(context, track),
-                            ),
-                          ],
-                        ),
+                      final isCurrent = currentPlayingTrackId == track.id;
+
+                      return HumsTrackTile(
+                        index: index + 1,
+                        title: track.title,
+                        artistName: track.artistName,
+                        formattedDuration: track.formattedDuration,
+                        isPlaying: isCurrent,
+                        isLiked: true,
                         onTap: () => _playQueue(state.tracks, index),
+                        onLikeToggle: () {
+                          ref.read(likeNotifierProvider(track.id).notifier).toggleLike();
+                        },
+                        trailing: DownloadButton(
+                          trackId: track.id,
+                          title: track.title,
+                          artistName: track.artistName,
+                          albumName: track.albumName,
+                          durationSeconds: track.durationSeconds,
+                          size: 20,
+                        ),
+                        onMoreTap: () => _showTrackMenu(context, track),
                       );
                     },
                     childCount: state.tracks.length,
@@ -444,13 +367,12 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
                     child: Padding(
                       padding: EdgeInsets.all(AppSpacing.md),
                       child: Center(
-                        child: CircularProgressIndicator(color: AppColors.primary),
+                        child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
                       ),
                     ),
                   ),
                 ],
 
-                // Space for floating MiniPlayer
                 const SliverToBoxAdapter(
                   child: SizedBox(height: 100),
                 ),
@@ -458,7 +380,7 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
             ],
           ),
 
-          // 4. Floating MiniPlayer at bottom
+          // Floating MiniPlayer at bottom
           const Positioned(
             left: 0,
             right: 0,

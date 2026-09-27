@@ -7,6 +7,8 @@ import 'package:hums_mobile/core/theme/app_spacing.dart';
 import 'package:hums_mobile/core/theme/app_typography.dart';
 import 'package:hums_mobile/core/widgets/hums_app_bar.dart';
 import 'package:hums_mobile/core/widgets/hums_button.dart';
+import 'package:hums_mobile/features/audio_player/presentation/widgets/mini_player.dart';
+import 'package:hums_mobile/features/auth/presentation/providers/auth_provider.dart';
 import 'package:hums_mobile/features/profile/domain/entities/profile_entity.dart';
 import 'package:hums_mobile/features/profile/presentation/providers/profile_provider.dart';
 import 'package:hums_mobile/features/profile/presentation/states/profile_state.dart';
@@ -139,6 +141,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               tooltip: 'Edit Profile',
               onPressed: () => context.push(RouteNames.editProfilePath),
             ),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, color: AppColors.textSecondary),
+            tooltip: 'Log Out',
+            onPressed: () {
+              ref.read(authNotifierProvider.notifier).logout();
+            },
+          ),
         ],
       ),
       body: SafeArea(
@@ -150,6 +159,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ? _buildErrorState()
             : _buildProfileContent(profile, state),
       ),
+      bottomNavigationBar: const MiniPlayer(),
     );
   }
 

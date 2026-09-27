@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hums_mobile/core/theme/app_colors.dart';
 import 'package:hums_mobile/core/theme/app_icons.dart';
+import 'package:hums_mobile/core/theme/app_radii.dart';
 import 'package:hums_mobile/core/theme/app_spacing.dart';
 import 'package:hums_mobile/core/theme/app_typography.dart';
 import 'package:hums_mobile/core/widgets/app_icon.dart';
 import 'package:hums_mobile/core/widgets/hums_app_bar.dart';
+import 'package:hums_mobile/core/widgets/hums_button.dart';
 import 'package:hums_mobile/features/audio_player/domain/entities/player_queue.dart';
 import 'package:hums_mobile/features/audio_player/presentation/providers/audio_player_provider.dart';
 import 'package:hums_mobile/features/audio_player/presentation/widgets/mini_player.dart';
@@ -346,29 +348,36 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
               .loadDetails(),
           child: CustomScrollView(
             slivers: [
-              // Header Sliver
+              // Header Sliver with Reference Curved Ambient Glow
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Cover Artwork
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(
-                          AppSpacing.radiusMd,
+                      // Ambient Glow Artwork
+                      Container(
+                        width: 160,
+                        height: 160,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppRadii.xl),
+                          border: Border.all(color: AppColors.borderSubtle, width: 1.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.2),
+                              blurRadius: 28,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
                         ),
-                        child: Container(
-                          width: 160,
-                          height: 160,
-                          color: AppColors.surfaceHighlight,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(AppRadii.xl),
                           child: playlist.coverImageUrl != null
                               ? Image.network(
                                   playlist.coverImageUrl!,
                                   width: 160,
                                   height: 160,
-                                  cacheWidth: 320,
-                                  cacheHeight: 320,
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) =>
                                       _buildPlaceholder(),
@@ -378,13 +387,33 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                       ),
                       const SizedBox(height: AppSpacing.md),
 
+                      // Category Pill Chip
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceElevated,
+                          borderRadius: BorderRadius.circular(AppRadii.pill),
+                          border: Border.all(color: AppColors.borderSubtle),
+                        ),
+                        child: const Text(
+                          'PLAYLIST',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+
                       // Playlist Title
                       Text(
                         playlist.name,
                         style: AppTypography.headlineLarge,
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: AppSpacing.xxs),
+                      const SizedBox(height: 2),
 
                       // Metadata Subtitle
                       Text(
@@ -395,8 +424,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                       ),
 
                       // Description
-                      if (playlist.description != null &&
-                          playlist.description!.isNotEmpty) ...[
+                      if (playlist.description != null && playlist.description!.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.xs),
                         Text(
                           playlist.description!,
@@ -404,95 +432,74 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                             color: AppColors.textTertiary,
                           ),
                           textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                       const SizedBox(height: AppSpacing.lg),
 
-                      // Actions: Play All + Add Tracks
+                      // Actions: Large Coral "PLAY NOW" Pill Button + Add Tracks
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          ElevatedButton.icon(
+                          HumsButton(
+                            label: 'PLAY NOW',
+                            icon: Icons.play_arrow_rounded,
+                            variant: HumsButtonVariant.coral,
+                            height: 46,
+                            fontSize: 14,
                             onPressed: detail.playableTracks.isNotEmpty
                                 ? () => _playPlaylist(detail)
                                 : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.black,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.lg,
-                                vertical: AppSpacing.sm,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  AppSpacing.radiusFull,
-                                ),
-                              ),
-                            ),
-                            icon: const AppIcon(
-                              icon: AppIcons.play,
-                              size: AppIconSizes.sm,
-                              color: Colors.black,
-                            ),
-                            label: Text(
-                              'Play All',
-                              style: AppTypography.labelLarge.copyWith(
-                                color: Colors.black,
-                              ),
-                            ),
                           ),
-                          const SizedBox(width: AppSpacing.md),
-                          OutlinedButton.icon(
+                          const SizedBox(width: AppSpacing.sm),
+                          IconButton(
+                            icon: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceElevated,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppColors.borderSubtle),
+                              ),
+                              child: const Icon(
+                                Icons.add_rounded,
+                                color: AppColors.textPrimary,
+                                size: 22,
+                              ),
+                            ),
+                            tooltip: 'Add Tracks',
                             onPressed: () {
-                              final existingIds = tracks
-                                  .map((t) => t.trackId)
-                                  .toSet();
+                              final existingIds = tracks.map((t) => t.trackId).toSet();
                               SelectTrackModal.show(
                                 context,
                                 playlistId: widget.playlistId,
                                 existingTrackIds: existingIds,
                               );
                             },
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.textPrimary,
-                              side: const BorderSide(color: AppColors.border),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md,
-                                vertical: AppSpacing.sm,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  AppSpacing.radiusFull,
-                                ),
-                              ),
-                            ),
-                            icon: const AppIcon(
-                              icon: AppIcons.add,
-                              size: AppIconSizes.sm,
-                              color: AppColors.textPrimary,
-                            ),
-                            label: Text(
-                              'Add Tracks',
-                              style: AppTypography.labelLarge.copyWith(
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
                           ),
-                          if (detail.playableTracks.isNotEmpty) ...[
-                            const SizedBox(width: AppSpacing.sm),
+                          if (detail.playableTracks.isNotEmpty)
                             IconButton(
-                              icon: const Icon(
-                                Icons.arrow_circle_down_outlined,
-                                color: AppColors.primary,
-                                size: 28,
+                              icon: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceElevated,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: AppColors.borderSubtle),
+                                ),
+                                child: const Icon(
+                                  Icons.download_rounded,
+                                  color: AppColors.primary,
+                                  size: 22,
+                                ),
                               ),
                               tooltip: 'Download Playlist',
                               onPressed: () => _downloadAllTracks(detail),
                             ),
-                          ],
                         ],
                       ),
-                      const SizedBox(height: AppSpacing.md),
+                      const SizedBox(height: AppSpacing.lg),
                       const Divider(color: AppColors.divider, height: 1),
                     ],
                   ),

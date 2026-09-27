@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hums_mobile/core/theme/app_colors.dart';
+import 'package:hums_mobile/core/theme/app_radii.dart';
 import 'package:hums_mobile/core/theme/app_spacing.dart';
 import 'package:hums_mobile/core/theme/app_typography.dart';
 import 'package:hums_mobile/features/audio_player/presentation/widgets/mini_player.dart';
@@ -18,14 +19,12 @@ class LibraryScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.background,
         elevation: 0,
-        title: Text(
+        centerTitle: false,
+        title: const Text(
           'My Library',
-          style: AppTypography.headlineMedium.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTypography.headlineLarge,
         ),
         actions: [
           IconButton(
@@ -34,104 +33,91 @@ class LibraryScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            color: AppColors.primary,
-            onRefresh: () async {
-              ref.invalidate(librarySummaryProvider);
-              await ref.read(librarySummaryProvider.future);
-            },
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.md,
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        backgroundColor: AppColors.surface,
+        onRefresh: () async {
+          ref.invalidate(librarySummaryProvider);
+          await ref.read(librarySummaryProvider.future);
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.md,
+          ),
+          children: [
+            // 1. Liked Songs Hero Card
+            asyncSummary.when(
+              data: (summary) => _buildLikedSongsCard(
+                context,
+                summary.likedTracksCount,
               ),
-              children: [
-                // 1. Liked Songs Hero Card
-                asyncSummary.when(
-                  data: (summary) => _buildLikedSongsCard(
-                    context,
-                    summary.likedTracksCount,
-                  ),
-                  loading: () => _buildLikedSongsCard(context, 0, isLoading: true),
-                  error: (e, _) => _buildLikedSongsCard(context, 0),
-                ),
-
-                const SizedBox(height: AppSpacing.lg),
-
-                // 2. Library Navigation Sections
-                Text(
-                  'Collections & Activity',
-                  style: AppTypography.titleMedium.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-
-                _buildNavigationTile(
-                  context: context,
-                  icon: Icons.history_rounded,
-                  iconColor: AppColors.primaryLight,
-                  title: 'Recently Played',
-                  subtitle: 'Review your listening history',
-                  route: RouteNames.historyPath,
-                ),
-                _buildNavigationTile(
-                  context: context,
-                  icon: Icons.download_for_offline_outlined,
-                  iconColor: AppColors.success,
-                  title: 'Downloaded',
-                  subtitle: 'Offline tracks & episodes',
-                  route: RouteNames.downloadsPath,
-                ),
-                _buildNavigationTile(
-                  context: context,
-                  icon: Icons.playlist_play_rounded,
-                  iconColor: AppColors.primary,
-                  title: 'Playlists',
-                  subtitle: asyncSummary.maybeWhen(
-                    data: (s) => '${s.playlistsCount} collections',
-                    orElse: () => 'Organize your music',
-                  ),
-                  route: RouteNames.playlistsPath,
-                ),
-                _buildNavigationTile(
-                  context: context,
-                  icon: Icons.people_outline_rounded,
-                  iconColor: AppColors.info,
-                  title: 'Following',
-                  subtitle: asyncSummary.maybeWhen(
-                    data: (s) => '${s.followingCreatorsCount} artists',
-                    orElse: () => 'Artists you follow',
-                  ),
-                  route: RouteNames.followingPath,
-                ),
-                _buildNavigationTile(
-                  context: context,
-                  icon: Icons.cloud_upload_outlined,
-                  iconColor: AppColors.textSecondary,
-                  title: 'My Tracks',
-                  subtitle: 'Your uploaded audio & episodes',
-                  route: RouteNames.userTracksPath,
-                ),
-
-                const SizedBox(height: 100), // Bottom space for MiniPlayer
-              ],
+              loading: () => _buildLikedSongsCard(context, 0, isLoading: true),
+              error: (e, _) => _buildLikedSongsCard(context, 0),
             ),
-          ),
 
-          // Floating MiniPlayer
-          const Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: MiniPlayer(),
-          ),
-        ],
+            const SizedBox(height: AppSpacing.xl),
+
+            // 2. Library Navigation Sections
+            const Text(
+              'Collections & Activity',
+              style: AppTypography.titleLarge,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+
+            _buildNavigationTile(
+              context: context,
+              icon: Icons.history_rounded,
+              iconColor: AppColors.accentPurple,
+              title: 'Recently Played',
+              subtitle: 'Review your listening history',
+              route: RouteNames.historyPath,
+            ),
+            _buildNavigationTile(
+              context: context,
+              icon: Icons.download_done_rounded,
+              iconColor: AppColors.accentBlue,
+              title: 'Downloaded',
+              subtitle: 'Offline tracks & episodes',
+              route: RouteNames.downloadsPath,
+            ),
+            _buildNavigationTile(
+              context: context,
+              icon: Icons.queue_music_rounded,
+              iconColor: AppColors.primary,
+              title: 'Playlists',
+              subtitle: asyncSummary.maybeWhen(
+                data: (s) => '${s.playlistsCount} collections',
+                orElse: () => 'Organize your music',
+              ),
+              route: RouteNames.playlistsPath,
+            ),
+            _buildNavigationTile(
+              context: context,
+              icon: Icons.people_outline_rounded,
+              iconColor: AppColors.accentMint,
+              title: 'Following',
+              subtitle: asyncSummary.maybeWhen(
+                data: (s) => '${s.followingCreatorsCount} artists',
+                orElse: () => 'Artists you follow',
+              ),
+              route: RouteNames.followingPath,
+            ),
+            _buildNavigationTile(
+              context: context,
+              icon: Icons.cloud_upload_outlined,
+              iconColor: AppColors.textSecondary,
+              title: 'My Tracks',
+              subtitle: 'Your uploaded audio & episodes',
+              route: RouteNames.userTracksPath,
+            ),
+
+            const SizedBox(height: AppSpacing.xl),
+          ],
+        ),
       ),
+      bottomNavigationBar: const MiniPlayer(),
     );
   }
 
@@ -142,20 +128,21 @@ class LibraryScreen extends ConsumerWidget {
   }) {
     return InkWell(
       onTap: () => context.push(RouteNames.likedSongsPath),
-      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      borderRadius: BorderRadius.circular(AppRadii.xl),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFFE5484D), Color(0xFF8E1F24)],
+            colors: [Color(0xFFE5484D), Color(0xFF7A1C20)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          borderRadius: BorderRadius.circular(AppRadii.xl),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
           boxShadow: [
             BoxShadow(
-              color: AppColors.error.withValues(alpha: 0.25),
-              blurRadius: 18,
+              color: const Color(0xFFE5484D).withValues(alpha: 0.3),
+              blurRadius: 20,
               offset: const Offset(0, 6),
             ),
           ],
@@ -163,17 +150,17 @@ class LibraryScreen extends ConsumerWidget {
         child: Row(
           children: [
             Container(
-              width: 56,
-              height: 56,
+              width: 54,
+              height: 54,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
+                color: Colors.white.withValues(alpha: 0.18),
                 shape: BoxShape.circle,
               ),
               child: const Center(
                 child: Icon(
                   Icons.favorite_rounded,
                   color: Colors.white,
-                  size: 30,
+                  size: 28,
                 ),
               ),
             ),
@@ -182,29 +169,31 @@ class LibraryScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Liked Songs',
-                    style: AppTypography.headlineMedium.copyWith(
+                    style: TextStyle(
                       color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.xxs),
+                  const SizedBox(height: 3),
                   Text(
                     isLoading
                         ? 'Loading songs...'
                         : '$likedCount ${likedCount == 1 ? "song" : "songs"}',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: Colors.white.withValues(alpha: 0.85),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 13,
                     ),
                   ),
                 ],
               ),
             ),
             const Icon(
-              Icons.arrow_forward_ios_rounded,
+              Icons.chevron_right_rounded,
               color: Colors.white70,
-              size: 18,
+              size: 24,
             ),
           ],
         ),
@@ -221,10 +210,11 @@ class LibraryScreen extends ConsumerWidget {
     required String route,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: AppColors.borderSubtle, width: 1),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(
@@ -232,31 +222,31 @@ class LibraryScreen extends ConsumerWidget {
           vertical: AppSpacing.xxs,
         ),
         leading: Container(
-          width: 40,
-          height: 40,
+          width: 42,
+          height: 42,
           decoration: BoxDecoration(
             color: iconColor.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+            borderRadius: BorderRadius.circular(AppRadii.md),
           ),
           child: Icon(icon, color: iconColor, size: 22),
         ),
         title: Text(
           title,
           style: AppTypography.titleMedium.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w600,
+            fontSize: 14.5,
           ),
         ),
         subtitle: Text(
           subtitle,
-          style: AppTypography.labelSmall.copyWith(
+          style: AppTypography.bodyMedium.copyWith(
+            fontSize: 12,
             color: AppColors.textSecondary,
           ),
         ),
         trailing: const Icon(
-          Icons.arrow_forward_ios_rounded,
+          Icons.chevron_right_rounded,
           color: AppColors.textTertiary,
-          size: 14,
+          size: 20,
         ),
         onTap: () => context.push(route),
       ),

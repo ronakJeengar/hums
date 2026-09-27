@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hums_mobile/core/theme/app_colors.dart';
+import 'package:hums_mobile/core/theme/app_radii.dart';
 import 'package:hums_mobile/core/theme/app_spacing.dart';
 import 'package:hums_mobile/core/theme/app_typography.dart';
 import 'package:hums_mobile/core/widgets/hums_button.dart';
@@ -51,34 +52,57 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: AppColors.textPrimary, size: 20),
-          onPressed: () => context.pop(),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: AppColors.textPrimary),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              context.go(RouteNames.splashPath);
+            }
+          },
         ),
       ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Title & Subtitle
-                  Text(
+                  const SizedBox(height: AppSpacing.sm),
+                  // App Brand Logo
+                  Center(
+                    child: Container(
+                      width: 58,
+                      height: 58,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadii.lg),
+                        border: Border.all(color: AppColors.borderSubtle, width: 1.5),
+                      ),
+                      child: const Icon(
+                        Icons.graphic_eq_rounded,
+                        size: 32,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  const Text(
                     'Create Account',
                     style: AppTypography.displayMedium,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    'Start your high-fidelity audio journey with Hums',
-                    style: AppTypography.bodyMedium,
+                    'Join Hums and experience pristine audio clarity.',
+                    style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: AppSpacing.xl),
@@ -89,13 +113,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       padding: const EdgeInsets.all(AppSpacing.md),
                       decoration: BoxDecoration(
                         color: AppColors.error.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                        borderRadius: BorderRadius.circular(AppRadii.md),
                         border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline_rounded,
-                              color: AppColors.error, size: 20),
+                          const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 20),
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Text(
@@ -111,19 +134,16 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     const SizedBox(height: AppSpacing.md),
                   ],
 
-                  // Name Field
+                  // Full Name Field
                   AuthTextField(
                     controller: _nameController,
                     label: 'Full Name',
-                    hintText: 'Ronak Jeengar',
+                    hintText: 'Enter your name',
                     prefixIcon: Icons.person_outline_rounded,
                     enabled: !isLoading,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
                         return 'Name is required';
-                      }
-                      if (value.trim().length < 2) {
-                        return 'Name must be at least 2 characters';
                       }
                       return null;
                     },
@@ -138,12 +158,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     prefixIcon: Icons.mail_outline_rounded,
                     keyboardType: TextInputType.emailAddress,
                     enabled: !isLoading,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
                         return 'Email is required';
                       }
-                      if (!value.contains('@') || !value.contains('.')) {
-                        return 'Enter a valid email address';
+                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(val.trim())) {
+                        return 'Please enter a valid email address';
                       }
                       return null;
                     },
@@ -158,15 +178,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     prefixIcon: Icons.lock_outline_rounded,
                     obscureText: _obscurePassword,
                     enabled: !isLoading,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _onSignup(),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        color: AppColors.textSecondary,
+                        _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                         size: 20,
+                        color: AppColors.textSecondary,
                       ),
                       onPressed: () {
                         setState(() {
@@ -174,45 +190,49 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                         });
                       },
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
+                    validator: (val) {
+                      if (val == null || val.isEmpty) {
                         return 'Password is required';
                       }
-                      if (value.length < 8) {
+                      if (val.length < 8) {
                         return 'Password must be at least 8 characters';
                       }
                       return null;
                     },
                   ),
+
                   const SizedBox(height: AppSpacing.xl),
 
-                  // Sign Up Button
+                  // Primary Sign Up CTA (White Pill)
                   HumsButton(
                     label: 'Create Account',
-                    onPressed: _onSignup,
-                    isLoading: isLoading,
                     variant: HumsButtonVariant.primary,
+                    height: 52,
+                    fontSize: 16,
+                    isLoading: isLoading,
+                    onPressed: _onSignup,
                   ),
+
                   const SizedBox(height: AppSpacing.xl),
 
-                  // Sign In Navigation Link
+                  // Existing Account Navigation
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         'Already have an account?',
-                        style: AppTypography.bodyMedium,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
-                      TextButton(
-                        onPressed: isLoading
-                            ? null
-                            : () {
-                                context.go(RouteNames.loginPath);
-                              },
+                      const SizedBox(width: AppSpacing.xs),
+                      GestureDetector(
+                        onTap: () => context.push(RouteNames.loginPath),
                         child: Text(
                           'Sign In',
                           style: AppTypography.labelLarge.copyWith(
                             color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),

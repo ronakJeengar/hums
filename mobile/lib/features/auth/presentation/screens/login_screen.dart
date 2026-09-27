@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hums_mobile/core/theme/app_colors.dart';
+import 'package:hums_mobile/core/theme/app_radii.dart';
 import 'package:hums_mobile/core/theme/app_spacing.dart';
 import 'package:hums_mobile/core/theme/app_typography.dart';
 import 'package:hums_mobile/core/widgets/hums_button.dart';
@@ -47,36 +48,50 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: AppColors.textPrimary),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              context.go(RouteNames.splashPath);
+            }
+          },
+        ),
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: AppSpacing.xl),
-                  // Brand Icon & Title
+                  const SizedBox(height: AppSpacing.md),
+                  // App Brand Logo & Title
                   Center(
                     child: Container(
-                      width: 64,
-                      height: 64,
+                      width: 58,
+                      height: 58,
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceElevated,
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                        border: Border.all(color: AppColors.border),
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadii.lg),
+                        border: Border.all(color: AppColors.borderSubtle, width: 1.5),
                       ),
                       child: const Icon(
                         Icons.graphic_eq_rounded,
-                        size: 36,
+                        size: 32,
                         color: AppColors.primary,
                       ),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  Text(
+                  const Text(
                     'Welcome Back',
                     style: AppTypography.displayMedium,
                     textAlign: TextAlign.center,
@@ -84,7 +99,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     'Sign in to your Hums account',
-                    style: AppTypography.bodyMedium,
+                    style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: AppSpacing.xl),
@@ -95,13 +110,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       padding: const EdgeInsets.all(AppSpacing.md),
                       decoration: BoxDecoration(
                         color: AppColors.error.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                        borderRadius: BorderRadius.circular(AppRadii.md),
                         border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline_rounded,
-                              color: AppColors.error, size: 20),
+                          const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 20),
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Text(
@@ -124,13 +138,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     hintText: 'name@example.com',
                     prefixIcon: Icons.mail_outline_rounded,
                     keyboardType: TextInputType.emailAddress,
-                    enabled: !isLoading,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
                         return 'Email is required';
                       }
-                      if (!value.contains('@') || !value.contains('.')) {
-                        return 'Enter a valid email address';
+                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(val.trim())) {
+                        return 'Please enter a valid email address';
                       }
                       return null;
                     },
@@ -144,16 +157,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     hintText: '••••••••',
                     prefixIcon: Icons.lock_outline_rounded,
                     obscureText: _obscurePassword,
-                    enabled: !isLoading,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _onLogin(),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        color: AppColors.textSecondary,
+                        _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                         size: 20,
+                        color: AppColors.textSecondary,
                       ),
                       onPressed: () {
                         setState(() {
@@ -161,61 +169,62 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         });
                       },
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
+                    validator: (val) {
+                      if (val == null || val.isEmpty) {
                         return 'Password is required';
                       }
                       return null;
                     },
                   ),
-                  const SizedBox(height: AppSpacing.xs),
 
                   // Forgot Password Link
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: isLoading
-                          ? null
-                          : () {
-                              context.push('/forgot-password');
-                            },
+                      onPressed: () => context.push(RouteNames.forgotPasswordPath),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                      ),
                       child: Text(
                         'Forgot Password?',
-                        style: AppTypography.labelSmall.copyWith(
+                        style: AppTypography.labelMedium.copyWith(
                           color: AppColors.primary,
                         ),
                       ),
                     ),
                   ),
+
                   const SizedBox(height: AppSpacing.md),
 
-                  // Sign In Button
+                  // Primary Sign In CTA Pill (White Pill)
                   HumsButton(
                     label: 'Sign In',
-                    onPressed: _onLogin,
-                    isLoading: isLoading,
                     variant: HumsButtonVariant.primary,
+                    height: 52,
+                    fontSize: 16,
+                    isLoading: isLoading,
+                    onPressed: _onLogin,
                   ),
+
                   const SizedBox(height: AppSpacing.xl),
 
-                  // Sign Up Navigation Link
+                  // Create Account Navigation
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "Don't have an account?",
-                        style: AppTypography.bodyMedium,
+                        "Don't have an account? ",
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
-                      TextButton(
-                        onPressed: isLoading
-                            ? null
-                            : () {
-                                context.push(RouteNames.registerPath);
-                              },
+                      GestureDetector(
+                        onTap: () => context.push(RouteNames.registerPath),
                         child: Text(
                           'Sign Up',
                           style: AppTypography.labelLarge.copyWith(
                             color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hums_mobile/core/theme/app_colors.dart';
+import 'package:hums_mobile/core/theme/app_radii.dart';
 import 'package:hums_mobile/core/theme/app_spacing.dart';
 import 'package:hums_mobile/core/theme/app_typography.dart';
 
@@ -22,10 +23,11 @@ class SearchBarWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: 46,
       decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(color: AppColors.border),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        border: Border.all(color: AppColors.borderSubtle, width: 1),
       ),
       child: TextField(
         controller: controller,
@@ -33,22 +35,25 @@ class SearchBarWidget extends StatelessWidget {
         textInputAction: TextInputAction.search,
         onSubmitted: (_) => onSubmitted?.call(),
         onChanged: onChanged,
+        textAlignVertical: TextAlignVertical.center,
         decoration: InputDecoration(
+          isDense: true,
           hintText: hintText,
           hintStyle: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
+            color: AppColors.textTertiary,
+            fontSize: 13.5,
           ),
           prefixIcon: const Icon(
             Icons.search_rounded,
             color: AppColors.textSecondary,
-            size: AppSpacing.iconMd,
+            size: 20,
           ),
           suffixIcon: controller.text.isNotEmpty
               ? IconButton(
                   icon: const Icon(
                     Icons.close_rounded,
                     color: AppColors.textSecondary,
-                    size: 20,
+                    size: 18,
                   ),
                   tooltip: 'Clear search',
                   onPressed: () {
@@ -58,9 +63,11 @@ class SearchBarWidget extends StatelessWidget {
                 )
               : null,
           border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
+            horizontal: AppSpacing.sm,
+            vertical: 10,
           ),
         ),
       ),

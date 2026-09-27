@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hums_mobile/core/theme/app_colors.dart';
+import 'package:hums_mobile/core/theme/app_radii.dart';
 import 'package:hums_mobile/core/theme/app_spacing.dart';
 import 'package:hums_mobile/core/theme/app_typography.dart';
 
@@ -41,6 +42,8 @@ class AuthTextField extends StatelessWidget {
           label,
           style: AppTypography.labelLarge.copyWith(
             color: AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -54,18 +57,20 @@ class AuthTextField extends StatelessWidget {
           enabled: enabled,
           style: AppTypography.bodyLarge.copyWith(
             color: enabled ? AppColors.textPrimary : AppColors.textTertiary,
+            fontSize: 14.5,
           ),
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: AppTypography.bodyMedium.copyWith(
               color: AppColors.textTertiary,
+              fontSize: 13.5,
             ),
             filled: true,
             fillColor: AppColors.surface,
             prefixIcon: prefixIcon != null
                 ? Icon(
                     prefixIcon,
-                    size: AppSpacing.iconSm,
+                    size: 20,
                     color: AppColors.textSecondary,
                   )
                 : null,
@@ -75,23 +80,23 @@ class AuthTextField extends StatelessWidget {
               vertical: AppSpacing.md,
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderRadius: BorderRadius.circular(AppRadii.md),
+              borderSide: const BorderSide(color: AppColors.borderSubtle),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderRadius: BorderRadius.circular(AppRadii.md),
+              borderSide: const BorderSide(color: AppColors.borderSubtle),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              borderRadius: BorderRadius.circular(AppRadii.md),
               borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              borderRadius: BorderRadius.circular(AppRadii.md),
               borderSide: const BorderSide(color: AppColors.error),
             ),
             focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              borderRadius: BorderRadius.circular(AppRadii.md),
               borderSide: const BorderSide(color: AppColors.error, width: 1.5),
             ),
           ),
