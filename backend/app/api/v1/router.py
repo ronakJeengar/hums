@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
     playback,
     playlists,
     profile,
+    recommendations,
     search,
     telemetry,
     users,
@@ -25,3 +26,4 @@ v1_router.include_router(playback.router, prefix="/playback", tags=["playback"])
 v1_router.include_router(playback.history_alias_router, tags=["history"])
 v1_router.include_router(telemetry.router)
 v1_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
+v1_router.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])

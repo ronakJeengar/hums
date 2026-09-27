@@ -45,6 +45,10 @@ abstract class ApiEndpoints {
   static String notificationRead(String notificationId) => '/api/v1/notifications/$notificationId/read';
   static const String notificationReadAll = '/api/v1/notifications/read-all';
 
+  // Recommendation Endpoints
+  static const String recommendations = '/api/v1/recommendations';
+  static const String recommendationsRefresh = '/api/v1/recommendations/refresh';
+
   // Search Endpoints
   static const String search = '/api/v1/search';
   static const String searchSuggestions = '/api/v1/search/suggestions';

@@ -9,6 +9,7 @@ from app.db.base import BaseDBModel
 if TYPE_CHECKING:
     from app.db.models.audio import Track
     from app.db.models.notification import Notification, NotificationPreference, UserDevice
+    from app.db.models.recommendation import RecommendationSet
 
 
 class User(BaseDBModel):
@@ -92,6 +93,12 @@ class User(BaseDBModel):
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan",
+    )
+    recommendation_sets: Mapped[List["RecommendationSet"]] = relationship(
+        "RecommendationSet",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="RecommendationSet.created_at.desc()",
     )
 
     @property

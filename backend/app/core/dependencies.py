@@ -18,17 +18,28 @@ from app.repositories.audio_repository import (
 from app.repositories.playback_repository import PlaybackRepository
 from app.repositories.playlist_repository import PlaylistRepository
 from app.repositories.search_repository import SearchRepository
+from app.repositories.recommendation_repository import (
+    RecommendationItemRepository,
+    RecommendationSetRepository,
+)
 from app.repositories.user_repository import (
     PasswordResetTokenRepository,
     RefreshTokenRepository,
     UserRepository,
 )
+from app.ai.gemini_recommendation_client import GeminiRecommendationClient
 from app.services.audio_service import AudioService
 from app.services.auth_service import AuthService
 from app.services.playback_service import PlaybackService
 from app.services.playlist_service import PlaylistService
 from app.services.profile_service import ProfileService
 from app.services.search_service import SearchService
+from app.services.recommendation.cache_service import RecommendationCacheService
+from app.services.recommendation.candidate_service import CandidateGenerationService
+from app.services.recommendation.diversity_service import DiversityService
+from app.services.recommendation.ranking_service import RankingService
+from app.services.recommendation.user_preference_service import UserPreferenceService
+from app.services.recommendation_service import RecommendationService
 from app.services.user_service import UserService
 from app.utils.storage import BaseStorageService, S3StorageService
 
@@ -189,6 +200,54 @@ def get_notification_service(
     from app.services.notification_service import NotificationService
 
     return NotificationService(session=session)
+
+
+def get_recommendation_set_repository(
+    session: AsyncSession = Depends(get_db),
+) -> RecommendationSetRepository:
+    return RecommendationSetRepository(session)
+
+
+def get_recommendation_item_repository(
+    session: AsyncSession = Depends(get_db),
+) -> RecommendationItemRepository:
+    return RecommendationItemRepository(session)
+
+
+def get_gemini_recommendation_client() -> GeminiRecommendationClient:
+    return GeminiRecommendationClient()
+
+
+async def get_recommendation_cache_service(
+    redis_client: aioredis.Redis = Depends(get_redis_client),
+) -> RecommendationCacheService:
+    return RecommendationCacheService(redis_client)
+
+
+def get_recommendation_service(
+    playlist_repo: PlaylistRepository = Depends(get_playlist_repository),
+    track_repo: TrackRepository = Depends(get_track_repository),
+    rec_set_repo: RecommendationSetRepository = Depends(get_recommendation_set_repository),
+    rec_item_repo: RecommendationItemRepository = Depends(get_recommendation_item_repository),
+    gemini_client: GeminiRecommendationClient = Depends(get_gemini_recommendation_client),
+    cache_service: RecommendationCacheService = Depends(get_recommendation_cache_service),
+) -> RecommendationService:
+    preference_service = UserPreferenceService(playlist_repo, track_repo)
+    candidate_service = CandidateGenerationService(track_repo)
+    ranking_service = RankingService()
+    diversity_service = DiversityService()
+
+    return RecommendationService(
+        preference_service=preference_service,
+        candidate_service=candidate_service,
+        ranking_service=ranking_service,
+        diversity_service=diversity_service,
+        gemini_client=gemini_client,
+        cache_service=cache_service,
+        rec_set_repo=rec_set_repo,
+        rec_item_repo=rec_item_repo,
+        track_repo=track_repo,
+    )
 
 
 async def get_current_user(

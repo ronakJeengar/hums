@@ -8,7 +8,11 @@ celery_app = Celery(
     "hums_worker",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=["app.workers.audio_tasks", "app.workers.notification_tasks"],
+    include=[
+        "app.workers.audio_tasks",
+        "app.workers.notification_tasks",
+        "app.workers.recommendation_tasks",
+    ],
 )
 
 # Connect observability signals
