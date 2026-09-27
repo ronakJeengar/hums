@@ -183,6 +183,13 @@ def get_playback_service(
     return PlaybackService(session)
 
 
+def get_notification_service(
+    session: AsyncSession = Depends(get_db),
+) -> "NotificationService":
+    from app.services.notification_service import NotificationService
+
+    return NotificationService(session=session)
+
 
 async def get_current_user(
     auth: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),

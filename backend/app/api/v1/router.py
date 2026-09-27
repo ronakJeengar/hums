@@ -1,5 +1,16 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import audio, auth, health, playback, playlists, profile, search, telemetry, users
+from app.api.v1.endpoints import (
+    audio,
+    auth,
+    health,
+    notifications,
+    playback,
+    playlists,
+    profile,
+    search,
+    telemetry,
+    users,
+)
 
 v1_router = APIRouter()
 v1_router.include_router(health.router)
@@ -13,3 +24,4 @@ v1_router.include_router(search.router, prefix="/search", tags=["search"])
 v1_router.include_router(playback.router, prefix="/playback", tags=["playback"])
 v1_router.include_router(playback.history_alias_router, tags=["history"])
 v1_router.include_router(telemetry.router)
+v1_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])

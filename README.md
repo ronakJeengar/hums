@@ -19,6 +19,7 @@
 * Custom playlists, favorites, and listening history.
 * Native, high-performance catalog search & discovery across songs, artists, albums, playlists, podcasts, and episodes with PostgreSQL trigram indexing, Redis caching, and suggestions.
 * Resilient offline downloads & playback with byte-level Range resumption and zero player divergence.
+* Asynchronous push notification system (Firebase Cloud Messaging / Mock provider, Celery delivery workers, multi-device management, notification inbox with read tracking, user preferences, and deep linking).
 * Clean, warm, audio-centric mobile client built with Flutter and Riverpod.
 * Architectural readiness for future Google Gemini-powered transcripts and smart discovery.
 
@@ -29,11 +30,11 @@ Hums is completely self-contained. It operates with its own authentication syste
 
 ## 2. Technology Stack
 
-* **Mobile App:** Flutter (Dart), Riverpod (State Management), go_router (Declarative Routing), Dio (HTTP Client), Freezed (Immutable Models).
-* **API Backend:** Python 3.11+, FastAPI (Async ASGI), Pydantic v2, SQLAlchemy 2.0 (Async), asyncpg, Alembic.
+* **Mobile App:** Flutter (Dart), Riverpod (State Management), go_router (Declarative Routing), Dio (HTTP Client), Freezed (Immutable Models), Firebase Messaging (Push).
+* **API Backend:** Python 3.11+, FastAPI (Async ASGI), Pydantic v2, SQLAlchemy 2.0 (Async), asyncpg, Alembic, Firebase Admin SDK.
 * **Database:** PostgreSQL 16.
 * **Cache & Message Broker:** Redis 7.
-* **Background Workers:** Celery + FFmpeg for asynchronous audio processing.
+* **Background Workers:** Celery for asynchronous audio processing and push notification dispatch.
 * **Object Storage:** S3-compatible storage (MinIO for local development; AWS S3 / Cloudflare R2 for production).
 * **Delivery:** CDN-ready media distribution.
 

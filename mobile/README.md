@@ -1,17 +1,38 @@
-# hums_mobile
+# Hums Mobile Application
 
-A new Flutter project.
+Flutter mobile client for the Hums high-fidelity audio streaming platform.
 
-## Getting Started
+## Architecture
 
-This project is a starting point for a Flutter application.
+- **State Management:** Flutter Riverpod (`StateNotifierProvider`, `Provider`, `FutureProvider`)
+- **Networking:** Dio with custom `AuthInterceptor`, `LoggingInterceptor`, and typed `ApiException` handling
+- **Routing:** GoRouter with reactive auth state redirection and deep linking
+- **Design System:** Obsidian acoustic warmth theme (`AppColors`, `AppSpacing`, `AppTypography`, `AppTheme`)
+- **Audio Playback:** `just_audio` with `just_audio_background` media notifications
+- **Push Notifications:** Firebase Cloud Messaging (`firebase_core`, `firebase_messaging`) with backend registration, background/foreground handling, and deep link routing
+- **Widget Previews:** Official Flutter Widget Preview system (`package:flutter/widget_previews.dart`, `@Preview(...)`) located in `lib/previews/`
 
-A few resources to get you started if this is your first Flutter project:
+## Features
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+1. **Authentication:** Registration, login, JWT token management, automatic refresh token rotation, logout.
+2. **Audio Upload & Streaming:** Audio file validation, upload, transcode status tracking, multi-bitrate rendition streaming.
+3. **Playlists:** User playlist creation, cover artwork, reordering, adding/removing tracks.
+4. **Push Notifications & Inbox:**
+   - Multi-device registration on backend (`/api/v1/notifications/devices`).
+   - Push preferences management (`/api/v1/notifications/preferences`).
+   - Notification history with unread count badge, filtering (All/Unread), and bulk read-all (`/api/v1/notifications`).
+   - Deep linking directly to tracks and playlists.
+   - Foreground notification listening and in-memory inbox updating.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Running Previews
+
+Previews can be viewed in VS Code / Android Studio using the IDE Widget Preview gutter icons or via:
+```bash
+flutter widget-preview start
+```
+
+## Running Tests
+
+```bash
+flutter test
+```

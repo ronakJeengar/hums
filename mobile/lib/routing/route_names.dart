@@ -46,6 +46,8 @@ abstract class RouteNames {
   static const String playlistDetail = 'playlist-detail';
   static const String playlistDetailPath = '/playlists/:id';
 
+  static String playlistDetailPathFor(String id) => '/playlists/$id';
+
   static const String editPlaylist = 'edit-playlist';
   static const String editPlaylistPath = '/playlists/:id/edit';
 
@@ -57,6 +59,9 @@ abstract class RouteNames {
 
   static const String history = 'history';
   static const String historyPath = '/history';
+
+  static const String notifications = 'notifications';
+  static const String notificationsPath = '/notifications';
 }
 
 
