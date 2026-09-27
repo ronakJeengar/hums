@@ -2,30 +2,34 @@
 
 ## 1. Color Palette
 
-The Hums color palette is anchored in deep obsidian and slate tones with warm coral and mint accents, directly derived from the reference images.
+The Hums color palette is anchored in true deep obsidian black and warm graphite tones with rich sunset amber-tangerine accents and crisp white pill CTAs, directly replicating the reference design language.
 
 ### Base / Background
-- `background`: `#0D111A` — Primary deep obsidian canvas.
-- `surface`: `#151B26` — Elevated card and container background.
-- `surfaceLight`: `#1E2638` — Hovered / elevated layer surface (chips, secondary buttons).
-- `surfaceSubtle`: `#101520` — Inset containers, text fields, and subtle backdrops.
+- `background`: `#0A0B0E` — True deep obsidian black canvas (zero blue cast, optimal OLED contrast).
+- `surface`: `#14161D` — Warm graphite card and container surface.
+- `surfaceElevated`: `#1C1F28` — Secondary elevated layer (modals, bottom sheets, secondary pill buttons).
+- `surfaceHighlight`: `#262B37` — Hovered / active surface (chips, active item rows).
+- `surfaceSubtle`: `#101217` — Inset containers, recessed text fields, and subtle backdrops.
 
 ### Accent & Highlights
-- `primary`: `#FFFFFF` — Crisp high-contrast white used for primary action pill buttons.
-- `accentCoral`: `#FF7A59` — Warm coral used for play icons, active playback states, hero badges, and primary media actions.
-- `accentMint`: `#2DD4BF` — Refreshing mint/teal for creator tags, success indicators, and secondary categories.
-- `accentBlue`: `#60A5FA` — Sky blue for badges and metadata.
-- `accentPurple`: `#A78BFA` — Lavender for genres, ambient glows, and mood playlists.
+- `primary`: `#FF6633` — Vibrant sunset amber-tangerine for active states, play highlights, scrubbers, and badges.
+- `primaryLight`: `#FF8555` — Softer sunset glow for ambient highlights.
+- `whitePill`: `#FFFFFF` — Crisp high-contrast pure white for primary CTA pill buttons.
+- `accentMint`: `#10B981` — Emerald/mint for verified creator tags and success states.
+- `accentBlue`: `#38BDF8` — Sky blue for badges and metadata.
+- `accentPurple`: `#A855F7` — Soft violet for genres and ambient glows.
+- `accentAmber`: `#F59E0B` — Golden amber for featured accents.
 
 ### Text & Icons
-- `textPrimary`: `#FFFFFF` — Pure white for headings and primary titles.
-- `textSecondary`: `#94A3B8` — Slate grey for subtitles, artists, duration, and secondary metadata.
-- `textTertiary`: `#64748B` — Muted slate for hints, disabled states, and timestamps.
+- `textPrimary`: `#FFFFFF` — Crisp pure white for headings and primary titles.
+- `textSecondary`: `#94A3B8` — Slate neutral for subtitles, artists, duration, and secondary metadata.
+- `textTertiary`: `#64748B` — Muted hints, disabled states, and timestamps.
 
 ### Borders & Dividers
-- `borderSubtle`: `rgba(255, 255, 255, 0.08)` — Subtle 1px borders for cards and inputs.
-- `borderFocus`: `rgba(255, 122, 89, 0.5)` — Coral focus border for inputs and active selections.
-- `divider`: `rgba(255, 255, 255, 0.05)` — Ultra-thin divider between list items.
+- `border`: `#222631` — Warm graphite border for cards and inputs.
+- `borderSubtle`: `rgba(255, 255, 255, 0.10)` — Translucent 1px borders for cards and inputs.
+- `borderFocus`: `rgba(255, 102, 51, 0.5)` — Sunset amber focus border for inputs and active selections.
+- `divider`: `#1A1D26` — Ultra-thin divider between list items.
 
 ---
 
