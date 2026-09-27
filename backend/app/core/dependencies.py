@@ -15,6 +15,7 @@ from app.repositories.audio_repository import (
     TrackRepository,
 )
 from app.repositories.playlist_repository import PlaylistRepository
+from app.repositories.search_repository import SearchRepository
 from app.repositories.user_repository import (
     PasswordResetTokenRepository,
     RefreshTokenRepository,
@@ -24,6 +25,7 @@ from app.services.audio_service import AudioService
 from app.services.auth_service import AuthService
 from app.services.playlist_service import PlaylistService
 from app.services.profile_service import ProfileService
+from app.services.search_service import SearchService
 from app.services.user_service import UserService
 from app.utils.storage import BaseStorageService, S3StorageService
 
@@ -131,6 +133,17 @@ def get_playlist_service(
     return PlaylistService(playlist_repo, track_repo, storage_service)
 
 
+def get_search_repository(session: AsyncSession = Depends(get_db)) -> SearchRepository:
+    return SearchRepository(session)
+
+
+def get_search_service(
+    search_repo: SearchRepository = Depends(get_search_repository),
+    storage_service: BaseStorageService = Depends(get_storage_service),
+) -> SearchService:
+    return SearchService(search_repo, storage_service)
+
+
 async def get_current_user(
     auth: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
     user_repo: UserRepository = Depends(get_user_repository),
@@ -173,3 +186,27 @@ async def get_current_user(
         )
 
     return user
+
+
+async def get_optional_current_user(
+    auth: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+    user_repo: UserRepository = Depends(get_user_repository),
+) -> Optional[User]:
+    """Optionally extracts and validates authenticated user if Bearer token is provided."""
+    if not auth or not auth.credentials:
+        return None
+    try:
+        payload = decode_token(auth.credentials)
+        if payload.get("type") != "access":
+            return None
+        user_id_str = payload.get("sub")
+        if not user_id_str:
+            return None
+        user_id = uuid.UUID(user_id_str)
+        user = await user_repo.get_by_id(user_id)
+        if not user or not user.is_active:
+            return None
+        return user
+    except Exception:
+        return None
+

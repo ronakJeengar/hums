@@ -40,6 +40,13 @@ class HomeScreen extends ConsumerWidget {
         centerTitle: false,
         actions: [
           IconButton(
+            icon: const Icon(Icons.search_rounded, color: AppColors.textPrimary),
+            tooltip: 'Search',
+            onPressed: () {
+              context.push(RouteNames.searchPath);
+            },
+          ),
+          IconButton(
             icon: const AppIcon(
               icon: AppIcons.playlist,
               size: AppIconSizes.md,
@@ -228,6 +235,48 @@ class HomeScreen extends ConsumerWidget {
                       variant: HumsButtonVariant.primary,
                       onPressed: () {
                         context.push(RouteNames.playlistsPath);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.md),
+
+              // Search Quick Action Card
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Explore & Search',
+                            style: AppTypography.titleMedium,
+                          ),
+                          const SizedBox(height: AppSpacing.xxs),
+                          Text(
+                            'Find songs, artists, genres, and playlists.',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    HumsButton(
+                      label: 'Search',
+                      variant: HumsButtonVariant.primary,
+                      onPressed: () {
+                        context.push(RouteNames.searchPath);
                       },
                     ),
                   ],

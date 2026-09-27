@@ -17,6 +17,17 @@ from app.schemas.profile import (
     ProfileResponse,
     ProfileUpdateRequest,
 )
+from app.schemas.search import (
+    SearchType,
+    SearchTrackItem,
+    SearchArtistItem,
+    SearchAlbumItem,
+    SearchPlaylistItem,
+    SearchPodcastItem,
+    SearchEpisodeItem,
+    SearchResponse,
+    SearchSuggestionsResponse,
+)
 
 __all__ = [
     "ApiResponse",
@@ -32,4 +43,13 @@ __all__ = [
     "TokenPayload",
     "ProfileResponse",
     "ProfileUpdateRequest",
+    "SearchType",
+    "SearchTrackItem",
+    "SearchArtistItem",
+    "SearchAlbumItem",
+    "SearchPlaylistItem",
+    "SearchPodcastItem",
+    "SearchEpisodeItem",
+    "SearchResponse",
+    "SearchSuggestionsResponse",
 ]

@@ -19,6 +19,7 @@ import 'package:hums_mobile/features/playlists/presentation/screens/create_playl
 import 'package:hums_mobile/features/playlists/presentation/screens/edit_playlist_screen.dart';
 import 'package:hums_mobile/features/playlists/presentation/screens/playlist_detail_screen.dart';
 import 'package:hums_mobile/features/playlists/presentation/screens/playlist_list_screen.dart';
+import 'package:hums_mobile/features/search/presentation/screens/search_screen.dart';
 import 'package:hums_mobile/routing/route_names.dart';
 
 class RouterNotifier extends ChangeNotifier {
@@ -147,6 +148,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           final id = state.pathParameters['id'] ?? '';
           return EditPlaylistScreen(playlistId: id);
         },
+      ),
+      GoRoute(
+        name: RouteNames.search,
+        path: RouteNames.searchPath,
+        builder: (context, state) => const SearchScreen(),
       ),
     ],
     errorBuilder: (context, state) => ErrorScreen(

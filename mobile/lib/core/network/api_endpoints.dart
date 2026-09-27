@@ -34,5 +34,9 @@ abstract class ApiEndpoints {
       '/api/v1/playlists/$playlistId/tracks/$trackId';
   static String playlistTracksReorder(String playlistId) =>
       '/api/v1/playlists/$playlistId/tracks/reorder';
+
+  // Search Endpoints
+  static const String search = '/api/v1/search';
+  static const String searchSuggestions = '/api/v1/search/suggestions';
 }
 
