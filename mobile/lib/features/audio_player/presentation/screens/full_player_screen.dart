@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hums_mobile/core/theme/app_colors.dart';
 import 'package:hums_mobile/core/theme/app_icons.dart';
 import 'package:hums_mobile/core/widgets/app_icon.dart';
 import 'package:hums_mobile/features/audio_player/presentation/providers/audio_player_provider.dart';
 import 'package:hums_mobile/features/downloads/presentation/widgets/download_button.dart';
 import 'package:hums_mobile/features/library/presentation/widgets/like_button.dart';
+import 'package:hums_mobile/routing/route_names.dart';
 
 class FullPlayerScreen extends ConsumerStatefulWidget {
   const FullPlayerScreen({super.key});
@@ -119,6 +121,26 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
                                   durationSeconds: track.durationSeconds,
                                   size: 24,
                                   color: AppColors.textPrimary,
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.lyrics_outlined,
+                                    size: 22,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                  tooltip: 'Lyrics',
+                                  splashRadius: 20,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 32,
+                                    minHeight: 32,
+                                  ),
+                                  onPressed: () {
+                                    context.push(
+                                      RouteNames.lyricsPathFor(track.trackId),
+                                    );
+                                  },
                                 ),
                               ],
                             ),
@@ -525,24 +547,67 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
               ),
               const Spacer(flex: 1),
 
-              // Audio Quality Indicator
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceElevated,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Text(
-                  '${track.audio.format.toUpperCase()} · ${track.audio.bitrateKbps} kbps',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.8,
+              // Audio Quality Indicator & Lyrics Button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceElevated,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Text(
+                      '${track.audio.format.toUpperCase()} · ${track.audio.bitrateKbps} kbps',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 10),
+                  InkWell(
+                    onTap: () {
+                      context.push(RouteNames.lyricsPathFor(track.trackId));
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.lyrics_outlined,
+                            size: 14,
+                            color: AppColors.primaryLight,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'LYRICS',
+                            style: TextStyle(
+                              color: AppColors.primaryLight,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
             ],

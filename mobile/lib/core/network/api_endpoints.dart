@@ -80,4 +80,8 @@ abstract class ApiEndpoints {
   static const String library = '/api/v1/library';
   static String libraryLikedTracks({int page = 1, int size = 20}) =>
       '/api/v1/library/liked-tracks?page=$page&size=$size';
+
+  // Lyrics Endpoints
+  static String trackLyrics(String trackId) => '/api/v1/tracks/$trackId/lyrics';
+  static String trackLyricsGenerate(String trackId) => '/api/v1/tracks/$trackId/lyrics/generate';
 }

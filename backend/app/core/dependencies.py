@@ -30,10 +30,13 @@ from app.repositories.user_repository import (
     UserRepository,
 )
 from app.ai.gemini_recommendation_client import GeminiRecommendationClient
+from app.ai.gemini_lyrics_client import GeminiLyricsClient
+from app.repositories.lyrics_repository import LyricsRepository
 from app.services.audio_service import AudioService
 from app.services.auth_service import AuthService
 from app.services.creator_service import CreatorService
 from app.services.like_service import LikeService
+from app.services.lyrics_service import LyricsService
 from app.services.playback_service import PlaybackService
 from app.services.playlist_service import PlaylistService
 from app.services.profile_service import ProfileService
@@ -254,6 +257,28 @@ async def get_like_service(
     creator_repo: CreatorRepository = Depends(get_creator_repository),
 ) -> LikeService:
     return LikeService(like_repo, redis_client, playlist_repo, creator_repo)
+
+
+def get_lyrics_repository(session: AsyncSession = Depends(get_db)) -> LyricsRepository:
+    return LyricsRepository(session)
+
+
+def get_gemini_lyrics_client() -> GeminiLyricsClient:
+    return GeminiLyricsClient()
+
+
+async def get_lyrics_service(
+    lyrics_repo: LyricsRepository = Depends(get_lyrics_repository),
+    track_repo: TrackRepository = Depends(get_track_repository),
+    gemini_client: GeminiLyricsClient = Depends(get_gemini_lyrics_client),
+    redis_client: aioredis.Redis = Depends(get_redis_client),
+) -> LyricsService:
+    return LyricsService(
+        lyrics_repo=lyrics_repo,
+        track_repo=track_repo,
+        gemini_client=gemini_client,
+        redis_client=redis_client,
+    )
 
 
 def get_recommendation_service(

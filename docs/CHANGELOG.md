@@ -10,6 +10,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Lyrics & Synchronized Lyrics (`feature/lyrics`):**
+  - **Relational Data Model & PostgreSQL Migrations:**
+    - Dedicated `lyrics` table with 1:1 relation to `tracks` (`track_id` unique FK, cascading delete).
+    - Dedicated `lyric_lines` table storing line-level timestamps with sequence ordering, start and end milliseconds (`start_ms`, `end_ms`), and cascade deletion.
+    - Alembic migration `20260928_c9f0a1234567_create_lyrics_and_lyric_lines.py`.
+  - **Backend AI Pipeline & Celery Background Generation:**
+    - `GeminiLyricsClient` leveraging Google Gemini structured JSON schemas with non-hallucinating validation.
+    - Automated Celery worker task `generate_track_lyrics` enqueued upon track transcode completion (`READY`).
+    - Monotonic millisecond timestamp validation for owner manual uploads.
+    - Redis caching (`lyrics:{track_id}`, 1h TTL) with immediate mutation invalidation.
+  - **REST Endpoints (`/api/v1/tracks/{track_id}/lyrics`):**
+    - `GET /api/v1/tracks/{track_id}/lyrics` (cached public plain and synchronized lyrics).
+    - `POST /api/v1/tracks/{track_id}/lyrics/generate` (on-demand Celery worker trigger).
+    - `POST /api/v1/tracks/{track_id}/lyrics` (owner manual upload with validation).
+  - **Flutter Mobile Client & Design System Integration:**
+    - High-performance `LyricsScreen` (`/lyrics`) supporting loading, processing, unavailable, plain, and synchronized lyric states.
+    - $O(\log N)$ active line resolution using binary search; notification throttling avoids 60 FPS widget rebuilds.
+    - Smooth auto-scrolling with manual scroll detection, floating "Jump to current line" button, and 5-second inactivity auto-recovery.
+    - Interactive tap-to-seek seeking audio playback directly to line start timestamp.
+    - Offline lyrics caching at `downloads/{userId}/{trackId}/lyrics.json`, purged alongside audio downloads.
+    - Full player integration: dedicated lyrics icon in top bar and lyrics chip in bottom playback info row.
+  - **Verification & Documentation:**
+    - 13 backend tests in `backend/tests/test_lyrics.py` (all 193 backend pytest tests passing).
+    - 15 Flutter unit and widget tests in `mobile/test/features/lyrics/lyrics_test.dart` (all 274 Flutter tests passing, 0 analyzer issues).
+    - Dedicated documentation in `docs/lyrics/` (`LYRICS_ARCHITECTURE.md`, `LYRICS_API.md`, `SYNCHRONIZED_LYRICS.md`, `LYRICS_AI_PIPELINE.md`, `LYRICS_LIMITATIONS.md`).
 - **Likes, Favorites & Personal Library (`feature/likes-library`):**
   - **Relational Data Model & PostgreSQL Migrations:**
     - Dedicated `user_track_likes` table with composite unique constraint `(user_id, track_id)` guaranteeing strict separation from playlists.

@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from app.db.models.recommendation import RecommendationItem
     from app.db.models.creator import Creator
     from app.db.models.like import UserTrackLike
+    from app.db.models.lyrics import Lyrics
 
 
 class Track(BaseDBModel):
@@ -120,6 +121,12 @@ class Track(BaseDBModel):
     recommendation_items: Mapped[List["RecommendationItem"]] = relationship(
         "RecommendationItem",
         back_populates="track",
+        cascade="all, delete-orphan",
+    )
+    lyrics: Mapped[Optional["Lyrics"]] = relationship(
+        "Lyrics",
+        back_populates="track",
+        uselist=False,
         cascade="all, delete-orphan",
     )
 

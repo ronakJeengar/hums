@@ -493,4 +493,48 @@ Denormalized public counter on `tracks` for efficient aggregation without dynami
 **Index:**
 * `ix_tracks_likes_count` (btree DESC): Popular tracks discovery and ranking queries.
 
+---
+
+## 7. Lyrics & Synchronized Lyrics Schema
+
+### 7.1 `lyrics` Table
+Authoritative plain or synchronized lyrics associated with a track.
+
+| Column | Type | Nullable | Constraints & Defaults | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `UUID` | No | PK, Default `gen_random_uuid()` | Unique lyrics identifier |
+| `track_id` | `UUID` | No | FK -> `tracks(id)` ON DELETE CASCADE, UNIQUE | Target track ID |
+| `status` | `VARCHAR(50)` | No | Default `'PENDING'`, INDEX | Lifecycle status (`PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`, `UNAVAILABLE`) |
+| `language` | `VARCHAR(10)` | Yes | | ISO language code (e.g. `en`, `hi`) |
+| `text` | `TEXT` | Yes | | Full plain-text lyrics content |
+| `source` | `VARCHAR(50)` | No | Default `'AI_GENERATED'` | Provenance (`AI_GENERATED`, `UPLOADED`, `MANUAL`) |
+| `is_synchronized` | `BOOLEAN` | No | Default `false` | True if timestamped line markers exist |
+| `model` | `VARCHAR(100)` | Yes | | AI model used (e.g. `gemini-2.5-flash`) |
+| `version` | `VARCHAR(20)` | No | Default `'v1'` | Schema / prompt pipeline version |
+| `error_message` | `TEXT` | Yes | | Diagnostic message if processing failed |
+| `created_at` | `TIMESTAMPTZ` | No | Default `NOW()` | Record creation timestamp |
+| `updated_at` | `TIMESTAMPTZ` | No | Default `NOW()` | Modification audit timestamp |
+
+**Indexes:**
+* `ix_lyrics_track_id` (unique): Guarantees 1:1 relationship between track and its lyrics.
+* `ix_lyrics_status` (btree): Facilitates worker queue inspection and health checks.
+
+### 7.2 `lyric_lines` Table
+Stores ordered timestamped lines for synchronized playback.
+
+| Column | Type | Nullable | Constraints & Defaults | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `UUID` | No | PK, Default `gen_random_uuid()` | Unique line identifier |
+| `lyrics_id` | `UUID` | No | FK -> `lyrics(id)` ON DELETE CASCADE, INDEX | Parent lyrics record ID |
+| `sequence` | `INTEGER` | No | | 0-indexed chronological line order |
+| `start_ms` | `INTEGER` | No | | Millisecond start timestamp |
+| `end_ms` | `INTEGER` | Yes | | Optional millisecond end timestamp |
+| `text` | `TEXT` | No | | Lyric line text string |
+| `created_at` | `TIMESTAMPTZ` | No | Default `NOW()` | Creation timestamp |
+| `updated_at` | `TIMESTAMPTZ` | No | Default `NOW()` | Modification audit timestamp |
+
+**Indexes:**
+* `ix_lyric_lines_lyrics_sequence` (btree composite): `(lyrics_id, sequence ASC)` for fast retrieval in proper song order.
+
+
 

@@ -24,6 +24,8 @@ docs/*
 !docs/social/**
 !docs/library/
 !docs/library/**
+!docs/lyrics/
+!docs/lyrics/**
 !docs/PRD.md
 !docs/CHANGELOG.md
 !docs/ARCHITECTURE.md

@@ -45,6 +45,18 @@ class DownloadFileManager {
     return File(p.join(trackDir.path, 'audio.$ext'));
   }
 
+  /// Returns the cached lyrics file path for offline playback.
+  Future<File> getLyricsFile(String userId, String trackId) async {
+    final trackDir = await getTrackDirectory(userId, trackId);
+    return File(p.join(trackDir.path, 'lyrics.json'));
+  }
+
+  /// Checks if offline cached lyrics exist on disk for this track.
+  Future<bool> hasLyricsFile(String userId, String trackId) async {
+    final file = await getLyricsFile(userId, trackId);
+    return await file.exists();
+  }
+
   /// Checks how many bytes have already been downloaded to .part file for resume.
   Future<int> getPartialFileLength(String userId, String trackId) async {
     final partFile = await getPartialFile(userId, trackId);

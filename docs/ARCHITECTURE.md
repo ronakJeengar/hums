@@ -573,3 +573,32 @@ flowchart TD
   - `LikedSongsScreen` (`/liked-songs`): Dedicated paginated listing (`liked_at DESC`) with 1-tap queue playback, download integration, and playlist addition modals.
 * **Strict Account Isolation:** Logging out clears and invalidates all personal library providers and user-specific states.
 
+---
+
+## 12. Lyrics & Synchronized Lyrics Subsystem
+
+### 12.1 Domain & Relational Model
+* **Data Representation:**
+  - `lyrics` table holds metadata, full plain text (`text`), language code, generation source (`AI_GENERATED`, `UPLOADED`, `MANUAL`), synchronization flag (`is_synchronized`), model identifier, version, and lifecycle status (`PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`, `UNAVAILABLE`).
+  - `lyric_lines` table holds line-level timestamps with strict sequence numbering (`sequence`), start offset in milliseconds (`start_ms`), and optional completion offset (`end_ms`), cascading on parent deletion (`ondelete="CASCADE"`).
+* **Timestamp Invariant Enforcement:**
+  - Non-decreasing/strictly increasing `start_ms` validation.
+  - `end_ms >= start_ms` when specified.
+  - Zero tolerance for timestamp hallucination: plain lyrics are returned if timestamps are uncertain.
+* **Redis Caching & Invalidation:**
+  - Authoritative lyrics cached at `lyrics:{track_id}` (TTL 3600s).
+  - Explicit Redis deletion on generation completion or owner edits.
+
+### 12.2 Asynchronous Background Generation
+* Background worker task `generate_track_lyrics(track_id)` auto-enqueued when a track transitions to `READY`.
+* Interacts with `GeminiLyricsClient` using Gemini structured output JSON schema.
+* On failure or low vocal confidence, safely sets status to `UNAVAILABLE` and removes cache keys.
+
+### 12.3 High-Performance Mobile Client Architecture
+* **Active Line Resolution ($O(\log N)$):** Binary search over lines evaluates active line index instantly without traversing collections.
+* **Rebuild Prevention:** `activeLyricLineIndexProvider` emits only when line index changes, eliminating 60 FPS slider rebuilds.
+* **Auto-Scroll & Manual Override:** Smooth auto-centering pauses on manual scroll gestures with a floating "Jump to current line" recovery button and 5-second inactivity resume.
+* **Tap-to-Seek:** Direct invocation of `audioPlayerNotifier.seek(Duration(milliseconds: line.startMs))`.
+* **Offline Caching:** Downloaded tracks store cached lyrics at `downloads/{userId}/{trackId}/lyrics.json`, purged alongside audio files when deleting downloads.
+
+

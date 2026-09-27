@@ -1948,4 +1948,92 @@ Returns a paginated list of all tracks liked by the authenticated user, ordered 
   }
   ```
 
+---
+
+## 8. Lyrics & Synchronized Lyrics Endpoints
+
+### 8.1 Get Track Lyrics
+Retrieves authoritative plain or synchronized lyrics for a track. Publicly viewable and cached in Redis (`lyrics:{track_id}`, TTL 3600s).
+
+* **Method:** `GET`
+* **Path:** `/api/v1/tracks/{track_id}/lyrics` (Alias: `/api/v1/audio/tracks/{track_id}/lyrics`)
+* **Authentication:** Optional
+* **Path Parameters:** `track_id` (UUID)
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "7f8c0571-0857-41fe-8b17-062e08c69786",
+      "track_id": "c8135d7d-b7ae-44cb-905a-da83e5a0d45a",
+      "status": "COMPLETED",
+      "language": "en",
+      "source": "AI_GENERATED",
+      "is_synchronized": true,
+      "text": "First acoustic chord\nWalking down the shoreline",
+      "lines": [
+        {
+          "id": "8e3b1c24-5d39-4458-9be3-ef377e8a9390",
+          "sequence": 0,
+          "start_ms": 10500,
+          "end_ms": 14200,
+          "text": "First acoustic chord"
+        }
+      ],
+      "model": "gemini-2.5-flash",
+      "version": "v1",
+      "error_message": null,
+      "updated_at": "2026-09-27T17:40:00Z"
+    }
+  }
+  ```
+
+### 8.2 Request Lyrics Generation
+Asynchronously enqueues Celery background job to generate and align lyrics using Gemini structured AI schemas.
+
+* **Method:** `POST`
+* **Path:** `/api/v1/tracks/{track_id}/lyrics/generate`
+* **Authentication:** Required (`Bearer <access_token>`)
+* **Path Parameters:** `track_id` (UUID)
+* **Response (202 Accepted):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "track_id": "c8135d7d-b7ae-44cb-905a-da83e5a0d45a",
+      "status": "PROCESSING",
+      "message": "Lyrics generation job enqueued"
+    }
+  }
+  ```
+
+### 8.3 Upload / Save Manual Lyrics
+Allows the track owner to supply manual plain or synchronized lyric lines with strict non-decreasing millisecond validation.
+
+* **Method:** `POST`
+* **Path:** `/api/v1/tracks/{track_id}/lyrics`
+* **Authentication:** Required (`Bearer <access_token>`)
+* **Path Parameters:** `track_id` (UUID)
+* **Request Body:**
+  ```json
+  {
+    "text": "First acoustic chord\nWalking down the shoreline",
+    "language": "en",
+    "is_synchronized": true,
+    "lines": [
+      {
+        "sequence": 0,
+        "start_ms": 10500,
+        "end_ms": 14200,
+        "text": "First acoustic chord"
+      }
+    ]
+  }
+  ```
+* **Response (200 OK):** Updated `LyricsResponse`.
+* **Error Responses:**
+  * `400 Bad Request`: `INVALID_LYRIC_TIMESTAMPS` if timestamps violate ordering.
+  * `403 Forbidden`: Caller does not own the track.
+
+
 

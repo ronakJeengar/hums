@@ -263,6 +263,15 @@ class AudioProcessingService:
                             f"Could not dispatch upload notification for track {track_id}: {notif_exc}"
                         )
 
+                # Trigger asynchronous lyrics generation task
+                try:
+                    from app.workers.lyrics_tasks import generate_track_lyrics
+                    generate_track_lyrics.delay(str(track_id))
+                except Exception as lyrics_task_exc:
+                    logger.warning(
+                        f"Could not enqueue lyrics generation for track {track_id}: {lyrics_task_exc}"
+                    )
+
                 logger.info(
                     f"Successfully processed track {track_id}: duration={duration_sec}s, renditions={len(rendition_records_data)}"
                 )
