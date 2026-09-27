@@ -96,6 +96,7 @@ class SearchService:
                 query_str=clean_q,
                 limit=limit,
                 skip=skip if search_type == SearchType.ARTISTS else 0,
+                current_user_id=current_user_id,
             )
             artist_items = [SearchArtistItem.model_validate(a) for a in artists]
 

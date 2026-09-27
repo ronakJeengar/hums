@@ -20,6 +20,9 @@ docs/*
 !docs/downloads/**
 !docs/playback/
 !docs/playback/**
+!docs/social/
+!docs/social/**
+!docs/PRD.md
 !docs/CHANGELOG.md
 !docs/ARCHITECTURE.md
 !docs/DB_SCHEMA.md

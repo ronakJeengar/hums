@@ -62,6 +62,13 @@ abstract class RouteNames {
 
   static const String notifications = 'notifications';
   static const String notificationsPath = '/notifications';
+
+  static const String creatorProfile = 'creator-profile';
+  static const String creatorProfilePath = '/creators/:id';
+  static String creatorProfilePathFor(String id) => '/creators/$id';
+
+  static const String following = 'following';
+  static const String followingPath = '/following';
 }
 
 

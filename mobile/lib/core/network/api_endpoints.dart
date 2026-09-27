@@ -63,4 +63,14 @@ abstract class ApiEndpoints {
 
   // Telemetry & Observability
   static const String telemetryEvents = '/api/v1/telemetry/events';
+
+  // Creator & Social Endpoints
+  static const String creators = '/api/v1/creators';
+  static String creatorDetails(String creatorId) => '/api/v1/creators/$creatorId';
+  static String creatorFollow(String creatorId) => '/api/v1/creators/$creatorId/follow';
+  static String creatorFollowStatus(String creatorId) => '/api/v1/creators/$creatorId/follow-status';
+  static String creatorFollowers(String creatorId, {int page = 1, int size = 20}) =>
+      '/api/v1/creators/$creatorId/followers?page=$page&size=$size';
+  static String userFollowing({int page = 1, int size = 20}) =>
+      '/api/v1/users/me/following?page=$page&size=$size';
 }

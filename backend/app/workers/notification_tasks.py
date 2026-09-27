@@ -86,3 +86,72 @@ def send_push_notification(
                 logger.error(f"Max retries exceeded for user {user_id}")
                 return False
         return False
+
+
+@celery_app.task(
+    bind=True,
+    name="app.workers.notification_tasks.fanout_creator_new_release",
+    max_retries=3,
+    default_retry_delay=15,
+)
+def fanout_creator_new_release(
+    self,
+    creator_id_str: str,
+    track_id_str: str,
+    track_title: str,
+    creator_name: str,
+) -> int:
+    """
+    Asynchronous fan-out notification delivery when a creator publishes a new track.
+    Batches through followers and respects each follower's notification preferences.
+    """
+    try:
+        creator_id = uuid.UUID(creator_id_str)
+        track_id = uuid.UUID(track_id_str)
+    except ValueError as e:
+        logger.error(f"Invalid UUIDs in fanout_creator_new_release: {e}")
+        return 0
+
+    async def _fanout() -> int:
+        from app.db.database import AsyncSessionLocal
+        from app.repositories.creator_repository import CreatorRepository
+        from app.schemas.notification import NotificationType
+        from app.services.notification_service import NotificationService
+
+        service = NotificationService()
+        dispatched_count = 0
+
+        async with AsyncSessionLocal() as session:
+            creator_repo = CreatorRepository(session)
+            follower_ids = await creator_repo.get_follower_user_ids(creator_id)
+
+        for follower_id in follower_ids:
+            try:
+                await service.notify_user(
+                    user_id=follower_id,
+                    notification_type=NotificationType.NEW_RELEASE.value,
+                    title=f"New Release from {creator_name}",
+                    body=f"{creator_name} just released '{track_title}'.",
+                    data={
+                        "track_id": str(track_id),
+                        "creator_id": str(creator_id),
+                        "type": "new_release",
+                    },
+                    idempotency_key=f"release:{track_id}:{follower_id}",
+                    dispatch_push=True,
+                )
+                dispatched_count += 1
+            except Exception as e:
+                logger.warning(f"Failed to dispatch new release notification to {follower_id}: {e}")
+
+        return dispatched_count
+
+    try:
+        count = asyncio.run(_fanout())
+        logger.info(f"Fan-out completed for creator {creator_id_str}: {count} followers notified")
+        return count
+    except Exception as exc:
+        logger.error(f"Error during fanout_creator_new_release: {exc}", exc_info=True)
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=exc, countdown=15 * (2 ** self.request.retries))
+        return 0

@@ -10,6 +10,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Social Profiles, Following & Creator Discovery (`feature/social-following`):**
+  - **Relational Data Models & PostgreSQL Migrations:**
+    - Dedicated `creators` table separating public artist identities from private user accounts with authoritative `followers_count`.
+    - `creator_followers` table with unique constraint `(user_id, creator_id)` and composite indexes on `(creator_id, created_at DESC)` and `(user_id, created_at DESC)`.
+    - Applied Alembic migration `20260926_a7d8e9f01234_create_creators_and_following_tables.py`.
+  - **High-Concurrency Follow & Unfollow Engine:**
+    - Atomic PostgreSQL `ON CONFLICT (user_id, creator_id) DO NOTHING` inserts ensuring idempotent follow actions.
+    - Atomic non-negative follower counter decrement `GREATEST(0, followers_count - 1)` eliminating negative counter drift and double decrements.
+    - Self-follow prevention returning `400 BAD_REQUEST`.
+    - Redis caching for `creator:status:{user_id}:{creator_id}` and `creator:followers_count:{creator_id}` (1h TTL) with immediate mutation invalidation.
+    - Batch follow lookup `is_following_batch` eliminating N+1 database queries.
+  - **Creator REST Endpoints:**
+    - Public profile retrieval `GET /api/v1/creators/{creator_id}` with discography aggregates (popular tracks, latest tracks, albums, playlists) and zero private user leakage.
+    - Idempotent follow `POST /api/v1/creators/{creator_id}/follow` and unfollow `DELETE /api/v1/creators/{creator_id}/follow`.
+    - Follow status lookup `GET /api/v1/creators/{creator_id}/follow-status`.
+    - Paginated creator followers list `GET /api/v1/creators/{creator_id}/followers`.
+    - Paginated popular creators discovery `GET /api/v1/creators/popular`.
+    - Paginated current user following list `GET /api/v1/users/me/following`.
+  - **Recommendation & Search Integration:**
+    - `UserPreferenceService` incorporates followed creators as a positive signal with `+3.0` weight bonus during candidate generation.
+    - `SearchRepository.search_artists` directly queries the `creators` table, returning verified status, follower counts, and batch-resolved `is_following` flags.
+  - **Asynchronous Release Fan-Out (Celery):**
+    - `fanout_creator_new_release` task dispatches push notifications to creator followers asynchronously outside the FastAPI lifecycle.
+    - Strictly checks and enforces `notification_preferences.new_releases_enabled`.
+  - **Flutter Mobile Client & Design System Integration:**
+    - `CreatorProfileScreen`: Sliver collapsible cover image header, avatar, verified badge, reactive follower count, biography, `FollowButton`, popular tracks list with 1-tap queue playback, albums, playlists, and floating `MiniPlayer`.
+    - `FollowingScreen`: Paginated followed artists list with pull-to-refresh, empty state with "Discover Artists" call to action, error retry, unfollow actions, and profile navigation.
+    - `FollowButton`: Optimistic updates with instant visual feedback and automatic state rollback on network failure.
+    - Embedded follow state and action buttons in search artist tiles (`SearchArtistTile`).
+    - Added routes `/creators/:id` and `/following` with profile screen navigation entry.
+  - **Verification & Testing:**
+    - 8 backend tests in `backend/tests/test_social_following.py` (all 172 backend pytest tests passing).
+    - 4 mobile test suites with 9 unit and widget tests (all 245 Flutter tests passing, 0 analyzer issues).
+    - Dedicated operational documentation in `docs/social/` (`SOCIAL_ARCHITECTURE.md`, `FOLLOW_SYSTEM.md`, `CREATOR_PROFILES.md`, `NOTIFICATION_FANOUT.md`).
+
 - **Search & Discovery (`feature/search-discovery`):**
   - **Native PostgreSQL Search Engine:** Integrated `pg_trgm` extension with 8 GIN trigram indexes (`ix_tracks_title_trgm`, `ix_tracks_artist_name_trgm`, `ix_tracks_album_name_trgm`, `ix_tracks_genre_trgm`, `ix_playlists_name_trgm`, `ix_playlists_description_trgm`, `ix_users_username_trgm`, `ix_users_full_name_trgm`).
   - **Catalog Search API (`GET /api/v1/search`):** Unified multi-entity search across tracks, artists, albums, playlists, podcasts, and episodes with exact, prefix, substring, and typo-tolerant word similarity ranking.

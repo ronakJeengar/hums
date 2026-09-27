@@ -5,6 +5,7 @@ from app.db.models.playlist import Playlist, PlaylistTrack
 from app.db.models.playback import TrackPlaybackProgress, PlaybackEvent
 from app.db.models.notification import UserDevice, Notification, NotificationPreference
 from app.db.models.recommendation import RecommendationSet, RecommendationItem
+from app.db.models.creator import Creator, CreatorFollower
 
 __all__ = [
     "Base",
@@ -25,4 +26,6 @@ __all__ = [
     "NotificationPreference",
     "RecommendationSet",
     "RecommendationItem",
+    "Creator",
+    "CreatorFollower",
 ]

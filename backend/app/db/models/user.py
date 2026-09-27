@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from app.db.models.audio import Track
     from app.db.models.notification import Notification, NotificationPreference, UserDevice
     from app.db.models.recommendation import RecommendationSet
+    from app.db.models.creator import Creator, CreatorFollower
 
 
 class User(BaseDBModel):
@@ -99,6 +100,17 @@ class User(BaseDBModel):
         back_populates="user",
         cascade="all, delete-orphan",
         order_by="RecommendationSet.created_at.desc()",
+    )
+    creator_profile: Mapped[Optional["Creator"]] = relationship(
+        "Creator",
+        back_populates="user",
+        uselist=False,
+    )
+    following: Mapped[List["CreatorFollower"]] = relationship(
+        "CreatorFollower",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="CreatorFollower.created_at.desc()",
     )
 
     @property

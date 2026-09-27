@@ -420,3 +420,46 @@ To support typo-tolerant prefix and fuzzy search at sub-50ms latency across trac
 | `ix_playlists_description_trgm` | `playlists` | `description` | Playlist description substring matching |
 | `ix_users_username_trgm` | `users` | `username` | Creator username lookup |
 | `ix_users_full_name_trgm` | `users` | `full_name` | Creator display name search |
+
+---
+
+## 5. Creators & Social Following Schema
+
+### 5.1 `creators` Table
+Stores public artist/creator identities separate from private user records.
+
+| Column | Type | Nullable | Constraints & Defaults | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `UUID` | No | PK, Default `gen_random_uuid()` | Primary creator identifier |
+| `user_id` | `UUID` | Yes | FK -> `users(id)` ON DELETE SET NULL, UNIQUE | Optional user account link |
+| `name` | `VARCHAR(150)` | No | INDEX | Public creator / artist name |
+| `username` | `VARCHAR(60)` | Yes | UNIQUE, INDEX | Unique creator handle / URL slug |
+| `bio` | `TEXT` | Yes | | Creator biography |
+| `avatar_url` | `TEXT` | Yes | | CDN avatar image URL |
+| `cover_image_url` | `TEXT` | Yes | | High-resolution cover artwork URL |
+| `is_verified` | `BOOLEAN` | No | Default `false` | Blue verified checkmark status |
+| `followers_count` | `INTEGER` | No | Default `0`, INDEX | Server-authoritative follower count |
+| `created_at` | `TIMESTAMPTZ` | No | Default `NOW()` | Creation timestamp |
+| `updated_at` | `TIMESTAMPTZ` | No | Default `NOW()` | Last update timestamp |
+
+**Indexes:**
+* `ix_creators_name` (btree): Fast creator search and sorting.
+* `ix_creators_followers_count` (btree DESC): Popular creator discovery ranking.
+* `uq_creators_username` (unique): Prevents duplicate handles.
+* `uq_creators_user_id` (unique): Ensures 1:1 user-to-creator mapping when linked.
+
+### 5.2 `creator_followers` Table
+Governs many-to-many relationship between users and creators.
+
+| Column | Type | Nullable | Constraints & Defaults | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `UUID` | No | PK, Default `gen_random_uuid()` | Follow record identifier |
+| `user_id` | `UUID` | No | FK -> `users(id)` ON DELETE CASCADE | Follower user ID |
+| `creator_id` | `UUID` | No | FK -> `creators(id)` ON DELETE CASCADE | Target creator ID |
+| `created_at` | `TIMESTAMPTZ` | No | Default `NOW()` | Timestamp when followed |
+
+**Constraints & Indexes:**
+* `uq_creator_followers_user_creator` (UNIQUE composite): `(user_id, creator_id)` prevents duplicate follows.
+* `ix_creator_followers_creator_created` (btree composite): `(creator_id, created_at DESC)` for fast follower pagination.
+* `ix_creator_followers_user_created` (btree composite): `(user_id, created_at DESC)` for fast following list pagination.
+

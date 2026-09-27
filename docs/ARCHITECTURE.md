@@ -519,3 +519,31 @@ flowchart TD
   - Tapping a song routes directly to `audioPlayerNotifierProvider.playTrack(...)` with queue and playback history tracking.
   - MiniPlayer persistent at bottom.
   - Playlist tiles route directly to `/playlists/:id`.
+
+---
+
+## 3. Social Profiles, Following & Creator Discovery Subsystem
+
+### 3.1 Domain & Data Architecture
+* **User vs. Creator Decoupling:** Users (`users`) handle authentication, private credentials, and personal listening history. Creators (`creators`) handle public artist profiles, biographies, cover/avatar artwork, verification flags, and authoritative follower counts.
+* **Relationship Graph:** Governed by `creator_followers` with unique composite constraint `(user_id, creator_id)` and bidirectional chronological indexing `(creator_id, created_at DESC)` and `(user_id, created_at DESC)`.
+* **Atomic Counter Integrity:** Counter updates use `GREATEST(0, followers_count +/- 1)` within PostgreSQL transactions.
+* **Redis Caching & Invalidation:**
+  - Follow status cached as `creator:status:{user_id}:{creator_id}` (TTL 3600s).
+  - Follower count cached as `creator:followers_count:{creator_id}` (TTL 3600s).
+  - Explicit Redis deletion of both keys on follow and unfollow mutations.
+* **N+1 Batch Optimization:** `is_following_batch` resolves follow status across arbitrary creator collections using SQL `WHERE user_id = :uid AND creator_id = ANY(:cids)` in a single query.
+
+### 3.2 Recommendation Engine Integration
+* Followed creators serve as a strong positive taste signal in `UserPreferenceService`.
+* Tracks associated with artists the user follows receive an explicit `+3.0` weight bonus during candidate scoring.
+
+### 3.3 Asynchronous Release Fan-Out
+* Event `fanout_creator_new_release` dispatched to Celery background workers when new tracks transition to `READY`.
+* Worker queries creator followers, respects individual `notification_preferences.new_releases_enabled`, and routes through the pluggable `PushProvider`.
+
+### 3.4 Client Architecture (Flutter)
+* **Optimistic Follow Updates:** `FollowNotifier` applies optimistic local counter increments/decrements with automatic rollback upon API failure.
+* **Creator Profile:** `CreatorProfileScreen` provides sliver collapsible header, verified badge, responsive follower count, popular tracks with instant queue playback, albums, and public playlists.
+* **Following Management:** `FollowingScreen` provides a paginated listing of followed creators with empty states, pull-to-refresh, unfollow triggers, and profile navigation.
+

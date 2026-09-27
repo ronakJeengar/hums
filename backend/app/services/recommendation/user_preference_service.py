@@ -1,10 +1,11 @@
 from collections import Counter
 from dataclasses import dataclass, field
-from typing import List, Set
+from typing import List, Optional, Set
 import uuid
 
 from app.db.models.user import User
 from app.repositories.audio_repository import TrackRepository
+from app.repositories.creator_repository import CreatorRepository
 from app.repositories.playlist_repository import PlaylistRepository
 
 
@@ -23,15 +24,17 @@ class UserPreferences:
 
 
 class UserPreferenceService:
-    """Extracts explicit and implicit recommendation signals from user history and library."""
+    """Extracts explicit and implicit recommendation signals from user history, library, and followed creators."""
 
     def __init__(
         self,
         playlist_repo: PlaylistRepository,
         track_repo: TrackRepository,
+        creator_repo: Optional[CreatorRepository] = None,
     ):
         self.playlist_repo = playlist_repo
         self.track_repo = track_repo
+        self.creator_repo = creator_repo
 
     async def get_user_preferences(self, user: User) -> UserPreferences:
         """
@@ -62,6 +65,13 @@ class UserPreferenceService:
                 genre_counter[track.genre.strip()] += 1
             if track.artist_name and track.artist_name.strip():
                 artist_counter[track.artist_name.strip()] += 1
+
+        # 3. Inspect followed creators (strong explicit preference signal: +3 weight)
+        if self.creator_repo:
+            following_creators, _ = await self.creator_repo.get_following(user.id, page=1, size=50)
+            for creator in following_creators:
+                if creator.name and creator.name.strip():
+                    artist_counter[creator.name.strip()] += 3
 
         preferred_genres = [genre for genre, _ in genre_counter.most_common(10)]
         preferred_artists = [artist for artist, _ in artist_counter.most_common(10)]

@@ -40,8 +40,12 @@ class SearchArtistItem(BaseModel):
     name: str
     username: str | None = None
     avatar_url: str | None = None
+    cover_image_url: str | None = None
     bio: str | None = None
     track_count: int = 0
+    followers_count: int = 0
+    is_following: bool | None = None
+    is_verified: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

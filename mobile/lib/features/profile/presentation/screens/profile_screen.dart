@@ -340,6 +340,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           const SizedBox(height: AppSpacing.xxl),
 
+          // Following Artists Button
+          SizedBox(
+            width: double.infinity,
+            child: HumsButton(
+              label: 'Following',
+              icon: Icons.people_outline_rounded,
+              variant: HumsButtonVariant.secondary,
+              onPressed: () => context.push(RouteNames.followingPath),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+
           // Listening History Button
           SizedBox(
             width: double.infinity,

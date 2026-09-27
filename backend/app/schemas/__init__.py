@@ -40,6 +40,14 @@ from app.schemas.playback import (
     ListeningHistoryListResponse,
     RecommendationListeningSignal,
 )
+from app.schemas.creator import (
+    CreatorPublicProfile,
+    CreatorDetailResponse,
+    FollowStatusResponse,
+    FollowerUserItem,
+    FollowersListResponse,
+    FollowingListResponse,
+)
 
 __all__ = [
     "ApiResponse",
@@ -74,4 +82,10 @@ __all__ = [
     "ListeningHistoryItemResponse",
     "ListeningHistoryListResponse",
     "RecommendationListeningSignal",
+    "CreatorPublicProfile",
+    "CreatorDetailResponse",
+    "FollowStatusResponse",
+    "FollowerUserItem",
+    "FollowersListResponse",
+    "FollowingListResponse",
 ]

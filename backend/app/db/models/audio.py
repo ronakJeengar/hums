@@ -19,6 +19,7 @@ from app.db.base import BaseDBModel
 if TYPE_CHECKING:
     from app.db.models.user import User
     from app.db.models.recommendation import RecommendationItem
+    from app.db.models.creator import Creator
 
 
 class Track(BaseDBModel):
@@ -34,6 +35,12 @@ class Track(BaseDBModel):
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
+    )
+    creator_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("creators.id", ondelete="SET NULL"),
+        nullable=True,
         index=True,
     )
     title: Mapped[str] = mapped_column(
@@ -76,6 +83,9 @@ class Track(BaseDBModel):
     owner: Mapped["User"] = relationship(
         "User",
         back_populates="tracks",
+    )
+    creator: Mapped[Optional["Creator"]] = relationship(
+        "Creator",
     )
     audio_files: Mapped[List["AudioFile"]] = relationship(
         "AudioFile",

@@ -199,7 +199,7 @@ class PlaybackRepository(BaseRepository[TrackPlaybackProgress]):
             .join(Track, Track.id == TrackPlaybackProgress.track_id)
             .where(
                 TrackPlaybackProgress.user_id == user_id,
-                Track.status.in_(["READY", "UPLOADED", "PROCESSING"]),
+                Track.status != "DELETED",
             )
         )
         total_result = await self.session.execute(count_stmt)
@@ -211,7 +211,7 @@ class PlaybackRepository(BaseRepository[TrackPlaybackProgress]):
             .options(joinedload(TrackPlaybackProgress.track))
             .where(
                 TrackPlaybackProgress.user_id == user_id,
-                Track.status.in_(["READY", "UPLOADED", "PROCESSING"]),
+                Track.status != "DELETED",
             )
             .order_by(TrackPlaybackProgress.updated_at.desc())
             .offset(skip)

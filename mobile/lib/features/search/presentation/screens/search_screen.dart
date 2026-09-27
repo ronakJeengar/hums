@@ -339,9 +339,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             return SearchArtistTile(
               artist: artist,
               onTap: () {
-                _controller.text = artist.name;
-                notifier.onQueryChanged(artist.name);
-                notifier.onCategoryChanged(SearchCategory.tracks);
+                if (artist.id.isNotEmpty && !artist.id.startsWith('artist_')) {
+                  context.push('/creators/${artist.id}');
+                } else {
+                  _controller.text = artist.name;
+                  notifier.onQueryChanged(artist.name);
+                  notifier.onCategoryChanged(SearchCategory.tracks);
+                }
               },
             );
           }),

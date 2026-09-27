@@ -1650,3 +1650,162 @@ Returns fast, ranked completion suggestions across titles, artists, albums, and 
   }
 }
 ```
+
+---
+
+# Creators & Social Following API
+
+## 1. Get Creator Profile & Discography
+Retrieves public creator profile with aggregated popular tracks, latest tracks, albums, and playlists.
+
+* **Method:** `GET`
+* **Path:** `/api/v1/creators/{creator_id}`
+* **Authentication:** Optional (`Bearer <access_token>`). When authenticated, resolves `is_following`.
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "c7a8b9c0-1234-5678-9abc-def012345678",
+      "name": "Arijit Singh",
+      "username": "arijitsingh",
+      "bio": "Singer, composer, and music producer.",
+      "avatar_url": "https://cdn.hums.app/avatars/arijit.webp",
+      "cover_image_url": "https://cdn.hums.app/covers/arijit_header.webp",
+      "is_verified": true,
+      "followers_count": 1200000,
+      "is_following": true,
+      "popular_tracks": [...],
+      "latest_tracks": [...],
+      "albums": [...],
+      "playlists": [...],
+      "created_at": "2026-09-01T00:00:00Z"
+    }
+  }
+  ```
+
+---
+
+## 2. Follow Creator
+Follows an artist/creator. Idempotent; atomic increment of followers counter.
+
+* **Method:** `POST`
+* **Path:** `/api/v1/creators/{creator_id}/follow`
+* **Authentication:** Required (`Bearer <access_token>`)
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "creator_id": "c7a8b9c0-1234-5678-9abc-def012345678",
+      "is_following": true,
+      "followers_count": 1200001
+    }
+  }
+  ```
+
+---
+
+## 3. Unfollow Creator
+Unfollows an artist/creator. Idempotent; atomic non-negative decrement of followers counter.
+
+* **Method:** `DELETE`
+* **Path:** `/api/v1/creators/{creator_id}/follow`
+* **Authentication:** Required (`Bearer <access_token>`)
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "creator_id": "c7a8b9c0-1234-5678-9abc-def012345678",
+      "is_following": false,
+      "followers_count": 1200000
+    }
+  }
+  ```
+
+---
+
+## 4. Get Follow Status
+Checks follow state and authoritative follower count.
+
+* **Method:** `GET`
+* **Path:** `/api/v1/creators/{creator_id}/follow-status`
+* **Authentication:** Required (`Bearer <access_token>`)
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "creator_id": "c7a8b9c0-1234-5678-9abc-def012345678",
+      "is_following": true,
+      "followers_count": 1200000
+    }
+  }
+  ```
+
+---
+
+## 5. Get Creator Followers
+Paginated list of public follower profiles.
+
+* **Method:** `GET`
+* **Path:** `/api/v1/creators/{creator_id}/followers`
+* **Query Parameters:** `page` (default 1), `size` (default 20, max 100)
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "items": [
+        {
+          "id": "123e4567-e89b-12d3-a456-426614174000",
+          "name": "Ronak Jeengar",
+          "avatar_url": null,
+          "followed_at": "2026-09-20T12:00:00Z"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 20,
+      "has_next": false
+    }
+  }
+  ```
+
+---
+
+## 6. Get Current User Following
+Paginated list of creators followed by the authenticated user.
+
+* **Method:** `GET`
+* **Path:** `/api/v1/users/me/following`
+* **Authentication:** Required (`Bearer <access_token>`)
+* **Query Parameters:** `page` (default 1), `size` (default 20, max 100)
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "items": [
+        {
+          "id": "c7a8b9c0-1234-5678-9abc-def012345678",
+          "name": "Arijit Singh",
+          "username": "arijitsingh",
+          "bio": "Singer, composer, and music producer.",
+          "avatar_url": "https://cdn.hums.app/avatars/arijit.webp",
+          "cover_image_url": "https://cdn.hums.app/covers/arijit_header.webp",
+          "is_verified": true,
+          "followers_count": 1200000,
+          "is_following": true,
+          "created_at": "2026-09-01T00:00:00Z"
+        }
+      ],
+      "total": 1,
+      "page": 1,
+      "size": 20,
+      "has_next": false
+    }
+  }
+  ```
+

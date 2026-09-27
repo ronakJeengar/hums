@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db.models.audio import Track
+from app.db.models.creator import Creator, CreatorFollower
 from app.db.models.playlist import Playlist
 from app.db.models.user import User
 
@@ -164,10 +165,11 @@ class SearchRepository:
         query_str: str,
         limit: int = 20,
         skip: int = 0,
+        current_user_id: uuid.UUID | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
         """
-        Searches creators and artists from registered users and track artist metadata.
-        Aggregates track counts for each artist entity.
+        Searches creators and artists from Creator profiles, registered users, and track artist metadata.
+        Aggregates track counts, follower counts, and follow state for each artist entity.
         """
         clean_q = query_str.strip()
         if not clean_q:
@@ -179,7 +181,60 @@ class SearchRepository:
         substr_q = f"%{escaped_q}%"
         raw_q = clean_q
 
-        # Subquery for user track count (READY tracks only)
+        artists_list: list[dict[str, Any]] = []
+        seen_names = set()
+        seen_creator_ids = set()
+
+        # 1. Search Creators table
+        creator_score_expr = (
+            case((func.lower(Creator.name) == exact_q, 100.0), else_=0.0)
+            + case((func.lower(func.coalesce(Creator.username, "")) == exact_q, 90.0), else_=0.0)
+            + case((Creator.name.ilike(prefix_q), 50.0), else_=0.0)
+            + case((func.coalesce(Creator.username, "").ilike(prefix_q), 45.0), else_=0.0)
+            + case((Creator.name.ilike(substr_q), 25.0), else_=0.0)
+            + case((func.coalesce(Creator.username, "").ilike(substr_q), 20.0), else_=0.0)
+            + (func.word_similarity(raw_q, Creator.name) * 20.0)
+            + (func.word_similarity(raw_q, func.coalesce(Creator.username, "")) * 15.0)
+        )
+
+        creator_match_cond = or_(
+            Creator.name.ilike(substr_q),
+            func.coalesce(Creator.username, "").ilike(substr_q),
+            func.word_similarity(raw_q, Creator.name) > 0.35,
+            func.word_similarity(raw_q, func.coalesce(Creator.username, "")) > 0.35,
+        )
+
+        creator_stmt = (
+            select(
+                Creator,
+                creator_score_expr.label("score"),
+            )
+            .where(creator_match_cond)
+            .order_by(creator_score_expr.desc(), Creator.id.desc())
+        )
+        creator_res = await self.session.execute(creator_stmt)
+        creator_rows = creator_res.all()
+
+        for creator, score in creator_rows:
+            seen_names.add(creator.name.strip().lower())
+            seen_creator_ids.add(creator.id)
+            artists_list.append({
+                "id": str(creator.id),
+                "name": creator.name,
+                "username": creator.username,
+                "avatar_url": creator.avatar_url,
+                "cover_image_url": creator.cover_image_url,
+                "bio": creator.bio,
+                "track_count": 0,
+                "followers_count": creator.followers_count or 0,
+                "is_following": None,
+                "is_verified": creator.is_verified,
+                "_creator_uuid": creator.id,
+                "_user_id": creator.user_id,
+                "_score": float(score),
+            })
+
+        # 2. Search Users table (fallback for registered users without separate creator profiles)
         user_track_count_subq = (
             select(func.count(Track.id))
             .where(Track.owner_id == User.id, Track.status == "READY")
@@ -187,14 +242,14 @@ class SearchRepository:
         )
 
         user_score_expr = (
-            case((func.lower(func.coalesce(User.full_name, "")) == exact_q, 100.0), else_=0.0)
-            + case((func.lower(func.coalesce(User.username, "")) == exact_q, 90.0), else_=0.0)
-            + case((func.coalesce(User.full_name, "").ilike(prefix_q), 50.0), else_=0.0)
-            + case((func.coalesce(User.username, "").ilike(prefix_q), 45.0), else_=0.0)
-            + case((func.coalesce(User.full_name, "").ilike(substr_q), 25.0), else_=0.0)
-            + case((func.coalesce(User.username, "").ilike(substr_q), 20.0), else_=0.0)
-            + (func.word_similarity(raw_q, func.coalesce(User.full_name, "")) * 20.0)
-            + (func.word_similarity(raw_q, func.coalesce(User.username, "")) * 15.0)
+            case((func.lower(func.coalesce(User.full_name, "")) == exact_q, 95.0), else_=0.0)
+            + case((func.lower(func.coalesce(User.username, "")) == exact_q, 85.0), else_=0.0)
+            + case((func.coalesce(User.full_name, "").ilike(prefix_q), 45.0), else_=0.0)
+            + case((func.coalesce(User.username, "").ilike(prefix_q), 40.0), else_=0.0)
+            + case((func.coalesce(User.full_name, "").ilike(substr_q), 22.0), else_=0.0)
+            + case((func.coalesce(User.username, "").ilike(substr_q), 18.0), else_=0.0)
+            + (func.word_similarity(raw_q, func.coalesce(User.full_name, "")) * 18.0)
+            + (func.word_similarity(raw_q, func.coalesce(User.username, "")) * 14.0)
         )
 
         user_match_cond = and_(
@@ -219,28 +274,33 @@ class SearchRepository:
         user_res = await self.session.execute(user_stmt)
         user_rows = user_res.all()
 
-        artists_list: list[dict[str, Any]] = []
-        seen_names = set()
-
         for user, track_count, score in user_rows:
             name = user.full_name or user.username or "Unknown Artist"
-            seen_names.add(name.strip().lower())
-            artists_list.append({
-                "id": str(user.id),
-                "name": name,
-                "username": user.username,
-                "avatar_url": user.avatar_url,
-                "bio": user.bio,
-                "track_count": track_count or 0,
-                "_score": float(score),
-            })
+            lower_name = name.strip().lower()
+            if lower_name not in seen_names:
+                seen_names.add(lower_name)
+                artists_list.append({
+                    "id": str(user.id),
+                    "name": name,
+                    "username": user.username,
+                    "avatar_url": user.avatar_url,
+                    "cover_image_url": None,
+                    "bio": user.bio,
+                    "track_count": track_count or 0,
+                    "followers_count": 0,
+                    "is_following": None,
+                    "is_verified": False,
+                    "_creator_uuid": None,
+                    "_user_id": user.id,
+                    "_score": float(score),
+                })
 
-        # Also search distinct artist_names in tracks table
+        # 3. Search distinct artist_names in tracks table
         track_artist_score_expr = (
-            case((func.lower(Track.artist_name) == exact_q, 95.0), else_=0.0)
-            + case((Track.artist_name.ilike(prefix_q), 45.0), else_=0.0)
-            + case((Track.artist_name.ilike(substr_q), 22.0), else_=0.0)
-            + (func.word_similarity(raw_q, Track.artist_name) * 18.0)
+            case((func.lower(Track.artist_name) == exact_q, 90.0), else_=0.0)
+            + case((Track.artist_name.ilike(prefix_q), 40.0), else_=0.0)
+            + case((Track.artist_name.ilike(substr_q), 20.0), else_=0.0)
+            + (func.word_similarity(raw_q, Track.artist_name) * 15.0)
         )
 
         track_artist_match_cond = and_(
@@ -276,10 +336,41 @@ class SearchRepository:
                     "name": artist_name.strip(),
                     "username": None,
                     "avatar_url": None,
+                    "cover_image_url": None,
                     "bio": None,
                     "track_count": count or 0,
+                    "followers_count": 0,
+                    "is_following": None,
+                    "is_verified": False,
+                    "_creator_uuid": None,
+                    "_user_id": None,
                     "_score": float(score),
                 })
+            else:
+                for a in artists_list:
+                    if a["name"].strip().lower() == lower_name and (count or 0) > a["track_count"]:
+                        a["track_count"] = count or 0
+
+        # 4. Resolve follow status in single batch if user is authenticated
+        creator_uuids = [a["_creator_uuid"] for a in artists_list if a["_creator_uuid"] is not None]
+        if current_user_id and creator_uuids:
+            fol_stmt = (
+                select(CreatorFollower.creator_id)
+                .where(
+                    CreatorFollower.user_id == current_user_id,
+                    CreatorFollower.creator_id.in_(creator_uuids),
+                )
+            )
+            fol_res = await self.session.execute(fol_stmt)
+            followed_set = set(fol_res.scalars().all())
+            for a in artists_list:
+                if a["_creator_uuid"] is not None:
+                    a["is_following"] = a["_creator_uuid"] in followed_set
+                else:
+                    a["is_following"] = False
+        elif current_user_id:
+            for a in artists_list:
+                a["is_following"] = False
 
         # Sort combined results by score descending with id as deterministic tie-breaker
         artists_list.sort(key=lambda a: (a["_score"], a["id"]), reverse=True)
@@ -289,6 +380,8 @@ class SearchRepository:
         paginated_artists = artists_list[skip : skip + limit]
         for a in paginated_artists:
             a.pop("_score", None)
+            a.pop("_creator_uuid", None)
+            a.pop("_user_id", None)
 
         return paginated_artists, total_count
 

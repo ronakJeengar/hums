@@ -15,6 +15,7 @@ from app.repositories.audio_repository import (
     ProcessingJobRepository,
     TrackRepository,
 )
+from app.repositories.creator_repository import CreatorRepository
 from app.repositories.playback_repository import PlaybackRepository
 from app.repositories.playlist_repository import PlaylistRepository
 from app.repositories.search_repository import SearchRepository
@@ -30,6 +31,7 @@ from app.repositories.user_repository import (
 from app.ai.gemini_recommendation_client import GeminiRecommendationClient
 from app.services.audio_service import AudioService
 from app.services.auth_service import AuthService
+from app.services.creator_service import CreatorService
 from app.services.playback_service import PlaybackService
 from app.services.playlist_service import PlaylistService
 from app.services.profile_service import ProfileService
@@ -224,15 +226,30 @@ async def get_recommendation_cache_service(
     return RecommendationCacheService(redis_client)
 
 
+def get_creator_repository(
+    session: AsyncSession = Depends(get_db),
+) -> CreatorRepository:
+    return CreatorRepository(session)
+
+
+async def get_creator_service(
+    creator_repo: CreatorRepository = Depends(get_creator_repository),
+    redis_client: aioredis.Redis = Depends(get_redis_client),
+    storage_service: BaseStorageService = Depends(get_storage_service),
+) -> CreatorService:
+    return CreatorService(creator_repo, redis_client, storage_service)
+
+
 def get_recommendation_service(
     playlist_repo: PlaylistRepository = Depends(get_playlist_repository),
     track_repo: TrackRepository = Depends(get_track_repository),
+    creator_repo: CreatorRepository = Depends(get_creator_repository),
     rec_set_repo: RecommendationSetRepository = Depends(get_recommendation_set_repository),
     rec_item_repo: RecommendationItemRepository = Depends(get_recommendation_item_repository),
     gemini_client: GeminiRecommendationClient = Depends(get_gemini_recommendation_client),
     cache_service: RecommendationCacheService = Depends(get_recommendation_cache_service),
 ) -> RecommendationService:
-    preference_service = UserPreferenceService(playlist_repo, track_repo)
+    preference_service = UserPreferenceService(playlist_repo, track_repo, creator_repo)
     candidate_service = CandidateGenerationService(track_repo)
     ranking_service = RankingService()
     diversity_service = DiversityService()

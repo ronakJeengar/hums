@@ -23,6 +23,8 @@ import 'package:hums_mobile/features/search/presentation/screens/search_screen.d
 import 'package:hums_mobile/features/downloads/presentation/screens/downloads_screen.dart';
 import 'package:hums_mobile/features/history/presentation/screens/listening_history_screen.dart';
 import 'package:hums_mobile/features/notifications/presentation/screens/notification_screen.dart';
+import 'package:hums_mobile/features/social/presentation/screens/creator_profile_screen.dart';
+import 'package:hums_mobile/features/social/presentation/screens/following_screen.dart';
 import 'package:hums_mobile/routing/route_names.dart';
 
 class RouterNotifier extends ChangeNotifier {
@@ -171,6 +173,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.notifications,
         path: RouteNames.notificationsPath,
         builder: (context, state) => const NotificationScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.creatorProfile,
+        path: RouteNames.creatorProfilePath,
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return CreatorProfileScreen(creatorId: id);
+        },
+      ),
+      GoRoute(
+        name: RouteNames.following,
+        path: RouteNames.followingPath,
+        builder: (context, state) => const FollowingScreen(),
       ),
     ],
 
