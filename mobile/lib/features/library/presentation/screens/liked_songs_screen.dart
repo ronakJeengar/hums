@@ -128,6 +128,60 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
               ),
               const Divider(color: AppColors.divider, height: 1),
               ListTile(
+                leading: const Icon(Icons.playlist_play_rounded, color: AppColors.textPrimary),
+                title: Text(
+                  'Play next',
+                  style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
+                ),
+                onTap: () {
+                  Navigator.of(bottomSheetContext).pop();
+                  final queueItem = QueueItem(
+                    trackId: track.id,
+                    title: track.title,
+                    artistName: track.artistName,
+                    albumName: track.albumName,
+                    durationSeconds: track.durationSeconds,
+                    status: 'READY',
+                    source: QueueItemSource.liked,
+                  );
+                  ref.read(audioPlayerNotifierProvider.notifier).playNext(queueItem);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Playing next: ${track.title}'),
+                      duration: const Duration(seconds: 2),
+                      backgroundColor: AppColors.surfaceElevated,
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.queue_music_rounded, color: AppColors.textPrimary),
+                title: Text(
+                  'Add to queue',
+                  style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
+                ),
+                onTap: () {
+                  Navigator.of(bottomSheetContext).pop();
+                  final queueItem = QueueItem(
+                    trackId: track.id,
+                    title: track.title,
+                    artistName: track.artistName,
+                    albumName: track.albumName,
+                    durationSeconds: track.durationSeconds,
+                    status: 'READY',
+                    source: QueueItemSource.liked,
+                  );
+                  ref.read(audioPlayerNotifierProvider.notifier).addToQueue(queueItem);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Added to queue: ${track.title}'),
+                      duration: const Duration(seconds: 2),
+                      backgroundColor: AppColors.surfaceElevated,
+                    ),
+                  );
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.playlist_add_rounded, color: AppColors.textPrimary),
                 title: Text(
                   'Add to playlist',

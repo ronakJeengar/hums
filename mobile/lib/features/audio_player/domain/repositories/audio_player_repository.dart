@@ -1,8 +1,19 @@
 import 'package:hums_mobile/features/audio_player/domain/entities/playback_entity.dart';
+import 'package:hums_mobile/features/audio_player/domain/entities/player_queue.dart';
 
 abstract class AudioPlayerRepository {
   /// Fetches the playback source and metadata for a READY track.
   Future<TrackPlaybackEntity> getPlaybackSource(String trackId);
+
+  /// Fetches smart up-next queue recommendations to prevent playback silence.
+  Future<List<QueueItem>> getUpNextCandidates({
+    String? currentTrackId,
+    int limit = 10,
+    List<String>? excludeIds,
+  });
+
+  /// Resolves full playable metadata for a list of track IDs.
+  Future<List<QueueItem>> resolveTracks(List<String> trackIds);
 
   /// Loads and prepares a track for playback in the audio engine.
   Future<void> loadTrack(TrackPlaybackEntity playback);

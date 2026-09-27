@@ -15,6 +15,7 @@ import 'package:hums_mobile/features/audio/presentation/screens/user_tracks_scre
 import 'package:hums_mobile/features/profile/presentation/screens/edit_profile_screen.dart';
 import 'package:hums_mobile/features/profile/presentation/screens/profile_screen.dart';
 import 'package:hums_mobile/features/audio_player/presentation/screens/full_player_screen.dart';
+import 'package:hums_mobile/features/audio_player/presentation/screens/queue_screen.dart';
 import 'package:hums_mobile/features/playlists/presentation/screens/create_playlist_screen.dart';
 import 'package:hums_mobile/features/playlists/presentation/screens/edit_playlist_screen.dart';
 import 'package:hums_mobile/features/playlists/presentation/screens/playlist_detail_screen.dart';
@@ -129,6 +130,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.player,
         path: RouteNames.playerPath,
         builder: (context, state) => const FullPlayerScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.queue,
+        path: RouteNames.queuePath,
+        builder: (context, state) => const QueueScreen(),
       ),
       GoRoute(
         name: RouteNames.playlists,

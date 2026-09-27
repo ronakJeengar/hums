@@ -75,6 +75,9 @@ abstract class RouteNames {
 
   static const String likedSongs = 'liked-songs';
   static const String likedSongsPath = '/liked-songs';
+
+  static const String queue = 'queue';
+  static const String queuePath = '/queue';
 }
 
 

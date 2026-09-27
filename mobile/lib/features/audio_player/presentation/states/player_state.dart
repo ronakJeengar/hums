@@ -65,9 +65,23 @@ class PlayerState {
 
   bool get hasTrack => track != null;
   bool get canPlay => hasTrack && (isReady || isPaused || isCompleted);
-  bool get hasQueue => queue != null && queue!.items.isNotEmpty;
+  bool get hasQueue =>
+      queue != null &&
+      (queue!.items.isNotEmpty ||
+          queue!.manualItems.isNotEmpty ||
+          queue!.upNextItems.isNotEmpty ||
+          queue!.smartItems.isNotEmpty);
   bool get hasNext => queue?.hasNext ?? false;
   bool get hasPrevious => queue?.hasPrevious ?? false;
+
+  PlaybackRepeatMode get repeatMode =>
+      queue?.repeatMode ?? PlaybackRepeatMode.off;
+  bool get isShuffled => queue?.isShuffled ?? false;
+  List<QueueItem> get manualQueue => queue?.manualItems ?? const [];
+  List<QueueItem> get upNextQueue => queue?.upNextItems ?? const [];
+  List<QueueItem> get smartQueue => queue?.smartItems ?? const [];
+  List<QueueItem> get allUpcomingQueue => queue?.allUpcomingItems ?? const [];
+  int get upcomingCount => queue?.upcomingCount ?? 0;
 
   double get progress {
     if (duration.inMilliseconds <= 0) return 0.0;

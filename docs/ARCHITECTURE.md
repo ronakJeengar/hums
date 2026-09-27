@@ -573,3 +573,36 @@ flowchart TD
   - `LikedSongsScreen` (`/liked-songs`): Dedicated paginated listing (`liked_at DESC`) with 1-tap queue playback, download integration, and playlist addition modals.
 * **Strict Account Isolation:** Logging out clears and invalidates all personal library providers and user-specific states.
 
+---
+
+## 5. Smart Queue & Up Next Subsystem
+
+### 5.1 Client-Authoritative Queue State
+* **Zero Database Mutation Overhead:** Playback queue ordering, manual additions, and item removals are managed purely client-side in `PlayerQueue` and `AudioPlayerNotifier`. No per-skip or per-mutation network write requests are issued to PostgreSQL.
+* **Separation of Tiers:**
+  - `Now Playing`: The active track with streaming position and waveform scrub controls.
+  - `Next In Queue (Manual)`: User-inserted tracks via "Play next" or "Add to queue".
+  - `Up Next (Collection)`: Remainder of current playlist, album, or liked songs collection.
+  - `Smart Up Next`: Dynamic recommendations dynamically fetched from `/api/v1/player/up-next`.
+* **Execution Priority:** Manual Queue > Up Next > Smart Queue > Loop Mode > Idle.
+* **Deterministic Shuffle & Unshuffle:** Upcoming collection items are shuffled in-place, while `originalUpNextItems` preserves the author's track ordering. Unshuffling restores the original collection sequence without affecting user-added manual items.
+* **Three-State Repeat Loop:** Cycle between `off`, `repeatQueue` (loops active collection), and `repeatTrack` (re-loops currently playing audio track).
+
+### 5.2 Smart Candidate Backend Generation
+* **Continuous Playback Pipeline:** `PlayerService.get_up_next_candidates()` provides contextual continuity using multi-tier candidate selection:
+  1. *Tier A (Genre Continuity):* Same genre as active track (Weight 1.0).
+  2. *Tier B (Artist Continuity):* Same artist/creator as active track (Weight 0.9).
+  3. *Tier C (User Preference):* Affinity-matched tracks for authenticated listeners (Weight 0.8).
+  4. *Tier D (Trending & Recency):* Platform-wide high-popularity and new tracks backfill (Weight 0.5).
+* **Listening History De-duplication:** Automatically excludes recently played tracks (from `playback_progress`) and active queue IDs (`exclude_ids`) to eliminate repetitive loops.
+* **REST Interfaces:**
+  - `GET /api/v1/player/up-next`: Context-aware smart candidate generation.
+  - `GET /api/v1/player/resolve`: Batch track metadata resolution.
+
+### 5.3 Mobile Pre-fetching & Multi-Surface Integration
+* **Non-Blocking Background Prefetch:** When `upcomingCount <= 2`, `AudioPlayerNotifier._prefetchSmartQueue()` triggers an asynchronous background request. Playback continues gaplessly with zero audio interruption.
+* **Queue Screen (`/queue`):** Reorderable drag-and-drop lists for manual and collection tracks, quick-actions ("Play next", "Remove", "Clear All"), and live Now Playing card.
+* **Cross-Surface Context Menus:** "Play next" and "Add to queue" available on Liked Songs, Search Track Tiles, and Playlist Track Tiles.
+* **Session Reset on Logout:** Clears all queued items, stops audio streams, and resets state upon logout to guarantee zero account leakage.
+
+

@@ -80,4 +80,24 @@ abstract class ApiEndpoints {
   static const String library = '/api/v1/library';
   static String libraryLikedTracks({int page = 1, int size = 20}) =>
       '/api/v1/library/liked-tracks?page=$page&size=$size';
+
+  // Smart Queue & Up Next Endpoints
+  static const String playerUpNext = '/api/v1/player/up-next';
+  static String playerUpNextQuery({
+    String? currentTrackId,
+    int limit = 10,
+    List<String>? excludeIds,
+  }) {
+    final params = <String>[];
+    if (currentTrackId != null && currentTrackId.isNotEmpty) {
+      params.add('current_track_id=$currentTrackId');
+    }
+    params.add('limit=$limit');
+    if (excludeIds != null && excludeIds.isNotEmpty) {
+      params.add('exclude_ids=${excludeIds.join(',')}');
+    }
+    return '/api/v1/player/up-next?${params.join('&')}';
+  }
+  static String playerResolveTracks(List<String> trackIds) =>
+      '/api/v1/player/resolve?track_ids=${trackIds.join(',')}';
 }

@@ -10,6 +10,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Smart Queue & Up Next (`feature/smart-queue`):**
+  - **Client-Authoritative Queue State & Domain Entities:**
+    - Upgraded `PlayerQueue` domain entity with 4 discrete tiers: `Now Playing`, `Next In Queue (Manual)`, `Up Next (Collection)`, and `Smart Up Next`.
+    - Zero database mutation writes: all drag-and-drop reordering, removals, and additions are managed client-side in Riverpod `AudioPlayerNotifier`.
+    - Deterministic Shuffle: `originalUpNextItems` preserves authentic track ordering; toggling unshuffle instantly restores the original collection sequence without affecting manual user additions.
+    - Three-State Repeat Loop: `PlaybackRepeatMode` cycle (`off`, `repeatQueue`, `repeatTrack`) with seamless track restart or collection loop.
+    - Queue Priority Execution: strictly resolves Next In Queue (Manual) $\rightarrow$ Up Next (Collection) $\rightarrow$ Smart Queue $\rightarrow$ Loop $\rightarrow$ Idle.
+    - Strict Account Logout Isolation: `resetQueueOnLogout()` purges active queue, stops audio streams, and cancels pending prefetch tokens.
+  - **Backend Smart Up Next & Batch Track Resolution API:**
+    - Contextual candidate generation in `PlayerService.get_up_next_candidates()` leveraging active track genre/artist continuity, user listening preferences, listening history exclusions, and trending backfill.
+    - New REST endpoints: `GET /api/v1/player/up-next` and batch resolution `GET /api/v1/player/resolve` (with aliases under `/api/v1/playback/queue`).
+    - Excludes non-ready tracks and active queue IDs (`exclude_ids`) to eliminate repetitive loops.
+    - Comprehensive test suite in `backend/tests/test_smart_queue.py` (all 188 backend tests passing).
+  - **Flutter Mobile Client & Cross-Surface Integration:**
+    - Non-blocking background prefetch (`_prefetchSmartQueue`) triggered when `upcomingCount <= 2` or single track playback starts, preventing audio gaps or silence.
+    - Dedicated `QueueScreen` (`/queue`): Live Now Playing card, reorderable Next In Queue list, reorderable Up Next list, Smart Queue with "Play Next" and "Remove" quick-actions, Shuffle, Repeat, and Clear All controls.
+    - Upgraded `FullPlayerScreen`: Added Queue navigation button in top bar, integrated Shuffle and Repeat buttons into playback controls row, and added dynamic Queue pill badge with upcoming track counter.
+    - Multi-surface queue context actions ("Play next" and "Add to queue") integrated into `PlaylistTrackTile`, `SearchTrackTile`, and `LikedSongsScreen`.
+    - Registered `/queue` route in `AppRouter` and `RouteNames`.
+    - Added unit and widget tests in `smart_queue_notifier_test.dart` and `queue_screen_test.dart` (all 275 Flutter tests passing, 0 analyzer issues).
+    - Architecture & operational documentation in `docs/playback/QUEUE_ARCHITECTURE.md` and `docs/playback/SMART_QUEUE.md`.
+
 - **Likes, Favorites & Personal Library (`feature/likes-library`):**
   - **Relational Data Model & PostgreSQL Migrations:**
     - Dedicated `user_track_likes` table with composite unique constraint `(user_id, track_id)` guaranteeing strict separation from playlists.

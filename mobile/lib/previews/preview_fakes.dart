@@ -126,6 +126,17 @@ class FakeAudioPlayerRepository implements AudioPlayerRepository {
       PreviewData.playbackReady;
 
   @override
+  Future<List<QueueItem>> getUpNextCandidates({
+    String? currentTrackId,
+    int limit = 10,
+    List<String>? excludeIds,
+  }) async =>
+      [];
+
+  @override
+  Future<List<QueueItem>> resolveTracks(List<String> trackIds) async => [];
+
+  @override
   Future<void> loadTrack(TrackPlaybackEntity playback) async {}
 
   @override
@@ -299,6 +310,36 @@ class PreviewAudioPlayerNotifier extends AudioPlayerNotifier {
 
   @override
   Future<void> playQueue(PlayerQueue queue, {int startIndex = 0}) async {}
+
+  @override
+  Future<void> playNext(QueueItem item) async {}
+
+  @override
+  Future<void> addToQueue(QueueItem item) async {}
+
+  @override
+  void removeQueueItem(String queueItemId) {}
+
+  @override
+  void reorderManualQueue(int oldIndex, int newIndex) {}
+
+  @override
+  void reorderUpNextQueue(int oldIndex, int newIndex) {}
+
+  @override
+  void clearManualQueue() {}
+
+  @override
+  void clearAllUpcomingQueue() {}
+
+  @override
+  void toggleShuffle() {}
+
+  @override
+  void cycleRepeatMode() {}
+
+  @override
+  void setRepeatMode(PlaybackRepeatMode mode) {}
 
   @override
   Future<void> togglePlayPause() async {

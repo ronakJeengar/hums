@@ -35,6 +35,7 @@ from app.services.auth_service import AuthService
 from app.services.creator_service import CreatorService
 from app.services.like_service import LikeService
 from app.services.playback_service import PlaybackService
+from app.services.player_service import PlayerService
 from app.services.playlist_service import PlaylistService
 from app.services.profile_service import ProfileService
 from app.services.search_service import SearchService
@@ -281,6 +282,23 @@ def get_recommendation_service(
         rec_set_repo=rec_set_repo,
         rec_item_repo=rec_item_repo,
         track_repo=track_repo,
+    )
+
+
+def get_player_service(
+    track_repo: TrackRepository = Depends(get_track_repository),
+    playlist_repo: PlaylistRepository = Depends(get_playlist_repository),
+    creator_repo: CreatorRepository = Depends(get_creator_repository),
+    like_repo: LikeRepository = Depends(get_like_repository),
+    playback_repo: PlaybackRepository = Depends(get_playback_repository),
+) -> PlayerService:
+    preference_service = UserPreferenceService(playlist_repo, track_repo, creator_repo, like_repo)
+    candidate_service = CandidateGenerationService(track_repo)
+    return PlayerService(
+        track_repo=track_repo,
+        preference_service=preference_service,
+        candidate_service=candidate_service,
+        playback_repo=playback_repo,
     )
 
 

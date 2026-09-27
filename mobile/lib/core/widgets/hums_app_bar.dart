@@ -20,18 +20,32 @@ class HumsAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      title: Text(
-        title,
-        style: AppTypography.headlineLarge,
-      ),
+      titleSpacing: 0,
+      automaticallyImplyLeading: false,
+      leadingWidth: leading != null ? null : 0,
       leading: leading,
-      actions: actions != null
-          ? [
-              ...actions!,
-              const SizedBox(width: AppSpacing.md),
-            ]
-          : null,
-      centerTitle: centerTitle,
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: AppTypography.headlineLarge,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              softWrap: false,
+            ),
+          ),
+          if (actions != null)
+            ...actions!.map(
+                  (a) => Padding(
+                padding: const EdgeInsets.only(left: AppSpacing.sm),
+                child: a,
+              ),
+            ),
+          if (actions != null) const SizedBox(width: AppSpacing.md),
+        ],
+      ),
+      centerTitle: false,
       backgroundColor: AppColors.background,
       elevation: 0,
       scrolledUnderElevation: 0,

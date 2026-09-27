@@ -5,6 +5,7 @@ import 'package:hums_mobile/features/audio_player/data/datasources/audio_player_
 import 'package:hums_mobile/features/audio_player/data/services/audio_player_service.dart';
 import 'package:hums_mobile/features/audio_player/domain/entities/playback_entity.dart';
 import 'package:hums_mobile/features/audio_player/domain/entities/player_error.dart';
+import 'package:hums_mobile/features/audio_player/domain/entities/player_queue.dart';
 import 'package:hums_mobile/features/audio_player/domain/repositories/audio_player_repository.dart';
 import 'package:hums_mobile/features/downloads/data/datasources/download_local_data_source.dart';
 import 'package:hums_mobile/features/downloads/domain/entities/download_status.dart';
@@ -85,6 +86,32 @@ class AudioPlayerRepositoryImpl implements AudioPlayerRepository {
         message: 'Failed to retrieve playback source: $e',
         details: e.toString(),
       );
+    }
+  }
+
+  @override
+  Future<List<QueueItem>> getUpNextCandidates({
+    String? currentTrackId,
+    int limit = 10,
+    List<String>? excludeIds,
+  }) async {
+    try {
+      return await _remoteDataSource.getUpNextCandidates(
+        currentTrackId: currentTrackId,
+        limit: limit,
+        excludeIds: excludeIds,
+      );
+    } catch (_) {
+      return [];
+    }
+  }
+
+  @override
+  Future<List<QueueItem>> resolveTracks(List<String> trackIds) async {
+    try {
+      return await _remoteDataSource.resolveTracks(trackIds);
+    } catch (_) {
+      return [];
     }
   }
 

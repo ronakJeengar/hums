@@ -1948,4 +1948,77 @@ Returns a paginated list of all tracks liked by the authenticated user, ordered 
   }
   ```
 
+---
+
+## 8. Player & Smart Queue Endpoints
+
+### 8.1 Get Smart Up-Next Candidates
+Fetches contextually relevant, non-repetitive track recommendations to automatically replenish the playback queue and guarantee continuous playback.
+
+* **Method:** `GET`
+* **Path:** `/api/v1/player/up-next` (Aliased at `/api/v1/playback/queue/up-next`)
+* **Authentication:** Optional (`Bearer <access_token>`). If authenticated, personal preferences and listening history exclusions are applied.
+* **Query Parameters:**
+  * `current_track_id` (string, optional): Active track ID used for genre and artist continuity.
+  * `limit` (integer, optional, default: 10, max: 50): Number of up-next candidates to retrieve.
+  * `exclude_ids` (string, optional): Comma-delimited list of track IDs already in the active queue to prevent duplicates.
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "items": [
+        {
+          "id": "7b0a9d94-52a1-43e8-8a8b-c9e829375124",
+          "title": "Acoustic Horizon",
+          "artist_name": "Luna Wave",
+          "album_name": "Sunburst",
+          "genre": "Acoustic",
+          "duration_seconds": 195,
+          "waveform_key": "waveforms/7b0a9d94.json",
+          "status": "READY",
+          "source": "genre_match"
+        }
+      ],
+      "count": 1
+    }
+  }
+  ```
+* **Error Responses:**
+  * `422 Validation Error`: Invalid limit parameter (limit > 50 or limit < 1).
+
+### 8.2 Resolve Batch Tracks
+Resolves full playable metadata for an arbitrary collection of track IDs in a single batch query, avoiding N+1 roundtrips when restoring or initializing playback queues.
+
+* **Method:** `GET`
+* **Path:** `/api/v1/player/resolve` (Aliased at `/api/v1/playback/queue/resolve`)
+* **Authentication:** Optional
+* **Query Parameters:**
+  * `track_ids` (string, required): Comma-delimited list of track IDs to resolve (max 100).
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "items": [
+        {
+          "id": "7b0a9d94-52a1-43e8-8a8b-c9e829375124",
+          "title": "Acoustic Horizon",
+          "artist_name": "Luna Wave",
+          "album_name": "Sunburst",
+          "genre": "Acoustic",
+          "duration_seconds": 195,
+          "waveform_key": "waveforms/7b0a9d94.json",
+          "status": "READY",
+          "source": "playlist"
+        }
+      ],
+      "count": 1
+    }
+  }
+  ```
+* **Error Responses:**
+  * `422 Validation Error`: Missing `track_ids` or exceeded 100 track IDs limit.
+
+
 
