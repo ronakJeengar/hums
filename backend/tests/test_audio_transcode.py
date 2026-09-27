@@ -68,6 +68,9 @@ class MockInMemoryStorage(BaseStorageService):
     async def get_download_url(self, object_key: str, expires_in: int = 3600) -> str:
         return f"http://mock-storage/{object_key}"
 
+    async def get_presigned_download_url(self, object_key: str, expires_in: int = 900) -> str:
+        return f"http://mock-storage/{object_key}?signature=mock"
+
 
 
 @pytest.fixture

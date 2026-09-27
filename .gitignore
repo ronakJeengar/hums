@@ -8,8 +8,22 @@
 *.crt
 credentials.json
 
-# Documentation & Specifications (local AI reference directory, not committed)
-docs/
+# Documentation & Specifications
+docs/*
+!docs/performance/
+!docs/performance/**
+!docs/security/
+!docs/security/**
+!docs/observability/
+!docs/observability/**
+!docs/downloads/
+!docs/downloads/**
+!docs/playback/
+!docs/playback/**
+!docs/CHANGELOG.md
+!docs/ARCHITECTURE.md
+!docs/DB_SCHEMA.md
+!docs/API_SPEC.md
 
 # Python
 __pycache__/
@@ -20,7 +34,7 @@ __pycache__/
 build/
 develop-eggs/
 dist/
-downloads/
+/downloads/
 eggs/
 .eggs/
 /lib/

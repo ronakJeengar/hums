@@ -4,6 +4,7 @@ import 'package:hums_mobile/core/theme/app_colors.dart';
 import 'package:hums_mobile/core/theme/app_icons.dart';
 import 'package:hums_mobile/core/widgets/app_icon.dart';
 import 'package:hums_mobile/features/audio_player/presentation/providers/audio_player_provider.dart';
+import 'package:hums_mobile/features/downloads/presentation/widgets/download_button.dart';
 
 class FullPlayerScreen extends ConsumerStatefulWidget {
   const FullPlayerScreen({super.key});
@@ -101,7 +102,15 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
                                 letterSpacing: 1.5,
                               ),
                             ),
-                            const SizedBox(width: 48), // Balance spacing
+                            DownloadButton(
+                              trackId: track.trackId,
+                              title: track.title,
+                              artistName: track.artistName,
+                              albumName: track.albumName,
+                              durationSeconds: track.durationSeconds,
+                              size: 24,
+                              color: AppColors.textPrimary,
+                            ),
                           ],
                         ),
                         const Spacer(flex: 1),

@@ -1,7 +1,17 @@
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import BaseDBModel
@@ -12,7 +22,12 @@ if TYPE_CHECKING:
 
 class Track(BaseDBModel):
     """Core audio track model representing an uploaded song, episode, or audio piece."""
+
     __tablename__ = "tracks"
+    __table_args__ = (
+        Index("ix_tracks_status_created_at", "status", text("created_at DESC")),
+        Index("ix_tracks_owner_id_created_at", "owner_id", text("created_at DESC")),
+    )
 
     owner_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -82,6 +97,7 @@ class Track(BaseDBModel):
 
 class AudioFile(BaseDBModel):
     """Raw and processed audio files stored in object storage."""
+
     __tablename__ = "audio_files"
 
     track_id: Mapped[uuid.UUID] = mapped_column(
@@ -122,6 +138,7 @@ class AudioFile(BaseDBModel):
 
 class AudioRendition(BaseDBModel):
     """Processed audio renditions (e.g. 64k, 128k, 256k AAC/M4A) stored in object storage."""
+
     __tablename__ = "audio_renditions"
 
     track_id: Mapped[uuid.UUID] = mapped_column(
@@ -178,6 +195,7 @@ class AudioRendition(BaseDBModel):
 
 class ProcessingJob(BaseDBModel):
     """Asynchronous media processing job tracking for Celery / FFmpeg transcoding."""
+
     __tablename__ = "processing_jobs"
 
     track_id: Mapped[uuid.UUID] = mapped_column(

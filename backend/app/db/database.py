@@ -21,8 +21,21 @@ engine: AsyncEngine = create_async_engine(
     echo=settings.DEBUG,
     pool_pre_ping=True,
     poolclass=NullPool if is_testing else None,
-    **({} if is_testing else {"pool_size": 10, "max_overflow": 20}),
+    **(
+        {}
+        if is_testing
+        else {
+            "pool_size": 20,
+            "max_overflow": 10,
+            "pool_timeout": 30,
+            "pool_recycle": 1800,
+        }
+    ),
 )
+
+# Initialize query latency and slow query listeners
+from app.db.observability import setup_database_observability
+setup_database_observability(engine.sync_engine)
 
 # Asynchronous Session Factory
 AsyncSessionLocal = async_sessionmaker(

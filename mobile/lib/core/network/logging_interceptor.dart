@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 /// Interceptor that logs all outgoing HTTP requests, responses, and errors.
 ///
@@ -9,12 +10,18 @@ import 'package:dio/dio.dart';
 /// - Response status code and payload preview
 /// - Automatic redaction of sensitive credentials (passwords, tokens, API keys)
 /// - Truncation for large payloads to prevent log flooding
+/// - Automatically bypassed in release mode to avoid logcat / syslog data leakage
 class LoggingInterceptor extends Interceptor {
   static const String _startTimeKey = 'request_start_time';
   static const int _maxPayloadLogLength = 1000;
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    if (kReleaseMode) {
+      super.onRequest(options, handler);
+      return;
+    }
+
     options.extra[_startTimeKey] = DateTime.now().millisecondsSinceEpoch;
 
     final method = options.method.toUpperCase();
@@ -50,6 +57,11 @@ class LoggingInterceptor extends Interceptor {
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
+    if (kReleaseMode) {
+      super.onResponse(response, handler);
+      return;
+    }
+
     final startTime = response.requestOptions.extra[_startTimeKey] as int?;
     final durationMs = startTime != null
         ? DateTime.now().millisecondsSinceEpoch - startTime
@@ -81,6 +93,11 @@ class LoggingInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
+    if (kReleaseMode) {
+      super.onError(err, handler);
+      return;
+    }
+
     final startTime = err.requestOptions.extra[_startTimeKey] as int?;
     final durationMs = startTime != null
         ? DateTime.now().millisecondsSinceEpoch - startTime

@@ -13,13 +13,13 @@ class UserBase(BaseModel):
 class RegisterRequest(BaseModel):
     name: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
-    password: str = Field(..., min_length=8, max_length=100)
+    password: str = Field(..., min_length=8, max_length=128)
     username: Optional[str] = Field(None, min_length=3, max_length=50)
 
 
 class UserCreate(UserBase):
     name: Optional[str] = Field(None, min_length=2, max_length=100)
-    password: str = Field(..., min_length=8, max_length=100)
+    password: str = Field(..., min_length=8, max_length=128)
 
 
 class UserRead(BaseModel):
@@ -41,7 +41,7 @@ class UserRead(BaseModel):
 
 class UserLogin(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., max_length=128)
 
 
 class TokenResponse(BaseModel):
@@ -60,11 +60,11 @@ class AuthResponse(BaseModel):
 
 
 class RefreshTokenRequest(BaseModel):
-    refresh_token: str
+    refresh_token: str = Field(..., max_length=2048)
 
 
 class LogoutRequest(BaseModel):
-    refresh_token: Optional[str] = None
+    refresh_token: Optional[str] = Field(None, max_length=2048)
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -72,8 +72,8 @@ class ForgotPasswordRequest(BaseModel):
 
 
 class ResetPasswordRequest(BaseModel):
-    token: str = Field(..., min_length=1)
-    new_password: str = Field(..., min_length=8, max_length=100)
+    token: str = Field(..., min_length=1, max_length=2048)
+    new_password: str = Field(..., min_length=8, max_length=128)
 
 
 class TokenPayload(BaseModel):

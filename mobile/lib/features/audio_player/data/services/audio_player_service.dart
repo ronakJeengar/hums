@@ -24,10 +24,19 @@ class AudioPlayerService {
             : null,
       );
 
-      final audioSource = AudioSource.uri(
-        Uri.parse(track.audio.url),
-        tag: mediaItem,
-      );
+      final AudioSource audioSource;
+      final url = track.audio.url;
+      if (url.startsWith('file://')) {
+        final filePath = Uri.parse(url).toFilePath();
+        audioSource = AudioSource.file(filePath, tag: mediaItem);
+      } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        audioSource = AudioSource.file(url, tag: mediaItem);
+      } else {
+        audioSource = AudioSource.uri(
+          Uri.parse(url),
+          tag: mediaItem,
+        );
+      }
 
       await _player.setAudioSource(audioSource);
     } on PlayerException catch (e) {

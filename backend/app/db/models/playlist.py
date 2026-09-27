@@ -1,7 +1,18 @@
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import BaseDBModel
@@ -13,7 +24,14 @@ if TYPE_CHECKING:
 
 class Playlist(BaseDBModel):
     """User-owned playlist model representing a curated list of tracks."""
+
     __tablename__ = "playlists"
+    __table_args__ = (
+        Index("ix_playlists_owner_id_created_at", "owner_id", text("created_at DESC")),
+        Index(
+            "ix_playlists_is_public_created_at", "is_public", text("created_at DESC")
+        ),
+    )
 
     owner_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -51,9 +69,13 @@ class Playlist(BaseDBModel):
 
 class PlaylistTrack(BaseDBModel):
     """Associative model linking a track to a playlist with explicit ordering position."""
+
     __tablename__ = "playlist_tracks"
     __table_args__ = (
-        UniqueConstraint("playlist_id", "track_id", name="uq_playlist_tracks_playlist_track"),
+        UniqueConstraint(
+            "playlist_id", "track_id", name="uq_playlist_tracks_playlist_track"
+        ),
+        Index("ix_playlist_tracks_playlist_id_position", "playlist_id", "position"),
     )
 
     playlist_id: Mapped[uuid.UUID] = mapped_column(
@@ -80,5 +102,7 @@ class PlaylistTrack(BaseDBModel):
     )
 
     # Relationships
-    playlist: Mapped["Playlist"] = relationship("Playlist", back_populates="playlist_tracks")
+    playlist: Mapped["Playlist"] = relationship(
+        "Playlist", back_populates="playlist_tracks"
+    )
     track: Mapped["Track"] = relationship("Track")

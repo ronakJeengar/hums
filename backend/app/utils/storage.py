@@ -49,6 +49,11 @@ class BaseStorageService(ABC):
         pass
 
     @abstractmethod
+    async def get_presigned_download_url(self, key: str, expires_in: int = 900) -> str:
+        """Generates a secure short-lived presigned download URL."""
+        pass
+
+    @abstractmethod
     async def delete_file(self, key: str) -> bool:
         """Deletes an object by key."""
         pass
@@ -158,6 +163,24 @@ class S3StorageService(BaseStorageService):
         base = settings.CDN_BASE_URL.rstrip("/")
         clean_key = key.removeprefix(f"{self.bucket}/").lstrip("/")
         return f"{base}/{clean_key}"
+
+    async def get_presigned_download_url(self, key: str, expires_in: int = 900) -> str:
+        """Generates a secure presigned download URL with short expiration (default 15 mins)."""
+        clean_key = key.removeprefix(f"{self.bucket}/").lstrip("/")
+
+        def _presign():
+            client = self._get_client()
+            return client.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": self.bucket, "Key": clean_key},
+                ExpiresIn=expires_in,
+            )
+
+        try:
+            return await asyncio.to_thread(_presign)
+        except Exception as e:
+            logger.warning(f"Failed to generate presigned URL, falling back to CDN URL: {e}")
+            return await self.get_download_url(key, expires_in=expires_in)
 
     async def delete_file(self, key: str) -> bool:
         clean_key = key.removeprefix(f"{self.bucket}/").lstrip("/")

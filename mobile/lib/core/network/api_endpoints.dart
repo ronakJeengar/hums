@@ -22,6 +22,7 @@ abstract class ApiEndpoints {
   static String audioTrackDetails(String trackId) => '/api/v1/audio/tracks/$trackId';
   static String audioTrackStatus(String trackId) => '/api/v1/audio/tracks/$trackId/status';
   static String audioTrackPlayback(String trackId) => '/api/v1/audio/tracks/$trackId/playback';
+  static String audioTrackDownload(String trackId) => '/api/v1/audio/tracks/$trackId/download';
   static String audioTrackWaveform(String trackId) => '/api/v1/audio/tracks/$trackId/waveform';
   static String audioJobStatus(String jobId) => '/api/v1/audio/jobs/$jobId';
 
@@ -38,5 +39,15 @@ abstract class ApiEndpoints {
   // Search Endpoints
   static const String search = '/api/v1/search';
   static const String searchSuggestions = '/api/v1/search/suggestions';
-}
 
+  // Playback & History Endpoints
+  static const String playbackHistory = '/api/v1/playback/history';
+  static const String playbackEvents = '/api/v1/playback/events';
+  static String playbackProgress(String trackId) => '/api/v1/playback/progress/$trackId';
+  static String playbackBatchProgress(List<String> trackIds) =>
+      '/api/v1/playback/progress?track_ids=${trackIds.join(',')}';
+  static String playbackHistoryItem(String trackId) => '/api/v1/playback/history/$trackId';
+
+  // Telemetry & Observability
+  static const String telemetryEvents = '/api/v1/telemetry/events';
+}

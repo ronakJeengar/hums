@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Request, status
 from fastapi.security import HTTPAuthorizationCredentials
 
 from app.core.dependencies import get_auth_service, get_current_user, security_scheme
+from app.core.rate_limit import RateLimiter
 from app.db.models.user import User
 from app.schemas.common import ApiResponse, MessageData
 from app.schemas.user import (
@@ -26,6 +27,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
     response_model=ApiResponse[AuthResponse],
     status_code=status.HTTP_201_CREATED,
     summary="Register new user account",
+    dependencies=[Depends(RateLimiter(requests=10, window_seconds=60, action="auth_register"))],
 )
 async def register(
     request: Request,
@@ -58,6 +60,7 @@ async def register(
     response_model=ApiResponse[AuthResponse],
     status_code=status.HTTP_200_OK,
     summary="Authenticate user with credentials",
+    dependencies=[Depends(RateLimiter(requests=15, window_seconds=60, action="auth_login"))],
 )
 async def login(
     request: Request,
@@ -90,6 +93,7 @@ async def login(
     response_model=ApiResponse[TokenResponse],
     status_code=status.HTTP_200_OK,
     summary="Rotate access and refresh tokens",
+    dependencies=[Depends(RateLimiter(requests=30, window_seconds=60, action="auth_refresh"))],
 )
 async def refresh_tokens(
     request: Request,
@@ -147,6 +151,7 @@ async def get_me(
     response_model=ApiResponse[MessageData],
     status_code=status.HTTP_200_OK,
     summary="Request password reset token",
+    dependencies=[Depends(RateLimiter(requests=5, window_seconds=60, action="auth_forgot_password"))],
 )
 async def forgot_password(
     payload: ForgotPasswordRequest,
@@ -170,6 +175,7 @@ async def forgot_password(
     response_model=ApiResponse[MessageData],
     status_code=status.HTTP_200_OK,
     summary="Reset account password using valid reset token",
+    dependencies=[Depends(RateLimiter(requests=10, window_seconds=60, action="auth_reset_password"))],
 )
 async def reset_password(
     payload: ResetPasswordRequest,

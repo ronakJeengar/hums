@@ -1,5 +1,5 @@
 import uuid
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import redis.asyncio as aioredis
@@ -9,11 +9,13 @@ from app.core.config import get_settings
 from app.core.errors import AuthenticationError
 from app.core.security import decode_token
 from app.db.database import get_db
+from app.db.models.user import User
 from app.repositories.audio_repository import (
     AudioFileRepository,
     ProcessingJobRepository,
     TrackRepository,
 )
+from app.repositories.playback_repository import PlaybackRepository
 from app.repositories.playlist_repository import PlaylistRepository
 from app.repositories.search_repository import SearchRepository
 from app.repositories.user_repository import (
@@ -23,6 +25,7 @@ from app.repositories.user_repository import (
 )
 from app.services.audio_service import AudioService
 from app.services.auth_service import AuthService
+from app.services.playback_service import PlaybackService
 from app.services.playlist_service import PlaylistService
 from app.services.profile_service import ProfileService
 from app.services.search_service import SearchService
@@ -53,6 +56,30 @@ async def check_redis_health() -> bool:
         pong = await client.ping()
         await client.aclose()
         return bool(pong)
+    except Exception:
+        return False
+
+
+async def check_celery_broker_health() -> bool:
+    """Verifies Celery Redis broker reachability."""
+    try:
+        client = aioredis.from_url(settings.REDIS_URL, socket_timeout=2.0)
+        pong = await client.ping()
+        await client.aclose()
+        return bool(pong)
+    except Exception:
+        return False
+
+
+async def check_storage_health() -> bool:
+    """Verifies S3/MinIO object storage reachability."""
+    import asyncio
+    try:
+        storage = S3StorageService()
+        def _check():
+            storage.s3_client.head_bucket(Bucket=settings.S3_BUCKET)
+            return True
+        return await asyncio.to_thread(_check)
     except Exception:
         return False
 
@@ -144,6 +171,19 @@ def get_search_service(
     return SearchService(search_repo, storage_service)
 
 
+def get_playback_repository(
+    session: AsyncSession = Depends(get_db),
+) -> PlaybackRepository:
+    return PlaybackRepository(session)
+
+
+def get_playback_service(
+    session: AsyncSession = Depends(get_db),
+) -> PlaybackService:
+    return PlaybackService(session)
+
+
+
 async def get_current_user(
     auth: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
     user_repo: UserRepository = Depends(get_user_repository),
@@ -168,9 +208,9 @@ async def get_current_user(
         user_id = uuid.UUID(user_id_str)
     except AuthenticationError:
         raise
-    except Exception as exc:
+    except Exception:
         raise AuthenticationError(
-            f"Invalid or expired token: {str(exc)}",
+            "Invalid or expired token",
             code="UNAUTHORIZED",
         )
 

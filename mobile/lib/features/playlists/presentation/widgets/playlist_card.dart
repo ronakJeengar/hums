@@ -48,6 +48,8 @@ class PlaylistCard extends StatelessWidget {
                           playlist.coverImageUrl!,
                           width: 64,
                           height: 64,
+                          cacheWidth: 160,
+                          cacheHeight: 160,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
                               _buildPlaceholder(),

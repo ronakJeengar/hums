@@ -28,6 +28,18 @@ from app.schemas.search import (
     SearchResponse,
     SearchSuggestionsResponse,
 )
+from app.schemas.playback import (
+    PlaybackEventType,
+    PlaybackProgressUpdateRequest,
+    PlaybackProgressResponse,
+    PlaybackBatchProgressResponse,
+    PlaybackEventCreateRequest,
+    PlaybackBatchEventsRequest,
+    PlaybackEventsIngestResponse,
+    ListeningHistoryItemResponse,
+    ListeningHistoryListResponse,
+    RecommendationListeningSignal,
+)
 
 __all__ = [
     "ApiResponse",
@@ -52,4 +64,14 @@ __all__ = [
     "SearchEpisodeItem",
     "SearchResponse",
     "SearchSuggestionsResponse",
+    "PlaybackEventType",
+    "PlaybackProgressUpdateRequest",
+    "PlaybackProgressResponse",
+    "PlaybackBatchProgressResponse",
+    "PlaybackEventCreateRequest",
+    "PlaybackBatchEventsRequest",
+    "PlaybackEventsIngestResponse",
+    "ListeningHistoryItemResponse",
+    "ListeningHistoryListResponse",
+    "RecommendationListeningSignal",
 ]

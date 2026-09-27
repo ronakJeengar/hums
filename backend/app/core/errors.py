@@ -100,8 +100,13 @@ def register_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
+        headers = {}
+        if exc.status_code == status.HTTP_429_TOO_MANY_REQUESTS and exc.details and "retry_after" in exc.details:
+            headers["Retry-After"] = str(exc.details["retry_after"])
+
         return JSONResponse(
             status_code=exc.status_code,
+            headers=headers if headers else None,
             content=format_error_response(
                 code=exc.code,
                 message=exc.message,

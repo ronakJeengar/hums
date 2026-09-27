@@ -58,6 +58,20 @@ class HomeScreen extends ConsumerWidget {
             },
           ),
           IconButton(
+            icon: const Icon(Icons.history_rounded, color: AppColors.textPrimary),
+            tooltip: 'Listening History',
+            onPressed: () {
+              context.push(RouteNames.historyPath);
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.download_for_offline_outlined, color: AppColors.textPrimary),
+            tooltip: 'Downloads',
+            onPressed: () {
+              context.push(RouteNames.downloadsPath);
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.library_music_outlined, color: AppColors.textPrimary),
             tooltip: 'My Tracks',
             onPressed: () {
@@ -275,8 +289,52 @@ class HomeScreen extends ConsumerWidget {
                     HumsButton(
                       label: 'Search',
                       variant: HumsButtonVariant.primary,
+                      icon: Icons.search_rounded,
                       onPressed: () {
                         context.push(RouteNames.searchPath);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.md),
+
+              // Listening History Quick Action Card
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Recently Played',
+                            style: AppTypography.titleMedium,
+                          ),
+                          const SizedBox(height: AppSpacing.xxs),
+                          Text(
+                            'Jump back into your recent tracks and resume playback.',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    HumsButton(
+                      label: 'View History',
+                      variant: HumsButtonVariant.secondary,
+                      icon: Icons.history_rounded,
+                      onPressed: () {
+                        context.push(RouteNames.historyPath);
                       },
                     ),
                   ],

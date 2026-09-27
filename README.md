@@ -18,6 +18,7 @@
 * Direct creator audio and podcast episode publishing.
 * Custom playlists, favorites, and listening history.
 * Native, high-performance catalog search & discovery across songs, artists, albums, playlists, podcasts, and episodes with PostgreSQL trigram indexing, Redis caching, and suggestions.
+* Resilient offline downloads & playback with byte-level Range resumption and zero player divergence.
 * Clean, warm, audio-centric mobile client built with Flutter and Riverpod.
 * Architectural readiness for future Google Gemini-powered transcripts and smart discovery.
 
@@ -163,6 +164,17 @@ cd mobile
 flutter test
 ```
 
+### Performance Benchmarks
+```bash
+# Run Flutter widget rebuild benchmark
+cd mobile
+flutter test test/performance/rebuild_benchmark_test.dart
+```
+
+Comprehensive performance baselines, execution plans, and optimization reports are documented in:
+* [`docs/performance/PERFORMANCE_BASELINE.md`](docs/performance/PERFORMANCE_BASELINE.md)
+* [`docs/performance/PERFORMANCE_REPORT.md`](docs/performance/PERFORMANCE_REPORT.md)
+
 ---
 
 ## 7. Database Migrations (Alembic)
@@ -194,3 +206,58 @@ alembic downgrade -1
 2. Commit with conventional commit messages (`feat:`, `fix:`, `docs:`, `test:`).
 3. Ensure all tests and linters pass before opening a Pull Request.
 4. Merge via approved Pull Request into `main`.
+
+---
+
+## 9. Security & Hardening
+
+Hums incorporates production-grade defensive security engineering:
+* **Rate Limiting:** Atomic Redis sliding-window throttling on authentication, uploads, and creation endpoints with `Retry-After` headers.
+* **Bounded Streams:** Early termination of oversized file uploads (`read_upload_file_bounded`) preventing memory starvation.
+* **Strict Input Bounds:** Field-level character and array limits defending against algorithmic complexity and buffer overflows.
+* **Security Headers:** Automatic enforcement of HSTS, `nosniff`, `DENY` framing, and strict referrer policies.
+* **Container Isolation:** Docker backend executes as unprivileged `appuser` (UID 1000).
+* **Secure Mobile Storage:** Hardware-backed token storage via Keychain / EncryptedSharedPreferences with release-mode log suppression.
+
+Detailed documentation is available in [`docs/security/`](docs/security/):
+* [Security Baseline](docs/security/SECURITY_BASELINE.md)
+* [Security Report](docs/security/SECURITY_REPORT.md)
+* [Security Checklist](docs/security/SECURITY_CHECKLIST.md)
+
+---
+
+## 10. Production Observability & Monitoring
+
+Hums features an integrated, low-overhead observability layer providing full visibility across the distributed system:
+* **Request Correlation:** Distributed tracing via `X-Request-ID` context propagation across all HTTP routes, background workers, and logs.
+* **Structured Logging & Redaction:** Auto-switching structured JSON logging in production and human-readable text in development, with active masking of bearer tokens, passwords, database credentials, and presigned object storage URLs.
+* **Low-Cardinality Metrics Registry:** High-performance in-memory registry exporting standard Prometheus exposition text (`GET /metrics`) and structured JSON summaries (`GET /api/v1/metrics`).
+* **Multi-Tier Health Checks:** Shallow process liveness probe (`GET /health/live`), dependency-aware readiness probe (`GET /health/ready`), and deep subsystem status (`GET /api/v1/health`).
+* **Database & Worker Telemetry:** Automatic SQLAlchemy query duration tracking, slow query alerting (`DB_SLOW_QUERY_MS`), connection pool monitoring, and Celery task lifecycle signal integration.
+* **Mobile Client Telemetry:** Non-blocking batched ingestion (`POST /api/v1/telemetry/events`) for playback events, buffer stalls, and crash reporting with fail-open client behavior.
+
+Comprehensive observability documentation:
+* [Observability Architecture](docs/observability/OBSERVABILITY_ARCHITECTURE.md)
+* [Alerting Rules & SLOs](docs/observability/ALERTS.md)
+* [Dashboard Specifications](docs/observability/DASHBOARDS.md)
+* [Operations Runbook](docs/observability/OPERATIONS_RUNBOOK.md)
+* [Deployment Checklist](docs/observability/DEPLOYMENT_CHECKLIST.md)
+
+---
+
+## 11. Listening History & Playback Progress Sync
+
+Hums provides seamless cross-device track resumption, persistent listening history, and resilient offline playback event synchronization:
+* **Two-Tier Architecture:** High-water mark state table (`playback_progress`) for instant cross-device position resumption paired with an append-only event stream (`playback_events`) for analytics and audit trails.
+* **Idempotent Client-Driven Deduplication:** Client-generated RFC 4122 v4 `event_id` with `UNIQUE (user_id, event_id)` constraints guarantees zero duplicate counts during offline batch synchronization or retries.
+* **Intelligent Debounced Checkpointing:** Eliminates database write storms by checkpointing every 15 seconds during continuous playback, on discrete player transitions (`pause`, `seek`, `skip`, `complete`, `stop`), and on app backgrounding.
+* **Smart Track Resumption:** Completed tracks ($\ge 95\%$) automatically restart from `0:00`, while uncompleted tracks ($> 3\text{s}$) resume directly from the saved millisecond position.
+* **Resilient Offline Queue:** Sandboxed atomic JSON queue (`offline_events.json` and `offline_progress.json`) buffers playback events during network outages and automatically syncs in batches of 50 upon reconnection.
+* **Implicit Recommendation Signals:** Exposes aggregated consumption signals (completion rate, repeat listens, early skips) to feed the hybrid recommendation engine.
+
+Playback documentation:
+* [Playback History Architecture](docs/playback/PLAYBACK_HISTORY_ARCHITECTURE.md)
+* [Playback Sync Protocol](docs/playback/PLAYBACK_SYNC.md)
+* [Playback Event Model](docs/playback/PLAYBACK_EVENT_MODEL.md)
+
+

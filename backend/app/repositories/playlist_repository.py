@@ -22,8 +22,7 @@ class PlaylistRepository(BaseRepository[Playlist]):
         stmt = (
             select(Playlist)
             .options(
-                selectinload(Playlist.playlist_tracks)
-                .joinedload(PlaylistTrack.track)
+                selectinload(Playlist.playlist_tracks).joinedload(PlaylistTrack.track)
             )
             .where(Playlist.id == playlist_id)
         )
@@ -40,8 +39,7 @@ class PlaylistRepository(BaseRepository[Playlist]):
         stmt = (
             select(Playlist)
             .options(
-                selectinload(Playlist.playlist_tracks)
-                .joinedload(PlaylistTrack.track)
+                selectinload(Playlist.playlist_tracks).joinedload(PlaylistTrack.track)
             )
             .where(Playlist.owner_id == owner_id)
             .order_by(Playlist.created_at.desc())
@@ -51,11 +49,36 @@ class PlaylistRepository(BaseRepository[Playlist]):
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
+    async def list_by_owner_with_aggregates(
+        self, owner_id: uuid.UUID, skip: int = 0, limit: int = 50
+    ) -> List[tuple[Playlist, int, int]]:
+        """
+        Retrieves paginated playlists with track_count and duration_seconds pre-aggregated
+        in a single SQL query, avoiding N+1 child queries and thousands of hydrated model objects.
+        """
+        stmt = (
+            select(
+                Playlist,
+                func.count(PlaylistTrack.id).label("track_count"),
+                func.coalesce(func.sum(Track.duration_seconds), 0).label(
+                    "duration_seconds"
+                ),
+            )
+            .outerjoin(PlaylistTrack, PlaylistTrack.playlist_id == Playlist.id)
+            .outerjoin(Track, Track.id == PlaylistTrack.track_id)
+            .where(Playlist.owner_id == owner_id)
+            .group_by(Playlist.id)
+            .order_by(Playlist.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await self.session.execute(stmt)
+        return [(row[0], int(row[1]), int(row[2])) for row in result.all()]
+
     async def get_max_position(self, playlist_id: uuid.UUID) -> int:
         """Returns the current highest position in the playlist, or -1 if empty."""
-        stmt = (
-            select(func.coalesce(func.max(PlaylistTrack.position), -1))
-            .where(PlaylistTrack.playlist_id == playlist_id)
+        stmt = select(func.coalesce(func.max(PlaylistTrack.position), -1)).where(
+            PlaylistTrack.playlist_id == playlist_id
         )
         result = await self.session.execute(stmt)
         return result.scalar_one()
@@ -64,12 +87,9 @@ class PlaylistRepository(BaseRepository[Playlist]):
         self, playlist_id: uuid.UUID, track_id: uuid.UUID
     ) -> Optional[PlaylistTrack]:
         """Checks if a track already exists in a playlist."""
-        stmt = (
-            select(PlaylistTrack)
-            .where(
-                PlaylistTrack.playlist_id == playlist_id,
-                PlaylistTrack.track_id == track_id,
-            )
+        stmt = select(PlaylistTrack).where(
+            PlaylistTrack.playlist_id == playlist_id,
+            PlaylistTrack.track_id == track_id,
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -127,10 +147,7 @@ class PlaylistRepository(BaseRepository[Playlist]):
         Atomically updates the positions of all tracks in a playlist
         according to the provided track ID order.
         """
-        stmt = (
-            select(PlaylistTrack)
-            .where(PlaylistTrack.playlist_id == playlist_id)
-        )
+        stmt = select(PlaylistTrack).where(PlaylistTrack.playlist_id == playlist_id)
         res = await self.session.execute(stmt)
         pts = list(res.scalars().all())
 

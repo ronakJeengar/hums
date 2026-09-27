@@ -34,6 +34,8 @@ class ErrorResponse(BaseModel):
 class HealthServiceStatus(BaseModel):
     database: str
     redis: str
+    celery_broker: Optional[str] = "connected"
+    storage: Optional[str] = "connected"
 
 
 class HealthData(BaseModel):
