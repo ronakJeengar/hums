@@ -69,6 +69,12 @@ abstract class RouteNames {
 
   static const String following = 'following';
   static const String followingPath = '/following';
+
+  static const String library = 'library';
+  static const String libraryPath = '/library';
+
+  static const String likedSongs = 'liked-songs';
+  static const String likedSongsPath = '/liked-songs';
 }
 
 

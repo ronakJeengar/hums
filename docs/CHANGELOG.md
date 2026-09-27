@@ -10,6 +10,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Likes, Favorites & Personal Library (`feature/likes-library`):**
+  - **Relational Data Model & PostgreSQL Migrations:**
+    - Dedicated `user_track_likes` table with composite unique constraint `(user_id, track_id)` guaranteeing strict separation from playlists.
+    - Added `likes_count` to `tracks` with index `ix_tracks_likes_count` and composite index `ix_user_track_likes_user_created` (`user_id, created_at DESC`).
+    - Applied Alembic migration `20260927_b8e9f0123456_create_user_track_likes_and_likes_count.py`.
+  - **Idempotent Like & Unlike Engine:**
+    - Atomic PostgreSQL `INSERT ... ON CONFLICT (user_id, track_id) DO NOTHING` inserts ensuring idempotent like actions without counter drift.
+    - Atomic non-negative decrement `GREATEST(0, likes_count - 1)` preventing negative counters or double decrements.
+    - Redis caching for `like:status:{user_id}:{track_id}` (5m TTL) and `library:summary:{user_id}` (2m TTL) with immediate mutation invalidation.
+    - Batch like lookup `is_liked_batch` eliminating N+1 database and network queries across search, playlists, and recommendations.
+  - **REST Endpoints & Personal Library API:**
+    - Idempotent track like: `POST /api/v1/tracks/{track_id}/like`.
+    - Idempotent track unlike: `DELETE /api/v1/tracks/{track_id}/like`.
+    - Like status lookup: `GET /api/v1/tracks/{track_id}/like-status`.
+    - Personal library summary: `GET /api/v1/library`.
+    - Paginated liked tracks: `GET /api/v1/library/liked-tracks` ordered by `liked_at DESC`.
+  - **Recommendation Engine Signal Integration:**
+    - `UserPreferenceService` ingests user liked tracks with explicit `+3.0` weight bonus for associated genres and artists during candidate scoring.
+  - **Flutter Mobile Client & Design System Integration:**
+    - Universal `LikeButton` component with tactile scale animation, optimistic updates, and automatic failure rollback.
+    - Embedded `LikeButton` across Full Player Top Bar, Search Track Tiles, Recommendation Track Cards, and Creator Profile Popular Tracks.
+    - `LibraryScreen` (`/library`): Central personal library hub displaying aggregated metrics (liked songs, playlists, downloads, following) with quick-access navigation.
+    - `LikedSongsScreen` (`/liked-songs`): Dedicated paginated list with 1-tap queue playback, offline download integration, add-to-playlist modal, and unlike removal.
+    - Added routes `/library` and `/liked-songs` to `app_router.dart`, and added Library navigation buttons to `HomeScreen`.
+    - Account logout isolation: invalidates library and liked tracks providers to prevent data leakage between sessions.
+  - **Verification & Documentation:**
+    - 8 backend tests in `backend/tests/test_likes_library.py` (all 180 backend pytest tests passing).
+    - 4 mobile test suites with 14 unit and widget tests (all 259 Flutter tests passing, 0 analyzer issues).
+    - Dedicated operational documentation in `docs/library/` (`LIBRARY_ARCHITECTURE.md`, `LIKES_MODEL.md`, `LIBRARY_SYNC.md`).
+
 - **Social Profiles, Following & Creator Discovery (`feature/social-following`):**
   - **Relational Data Models & PostgreSQL Migrations:**
     - Dedicated `creators` table separating public artist identities from private user accounts with authoritative `followers_count`.

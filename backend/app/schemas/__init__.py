@@ -48,6 +48,14 @@ from app.schemas.creator import (
     FollowersListResponse,
     FollowingListResponse,
 )
+from app.schemas.like import (
+    LikeStatusResponse,
+    LikedTrackItem,
+    LikedTracksListResponse,
+)
+from app.schemas.library import (
+    LibrarySummaryResponse,
+)
 
 __all__ = [
     "ApiResponse",
@@ -88,4 +96,8 @@ __all__ = [
     "FollowerUserItem",
     "FollowersListResponse",
     "FollowingListResponse",
+    "LikeStatusResponse",
+    "LikedTrackItem",
+    "LikedTracksListResponse",
+    "LibrarySummaryResponse",
 ]

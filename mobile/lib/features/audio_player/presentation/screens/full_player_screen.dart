@@ -5,6 +5,7 @@ import 'package:hums_mobile/core/theme/app_icons.dart';
 import 'package:hums_mobile/core/widgets/app_icon.dart';
 import 'package:hums_mobile/features/audio_player/presentation/providers/audio_player_provider.dart';
 import 'package:hums_mobile/features/downloads/presentation/widgets/download_button.dart';
+import 'package:hums_mobile/features/library/presentation/widgets/like_button.dart';
 
 class FullPlayerScreen extends ConsumerStatefulWidget {
   const FullPlayerScreen({super.key});
@@ -102,14 +103,24 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
                                 letterSpacing: 1.5,
                               ),
                             ),
-                            DownloadButton(
-                              trackId: track.trackId,
-                              title: track.title,
-                              artistName: track.artistName,
-                              albumName: track.albumName,
-                              durationSeconds: track.durationSeconds,
-                              size: 24,
-                              color: AppColors.textPrimary,
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                LikeButton(
+                                  trackId: track.trackId,
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 8),
+                                DownloadButton(
+                                  trackId: track.trackId,
+                                  title: track.title,
+                                  artistName: track.artistName,
+                                  albumName: track.albumName,
+                                  durationSeconds: track.durationSeconds,
+                                  size: 24,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ],
                             ),
                           ],
                         ),

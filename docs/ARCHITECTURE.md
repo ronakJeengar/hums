@@ -547,3 +547,29 @@ flowchart TD
 * **Creator Profile:** `CreatorProfileScreen` provides sliver collapsible header, verified badge, responsive follower count, popular tracks with instant queue playback, albums, and public playlists.
 * **Following Management:** `FollowingScreen` provides a paginated listing of followed creators with empty states, pull-to-refresh, unfollow triggers, and profile navigation.
 
+---
+
+## 4. Likes, Favorites & Personal Library Subsystem
+
+### 4.1 Domain & Data Architecture
+* **Distinct Architectural Concept:** Likes are modeled as a dedicated relational link table (`user_track_likes`) with unique composite constraint `(user_id, track_id)`. Likes are never modeled as hidden or synthetic playlists.
+* **Server-Authoritative Counters:** `tracks.likes_count` is maintained exclusively on the server using `GREATEST(0, likes_count - 1)` floor protection. Client applications never increment or decrement persisted counts directly.
+* **Idempotency & Concurrency:** Multi-tap likes utilize `INSERT INTO user_track_likes ... ON CONFLICT DO NOTHING`, and multi-tap unlikes safely execute conditional deletes with row existence checks.
+* **Redis Caching & Invalidation:**
+  - Track like status cached at `like:status:{user_id}:{track_id}` (TTL 300s).
+  - Personal library summary cached at `library:summary:{user_id}` (TTL 120s).
+  - Both keys are explicitly evicted on like and unlike mutations.
+* **N+1 Prevention:** Batch status resolution (`is_liked_batch`) resolves like status for arbitrary track IDs in a single SQL query (`track_id = ANY(:track_ids)`).
+
+### 4.2 Recommendation Engine Signal Integration
+* Liking a track represents the highest explicit positive engagement signal in `UserPreferenceService`.
+* Liked tracks contribute `+3.0` weight to their respective artist and genre preference profiles during candidate generation.
+
+### 4.3 Client Architecture (Flutter)
+* **Universal LikeButton:** Single reusable reactive widget embedded across Home Recommendations, Search Results, Global Audio Player, Playlists, and Creator Profiles.
+* **State Management:** `likeNotifierProvider.family<LikeNotifier, LikeState, String>` provides optimistic UI updates, tactile scale animations, and automatic failure rollbacks.
+* **Personal Library Screens:**
+  - `LibraryScreen` (`/library`): Central hub displaying aggregated counts (liked songs, playlists, downloads, following) and quick-access navigation tiles.
+  - `LikedSongsScreen` (`/liked-songs`): Dedicated paginated listing (`liked_at DESC`) with 1-tap queue playback, download integration, and playlist addition modals.
+* **Strict Account Isolation:** Logging out clears and invalidates all personal library providers and user-specific states.
+

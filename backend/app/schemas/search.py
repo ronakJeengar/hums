@@ -28,6 +28,8 @@ class SearchTrackItem(BaseModel):
     duration_seconds: int | None = None
     waveform_key: str | None = None
     status: str
+    likes_count: int = 0
+    is_liked: bool | None = None
     created_at: datetime
     updated_at: datetime
 

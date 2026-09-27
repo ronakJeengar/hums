@@ -22,6 +22,8 @@ docs/*
 !docs/playback/**
 !docs/social/
 !docs/social/**
+!docs/library/
+!docs/library/**
 !docs/PRD.md
 !docs/CHANGELOG.md
 !docs/ARCHITECTURE.md

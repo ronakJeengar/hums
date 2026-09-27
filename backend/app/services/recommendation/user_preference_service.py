@@ -6,6 +6,7 @@ import uuid
 from app.db.models.user import User
 from app.repositories.audio_repository import TrackRepository
 from app.repositories.creator_repository import CreatorRepository
+from app.repositories.like_repository import LikeRepository
 from app.repositories.playlist_repository import PlaylistRepository
 
 
@@ -31,10 +32,12 @@ class UserPreferenceService:
         playlist_repo: PlaylistRepository,
         track_repo: TrackRepository,
         creator_repo: Optional[CreatorRepository] = None,
+        like_repo: Optional[LikeRepository] = None,
     ):
         self.playlist_repo = playlist_repo
         self.track_repo = track_repo
         self.creator_repo = creator_repo
+        self.like_repo = like_repo
 
     async def get_user_preferences(self, user: User) -> UserPreferences:
         """
@@ -72,6 +75,16 @@ class UserPreferenceService:
             for creator in following_creators:
                 if creator.name and creator.name.strip():
                     artist_counter[creator.name.strip()] += 3
+
+        # 4. Inspect liked tracks (strong explicit preference signal: +3 weight)
+        if self.like_repo:
+            liked_tracks, _ = await self.like_repo.get_liked_tracks(user.id, page=1, size=50)
+            for lt in liked_tracks:
+                excluded_ids.add(lt.id)
+                if lt.genre and lt.genre.strip():
+                    genre_counter[lt.genre.strip()] += 3
+                if lt.artist_name and lt.artist_name.strip():
+                    artist_counter[lt.artist_name.strip()] += 3
 
         preferred_genres = [genre for genre, _ in genre_counter.most_common(10)]
         preferred_artists = [artist for artist, _ in artist_counter.most_common(10)]

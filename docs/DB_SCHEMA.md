@@ -463,3 +463,34 @@ Governs many-to-many relationship between users and creators.
 * `ix_creator_followers_creator_created` (btree composite): `(creator_id, created_at DESC)` for fast follower pagination.
 * `ix_creator_followers_user_created` (btree composite): `(user_id, created_at DESC)` for fast following list pagination.
 
+---
+
+## 6. Likes & Personal Library Schema
+
+### 6.1 `user_track_likes` Table
+Stores explicit user-to-track favorites/likes. Fully independent from playlists.
+
+| Column | Type | Nullable | Constraints & Defaults | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `UUID` | No | PK, Default `gen_random_uuid()` | Unique record identifier |
+| `user_id` | `UUID` | No | FK -> `users(id)` ON DELETE CASCADE | ID of user who liked the track |
+| `track_id` | `UUID` | No | FK -> `tracks(id)` ON DELETE CASCADE | ID of the liked track |
+| `created_at` | `TIMESTAMPTZ` | No | Default `NOW()`, INDEX | Timestamp when liked (liked_at) |
+
+**Constraints & Indexes:**
+* `uq_user_track_likes_user_track` (UNIQUE composite): `(user_id, track_id)` strictly prevents duplicate likes.
+* `ix_user_track_likes_user_id` (btree): Rapid lookup for user likes.
+* `ix_user_track_likes_track_id` (btree): Rapid lookup for track likers.
+* `ix_user_track_likes_user_created` (btree composite): `(user_id, created_at DESC)` for high-performance reverse-chronological library pagination.
+
+### 6.2 `tracks.likes_count` Column
+Denormalized public counter on `tracks` for efficient aggregation without dynamic `COUNT(*)` overhead.
+
+| Column | Type | Nullable | Constraints & Defaults | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `likes_count` | `INTEGER` | No | Default `0`, INDEX | Server-authoritative non-negative like count |
+
+**Index:**
+* `ix_tracks_likes_count` (btree DESC): Popular tracks discovery and ranking queries.
+
+

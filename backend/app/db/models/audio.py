@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from app.db.models.user import User
     from app.db.models.recommendation import RecommendationItem
     from app.db.models.creator import Creator
+    from app.db.models.like import UserTrackLike
 
 
 class Track(BaseDBModel):
@@ -78,6 +79,12 @@ class Track(BaseDBModel):
         nullable=False,
         index=True,
     )
+    likes_count: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+        index=True,
+    )
 
     # Relationships
     owner: Mapped["User"] = relationship(
@@ -86,6 +93,11 @@ class Track(BaseDBModel):
     )
     creator: Mapped[Optional["Creator"]] = relationship(
         "Creator",
+    )
+    likes: Mapped[List["UserTrackLike"]] = relationship(
+        "UserTrackLike",
+        back_populates="track",
+        cascade="all, delete-orphan",
     )
     audio_files: Mapped[List["AudioFile"]] = relationship(
         "AudioFile",

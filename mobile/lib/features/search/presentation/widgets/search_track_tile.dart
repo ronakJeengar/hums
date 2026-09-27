@@ -3,6 +3,7 @@ import 'package:hums_mobile/core/theme/app_colors.dart';
 import 'package:hums_mobile/core/theme/app_spacing.dart';
 import 'package:hums_mobile/core/theme/app_typography.dart';
 import 'package:hums_mobile/features/search/domain/entities/search_track_entity.dart';
+import 'package:hums_mobile/features/library/presentation/widgets/like_button.dart';
 
 class SearchTrackTile extends StatelessWidget {
   final SearchTrackEntity track;
@@ -70,11 +71,21 @@ class SearchTrackTile extends StatelessWidget {
           color: AppColors.textSecondary,
         ),
       ),
-      trailing: Text(
-        track.formattedDuration,
-        style: AppTypography.labelSmall.copyWith(
-          color: AppColors.textSecondary,
-        ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          LikeButton(
+            trackId: track.id,
+            size: 20,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            track.formattedDuration,
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
       ),
       onTap: onTap,
     );

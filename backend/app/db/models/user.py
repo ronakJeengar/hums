@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from app.db.models.notification import Notification, NotificationPreference, UserDevice
     from app.db.models.recommendation import RecommendationSet
     from app.db.models.creator import Creator, CreatorFollower
+    from app.db.models.like import UserTrackLike
 
 
 class User(BaseDBModel):
@@ -111,6 +112,12 @@ class User(BaseDBModel):
         back_populates="user",
         cascade="all, delete-orphan",
         order_by="CreatorFollower.created_at.desc()",
+    )
+    track_likes: Mapped[List["UserTrackLike"]] = relationship(
+        "UserTrackLike",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="UserTrackLike.created_at.desc()",
     )
 
     @property

@@ -73,4 +73,11 @@ abstract class ApiEndpoints {
       '/api/v1/creators/$creatorId/followers?page=$page&size=$size';
   static String userFollowing({int page = 1, int size = 20}) =>
       '/api/v1/users/me/following?page=$page&size=$size';
+
+  // Likes & Personal Library Endpoints
+  static String trackLike(String trackId) => '/api/v1/tracks/$trackId/like';
+  static String trackLikeStatus(String trackId) => '/api/v1/tracks/$trackId/like-status';
+  static const String library = '/api/v1/library';
+  static String libraryLikedTracks({int page = 1, int size = 20}) =>
+      '/api/v1/library/liked-tracks?page=$page&size=$size';
 }

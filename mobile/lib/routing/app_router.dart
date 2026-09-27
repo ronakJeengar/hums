@@ -25,6 +25,8 @@ import 'package:hums_mobile/features/history/presentation/screens/listening_hist
 import 'package:hums_mobile/features/notifications/presentation/screens/notification_screen.dart';
 import 'package:hums_mobile/features/social/presentation/screens/creator_profile_screen.dart';
 import 'package:hums_mobile/features/social/presentation/screens/following_screen.dart';
+import 'package:hums_mobile/features/library/presentation/screens/library_screen.dart';
+import 'package:hums_mobile/features/library/presentation/screens/liked_songs_screen.dart';
 import 'package:hums_mobile/routing/route_names.dart';
 
 class RouterNotifier extends ChangeNotifier {
@@ -186,6 +188,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.following,
         path: RouteNames.followingPath,
         builder: (context, state) => const FollowingScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.library,
+        path: RouteNames.libraryPath,
+        builder: (context, state) => const LibraryScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.likedSongs,
+        path: RouteNames.likedSongsPath,
+        builder: (context, state) => const LikedSongsScreen(),
       ),
     ],
 

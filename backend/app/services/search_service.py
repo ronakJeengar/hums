@@ -6,6 +6,7 @@ import uuid
 import redis.asyncio as aioredis
 
 from app.core.config import get_settings
+from app.repositories.like_repository import LikeRepository
 from app.repositories.search_repository import SearchRepository
 from app.schemas.search import (
     SearchAlbumItem,
@@ -29,9 +30,11 @@ class SearchService:
         self,
         search_repository: SearchRepository,
         storage_service: BaseStorageService,
+        like_repo: Optional[LikeRepository] = None,
     ):
         self.search_repo = search_repository
         self.storage_service = storage_service
+        self.like_repo = like_repo
 
     async def search(
         self,
@@ -88,7 +91,17 @@ class SearchService:
                 limit=limit,
                 skip=skip if search_type == SearchType.TRACKS else 0,
             )
-            track_items = [SearchTrackItem.model_validate(t) for t in tracks]
+            liked_map = {}
+            if current_user_id and self.like_repo and tracks:
+                track_ids = [t.id for t in tracks]
+                liked_map = await self.like_repo.is_liked_batch(current_user_id, track_ids)
+
+            track_items = []
+            for t in tracks:
+                item = SearchTrackItem.model_validate(t)
+                if current_user_id:
+                    item.is_liked = liked_map.get(t.id, False)
+                track_items.append(item)
 
         # Artists
         if search_type in (SearchType.ALL, SearchType.ARTISTS):

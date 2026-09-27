@@ -92,6 +92,20 @@ class HomeScreen extends ConsumerWidget {
             },
           ),
           IconButton(
+            icon: const Icon(Icons.favorite_rounded, color: AppColors.error),
+            tooltip: 'Liked Songs',
+            onPressed: () {
+              context.push(RouteNames.likedSongsPath);
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.collections_bookmark_rounded, color: AppColors.textPrimary),
+            tooltip: 'My Library',
+            onPressed: () {
+              context.push(RouteNames.libraryPath);
+            },
+          ),
+          IconButton(
             icon: const AppIcon(
               icon: AppIcons.playlist,
               size: AppIconSizes.md,
@@ -302,6 +316,58 @@ class HomeScreen extends ConsumerWidget {
                       variant: HumsButtonVariant.primary,
                       onPressed: () {
                         context.push(RouteNames.playlistsPath);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.md),
+
+              // Library Quick Action Card
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Your Library',
+                            style: AppTypography.titleMedium,
+                          ),
+                          const SizedBox(height: AppSpacing.xxs),
+                          Text(
+                            'Access your liked songs, playlists, downloads, and followed creators.',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    HumsButton(
+                      label: 'Liked',
+                      variant: HumsButtonVariant.secondary,
+                      icon: Icons.favorite_rounded,
+                      onPressed: () {
+                        context.push(RouteNames.likedSongsPath);
+                      },
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    HumsButton(
+                      label: 'Library',
+                      variant: HumsButtonVariant.primary,
+                      icon: Icons.collections_bookmark_rounded,
+                      onPressed: () {
+                        context.push(RouteNames.libraryPath);
                       },
                     ),
                   ],

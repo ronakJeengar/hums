@@ -5,6 +5,7 @@ import 'package:hums_mobile/core/theme/app_spacing.dart';
 import 'package:hums_mobile/core/theme/app_typography.dart';
 import 'package:hums_mobile/features/audio_player/presentation/providers/audio_player_provider.dart';
 import 'package:hums_mobile/features/recommendations/domain/entities/recommendation_track_entity.dart';
+import 'package:hums_mobile/features/library/presentation/widgets/like_button.dart';
 
 class RecommendationTrackCard extends ConsumerWidget {
   final RecommendationTrackEntity track;
@@ -98,6 +99,20 @@ class RecommendationTrackCard extends ConsumerWidget {
                           color: isCurrentTrack
                               ? AppColors.textPrimary
                               : AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: AppSpacing.xs,
+                      right: AppSpacing.xs,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.background.withValues(alpha: 0.75),
+                          shape: BoxShape.circle,
+                        ),
+                        child: LikeButton(
+                          trackId: track.id,
+                          size: 16,
                         ),
                       ),
                     ),

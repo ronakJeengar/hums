@@ -1809,3 +1809,143 @@ Paginated list of creators followed by the authenticated user.
   }
   ```
 
+---
+
+## 7. Likes, Favorites & Personal Library Endpoints
+
+### 7.1 Like a Track
+Registers an explicit user favorite for the given track. Idempotent: repeated calls safely return current status without error or double-counting.
+
+* **Method:** `POST`
+* **Path:** `/api/v1/tracks/{track_id}/like`
+* **Authentication:** Required (`Bearer <access_token>`)
+* **Path Parameters:** `track_id` (UUID)
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "track_id": "987fcdeb-51a2-43f7-9abc-def012345678",
+      "is_liked": true,
+      "likes_count": 142
+    },
+    "meta": {
+      "timestamp": "2026-09-27T12:00:00Z",
+      "version": "1.0.0"
+    }
+  }
+  ```
+
+### 7.2 Unlike a Track
+Removes an existing user favorite for the given track. Idempotent: repeated calls safely return unliked status with floor protection (`likes_count >= 0`).
+
+* **Method:** `DELETE`
+* **Path:** `/api/v1/tracks/{track_id}/like`
+* **Authentication:** Required (`Bearer <access_token>`)
+* **Path Parameters:** `track_id` (UUID)
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "track_id": "987fcdeb-51a2-43f7-9abc-def012345678",
+      "is_liked": false,
+      "likes_count": 141
+    },
+    "meta": {
+      "timestamp": "2026-09-27T12:00:00Z",
+      "version": "1.0.0"
+    }
+  }
+  ```
+
+### 7.3 Get Track Like Status
+Queries the like status and public like count for a specific track. Cached in Redis (TTL 300s).
+
+* **Method:** `GET`
+* **Path:** `/api/v1/tracks/{track_id}/like-status`
+* **Authentication:** Required (`Bearer <access_token>`)
+* **Path Parameters:** `track_id` (UUID)
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "track_id": "987fcdeb-51a2-43f7-9abc-def012345678",
+      "is_liked": true,
+      "likes_count": 142
+    }
+  }
+  ```
+
+### 7.4 Get Personal Library Summary
+Retrieves aggregated library metrics for the authenticated user. Cached in Redis (TTL 120s).
+
+* **Method:** `GET`
+* **Path:** `/api/v1/library`
+* **Authentication:** Required (`Bearer <access_token>`)
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "liked_tracks_count": 42,
+      "playlists_count": 5,
+      "following_creators_count": 8,
+      "recent_liked_tracks": [
+        {
+          "id": "987fcdeb-51a2-43f7-9abc-def012345678",
+          "title": "Midnight Echoes",
+          "artist_name": "Luna Wave",
+          "album_name": "Nightfall",
+          "genre": "Ambient",
+          "duration_seconds": 215,
+          "waveform_key": "waveforms/sample.json",
+          "status": "READY",
+          "likes_count": 142,
+          "is_liked": true,
+          "liked_at": "2026-09-27T10:00:00Z",
+          "created_at": "2026-09-20T10:00:00Z"
+        }
+      ]
+    }
+  }
+  ```
+
+### 7.5 Get Liked Tracks
+Returns a paginated list of all tracks liked by the authenticated user, ordered reverse-chronologically (`liked_at DESC`).
+
+* **Method:** `GET`
+* **Path:** `/api/v1/library/liked-tracks`
+* **Authentication:** Required (`Bearer <access_token>`)
+* **Query Parameters:** `page` (default 1), `size` (default 20, max 100)
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "items": [
+        {
+          "id": "987fcdeb-51a2-43f7-9abc-def012345678",
+          "title": "Midnight Echoes",
+          "artist_name": "Luna Wave",
+          "album_name": "Nightfall",
+          "genre": "Ambient",
+          "duration_seconds": 215,
+          "waveform_key": "waveforms/sample.json",
+          "status": "READY",
+          "likes_count": 142,
+          "is_liked": true,
+          "liked_at": "2026-09-27T10:00:00Z",
+          "created_at": "2026-09-20T10:00:00Z"
+        }
+      ],
+      "total": 42,
+      "page": 1,
+      "size": 20,
+      "has_next": true
+    }
+  }
+  ```
+
+

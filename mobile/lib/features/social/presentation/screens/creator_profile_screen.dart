@@ -11,6 +11,7 @@ import 'package:hums_mobile/features/audio_player/presentation/widgets/mini_play
 import 'package:hums_mobile/features/social/presentation/providers/creator_profile_provider.dart';
 import 'package:hums_mobile/features/social/presentation/providers/follow_notifier.dart';
 import 'package:hums_mobile/features/social/presentation/widgets/follow_button.dart';
+import 'package:hums_mobile/features/library/presentation/widgets/like_button.dart';
 import 'package:hums_mobile/routing/route_names.dart';
 
 class CreatorProfileScreen extends ConsumerWidget {
@@ -304,11 +305,21 @@ class CreatorProfileScreen extends ConsumerWidget {
                             color: AppColors.textSecondary,
                           ),
                         ),
-                        trailing: Text(
-                          _formatDuration(track.durationSeconds),
-                          style: AppTypography.labelSmall.copyWith(
-                            color: AppColors.textTertiary,
-                          ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            LikeButton(
+                              trackId: track.id,
+                              size: 20,
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Text(
+                              _formatDuration(track.durationSeconds),
+                              style: AppTypography.labelSmall.copyWith(
+                                color: AppColors.textTertiary,
+                              ),
+                            ),
+                          ],
                         ),
                         onTap: () => _playTracks(
                           ref,

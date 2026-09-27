@@ -7,6 +7,7 @@ import 'package:hums_mobile/features/auth/data/datasources/auth_remote_data_sour
 import 'package:hums_mobile/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:hums_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:hums_mobile/features/auth/presentation/states/auth_state.dart';
+import 'package:hums_mobile/features/library/presentation/providers/library_provider.dart';
 
 final authStorageProvider = Provider<FlutterSecureStorage>((ref) {
   return const FlutterSecureStorage();
@@ -29,8 +30,9 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 
 class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repository;
+  final Ref? _ref;
 
-  AuthNotifier(this._repository) : super(const AuthState.initial());
+  AuthNotifier(this._repository, [this._ref]) : super(const AuthState.initial());
 
   Future<void> checkAuthStatus() async {
     state = const AuthState.loading();
@@ -100,6 +102,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _repository.logout();
     } finally {
       state = const AuthState.unauthenticated();
+      _ref?.invalidate(librarySummaryProvider);
+      _ref?.invalidate(likedTracksNotifierProvider);
     }
   }
 
@@ -142,5 +146,5 @@ class AuthNotifier extends StateNotifier<AuthState> {
 }
 
 final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(ref.watch(authRepositoryProvider));
+  return AuthNotifier(ref.watch(authRepositoryProvider), ref);
 });

@@ -16,6 +16,7 @@ from app.repositories.audio_repository import (
     TrackRepository,
 )
 from app.repositories.creator_repository import CreatorRepository
+from app.repositories.like_repository import LikeRepository
 from app.repositories.playback_repository import PlaybackRepository
 from app.repositories.playlist_repository import PlaylistRepository
 from app.repositories.search_repository import SearchRepository
@@ -32,6 +33,7 @@ from app.ai.gemini_recommendation_client import GeminiRecommendationClient
 from app.services.audio_service import AudioService
 from app.services.auth_service import AuthService
 from app.services.creator_service import CreatorService
+from app.services.like_service import LikeService
 from app.services.playback_service import PlaybackService
 from app.services.playlist_service import PlaylistService
 from app.services.profile_service import ProfileService
@@ -173,6 +175,10 @@ def get_playlist_service(
     return PlaylistService(playlist_repo, track_repo, storage_service)
 
 
+def get_like_repository(session: AsyncSession = Depends(get_db)) -> LikeRepository:
+    return LikeRepository(session)
+
+
 def get_search_repository(session: AsyncSession = Depends(get_db)) -> SearchRepository:
     return SearchRepository(session)
 
@@ -180,8 +186,9 @@ def get_search_repository(session: AsyncSession = Depends(get_db)) -> SearchRepo
 def get_search_service(
     search_repo: SearchRepository = Depends(get_search_repository),
     storage_service: BaseStorageService = Depends(get_storage_service),
+    like_repo: LikeRepository = Depends(get_like_repository),
 ) -> SearchService:
-    return SearchService(search_repo, storage_service)
+    return SearchService(search_repo, storage_service, like_repo)
 
 
 def get_playback_repository(
@@ -240,16 +247,26 @@ async def get_creator_service(
     return CreatorService(creator_repo, redis_client, storage_service)
 
 
+async def get_like_service(
+    like_repo: LikeRepository = Depends(get_like_repository),
+    redis_client: aioredis.Redis = Depends(get_redis_client),
+    playlist_repo: PlaylistRepository = Depends(get_playlist_repository),
+    creator_repo: CreatorRepository = Depends(get_creator_repository),
+) -> LikeService:
+    return LikeService(like_repo, redis_client, playlist_repo, creator_repo)
+
+
 def get_recommendation_service(
     playlist_repo: PlaylistRepository = Depends(get_playlist_repository),
     track_repo: TrackRepository = Depends(get_track_repository),
     creator_repo: CreatorRepository = Depends(get_creator_repository),
+    like_repo: LikeRepository = Depends(get_like_repository),
     rec_set_repo: RecommendationSetRepository = Depends(get_recommendation_set_repository),
     rec_item_repo: RecommendationItemRepository = Depends(get_recommendation_item_repository),
     gemini_client: GeminiRecommendationClient = Depends(get_gemini_recommendation_client),
     cache_service: RecommendationCacheService = Depends(get_recommendation_cache_service),
 ) -> RecommendationService:
-    preference_service = UserPreferenceService(playlist_repo, track_repo, creator_repo)
+    preference_service = UserPreferenceService(playlist_repo, track_repo, creator_repo, like_repo)
     candidate_service = CandidateGenerationService(track_repo)
     ranking_service = RankingService()
     diversity_service = DiversityService()
