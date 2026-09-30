@@ -148,6 +148,14 @@ class MetricsRegistry:
         self.playback_errors_total = ThreadSafeCounter()
         self.client_runtime_errors_total = ThreadSafeCounter()
 
+        # 9. Playback Quality & Data Saver Metrics
+        self.playback_quality_requested_total = ThreadSafeCounter()
+        self.playback_quality_selected_total = ThreadSafeCounter()
+        self.playback_quality_fallback_total = ThreadSafeCounter()
+        self.download_quality_selected_total = ThreadSafeCounter()
+        self.data_saver_enabled_total = ThreadSafeCounter()
+
+
     def record_http_request(
         self,
         method: str,
@@ -223,6 +231,16 @@ class MetricsRegistry:
         self.playback_events_total.inc(event_type=event_type, platform=platform)
         if error_category:
             self.playback_errors_total.inc(category=error_category, platform=platform)
+
+    def record_playback_quality(self, requested: str, selected: str, is_fallback: bool = False) -> None:
+        self.playback_quality_requested_total.inc(quality=requested)
+        self.playback_quality_selected_total.inc(quality=selected)
+        if is_fallback:
+            self.playback_quality_fallback_total.inc(requested=requested, selected=selected)
+
+    def record_download_quality(self, quality: str) -> None:
+        self.download_quality_selected_total.inc(quality=quality)
+
 
     def generate_prometheus_metrics(self) -> str:
         """Renders all metrics in standard Prometheus exposition text format."""

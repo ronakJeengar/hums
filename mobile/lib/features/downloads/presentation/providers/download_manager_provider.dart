@@ -14,6 +14,8 @@ import 'package:hums_mobile/features/downloads/domain/entities/download_item.dar
 import 'package:hums_mobile/features/downloads/domain/entities/download_status.dart';
 import 'package:hums_mobile/features/downloads/domain/repositories/download_repository.dart';
 import 'package:hums_mobile/features/downloads/presentation/providers/download_state.dart';
+import 'package:hums_mobile/features/playback_settings/domain/entities/playback_settings_entity.dart';
+import 'package:hums_mobile/features/playback_settings/presentation/providers/playback_settings_provider.dart';
 
 // Providers
 final downloadLocalDataSourceProvider = Provider<DownloadLocalDataSource>((ref) {
@@ -53,10 +55,13 @@ final downloadManagerProvider =
     fileManager: fileManager,
     telemetry: telemetry,
     initialUserId: authState.user?.id,
+    getDownloadQuality: () =>
+        ref.read(playbackSettingsNotifierProvider).downloadQuality,
   );
 
   return manager;
 });
+
 
 /// Central download manager coordinating queues, HTTP range downloads,
 /// pause/resume, and atomic file finalization.
@@ -68,6 +73,7 @@ class DownloadManager extends StateNotifier<DownloadState> {
 
   final Map<String, CancelToken> _cancelTokens = {};
   final Map<String, DateTime> _lastProgressUpdate = {};
+  final AudioQuality Function()? _getDownloadQuality;
 
   /// Maximum concurrent active downloads (FIFO queue).
   final int maxConcurrentDownloads;
@@ -78,10 +84,12 @@ class DownloadManager extends StateNotifier<DownloadState> {
     TelemetryService? telemetry,
     Dio? downloadDio,
     String? initialUserId,
+    AudioQuality Function()? getDownloadQuality,
     this.maxConcurrentDownloads = 2,
   })  : _repository = repository,
         _fileManager = fileManager,
         _telemetry = telemetry,
+        _getDownloadQuality = getDownloadQuality,
         _downloadDio = downloadDio ??
             Dio(
               BaseOptions(
@@ -94,6 +102,7 @@ class DownloadManager extends StateNotifier<DownloadState> {
       init(initialUserId);
     }
   }
+
 
   /// Initializes the download manager for the active user, running startup recovery.
   Future<void> init(String userId) async {
@@ -137,7 +146,7 @@ class DownloadManager extends StateNotifier<DownloadState> {
     await init(newUserId);
   }
 
-  /// Enqueues a track for download.
+  /// Enqueues a track for download with resolved quality tier.
   Future<void> enqueueDownload({
     required String trackId,
     String? title,
@@ -145,11 +154,14 @@ class DownloadManager extends StateNotifier<DownloadState> {
     String? albumName,
     int? durationSeconds,
     String? artworkUrl,
+    AudioQuality? quality,
   }) async {
     final userId = state.activeUserId;
     if (userId == null) {
       throw StateError('Cannot download without an authenticated user');
     }
+
+    final targetQuality = quality ?? _getDownloadQuality?.call() ?? AudioQuality.high;
 
     // Check if already completed and valid on disk
     final existing = state.items[trackId];
@@ -165,8 +177,13 @@ class DownloadManager extends StateNotifier<DownloadState> {
     }
 
     try {
-      // 1. Authorize download with backend
-      final authorizedItem = await _repository.getAuthorizedDownload(trackId, userId);
+      // 1. Authorize download with backend at configured quality
+      final authorizedItem = await _repository.getAuthorizedDownload(
+        trackId,
+        userId,
+        quality: targetQuality.toApiValue(),
+      );
+
       final itemWithMeta = authorizedItem.copyWith(
         title: title ?? authorizedItem.title,
         artistName: artistName ?? authorizedItem.artistName,

@@ -21,6 +21,10 @@ class PlayerState {
   final Duration bufferedPosition;
   final PlayerError? error;
   final PlayerQueue? queue;
+  final String? selectedQuality;
+  final String? activeRenditionQuality;
+  final int? activeBitrateKbps;
+  final bool isManualQuality;
 
   const PlayerState({
     this.status = PlayerStatus.idle,
@@ -30,6 +34,10 @@ class PlayerState {
     this.bufferedPosition = Duration.zero,
     this.error,
     this.queue,
+    this.selectedQuality,
+    this.activeRenditionQuality,
+    this.activeBitrateKbps,
+    this.isManualQuality = false,
   });
 
   PlayerState copyWith({
@@ -40,6 +48,10 @@ class PlayerState {
     Duration? bufferedPosition,
     PlayerError? error,
     PlayerQueue? queue,
+    String? selectedQuality,
+    String? activeRenditionQuality,
+    int? activeBitrateKbps,
+    bool? isManualQuality,
     bool clearError = false,
     bool clearQueue = false,
   }) {
@@ -51,8 +63,14 @@ class PlayerState {
       bufferedPosition: bufferedPosition ?? this.bufferedPosition,
       error: clearError ? null : (error ?? this.error),
       queue: clearQueue ? null : (queue ?? this.queue),
+      selectedQuality: selectedQuality ?? this.selectedQuality,
+      activeRenditionQuality:
+          activeRenditionQuality ?? this.activeRenditionQuality,
+      activeBitrateKbps: activeBitrateKbps ?? this.activeBitrateKbps,
+      isManualQuality: isManualQuality ?? this.isManualQuality,
     );
   }
+
 
   bool get isIdle => status == PlayerStatus.idle;
   bool get isLoading => status == PlayerStatus.loading;

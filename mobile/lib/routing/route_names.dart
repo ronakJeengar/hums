@@ -75,6 +75,10 @@ abstract class RouteNames {
 
   static const String likedSongs = 'liked-songs';
   static const String likedSongsPath = '/liked-songs';
+
+  static const String playbackSettings = 'playback-settings';
+  static const String playbackSettingsPath = '/settings/playback';
 }
+
 
 

@@ -21,10 +21,18 @@ abstract class ApiEndpoints {
   static const String audioTracks = '/api/v1/audio/tracks';
   static String audioTrackDetails(String trackId) => '/api/v1/audio/tracks/$trackId';
   static String audioTrackStatus(String trackId) => '/api/v1/audio/tracks/$trackId/status';
-  static String audioTrackPlayback(String trackId) => '/api/v1/audio/tracks/$trackId/playback';
-  static String audioTrackDownload(String trackId) => '/api/v1/audio/tracks/$trackId/download';
+  static String audioTrackPlayback(String trackId, {String? quality}) =>
+      quality != null
+          ? '/api/v1/audio/tracks/$trackId/playback?quality=$quality'
+          : '/api/v1/audio/tracks/$trackId/playback';
+  static String audioTrackDownload(String trackId, {String? quality}) =>
+      quality != null
+          ? '/api/v1/audio/tracks/$trackId/download?quality=$quality'
+          : '/api/v1/audio/tracks/$trackId/download';
   static String audioTrackWaveform(String trackId) => '/api/v1/audio/tracks/$trackId/waveform';
   static String audioJobStatus(String jobId) => '/api/v1/audio/jobs/$jobId';
+  static const String playbackSettings = '/api/v1/settings/playback';
+
 
   // Playlist Endpoints
   static const String playlists = '/api/v1/playlists';

@@ -1,3 +1,25 @@
+class AudioRenditionEntity {
+  final String id;
+  final String format;
+  final String codec;
+  final int bitrateKbps;
+  final int? sampleRate;
+  final int? durationSeconds;
+  final int fileSizeBytes;
+  final String quality;
+
+  const AudioRenditionEntity({
+    required this.id,
+    required this.format,
+    required this.codec,
+    required this.bitrateKbps,
+    this.sampleRate,
+    this.durationSeconds,
+    required this.fileSizeBytes,
+    required this.quality,
+  });
+}
+
 class AudioSourceEntity {
   final String url;
   final String format;
@@ -5,6 +27,7 @@ class AudioSourceEntity {
   final int bitrateKbps;
   final int? durationSeconds;
   final int fileSizeBytes;
+  final String? quality;
 
   const AudioSourceEntity({
     required this.url,
@@ -13,6 +36,7 @@ class AudioSourceEntity {
     required this.bitrateKbps,
     this.durationSeconds,
     required this.fileSizeBytes,
+    this.quality,
   });
 }
 
@@ -26,6 +50,7 @@ class TrackPlaybackEntity {
   final String status;
   final AudioSourceEntity audio;
   final List<double> waveformSamples;
+  final List<AudioRenditionEntity> availableRenditions;
 
   const TrackPlaybackEntity({
     required this.trackId,
@@ -37,5 +62,6 @@ class TrackPlaybackEntity {
     required this.status,
     required this.audio,
     this.waveformSamples = const [],
+    this.availableRenditions = const [],
   });
 }

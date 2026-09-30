@@ -60,6 +60,31 @@ class User(BaseDBModel):
         DateTime(timezone=True),
         nullable=True,
     )
+    preferred_streaming_quality: Mapped[str] = mapped_column(
+        String(20),
+        default="AUTO",
+        nullable=False,
+    )
+    preferred_mobile_quality: Mapped[str] = mapped_column(
+        String(20),
+        default="LOW",
+        nullable=False,
+    )
+    preferred_wifi_quality: Mapped[str] = mapped_column(
+        String(20),
+        default="HIGH",
+        nullable=False,
+    )
+    preferred_download_quality: Mapped[str] = mapped_column(
+        String(20),
+        default="HIGH",
+        nullable=False,
+    )
+    data_saver_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
 
     # Relationships
     refresh_tokens: Mapped[List["RefreshToken"]] = relationship(

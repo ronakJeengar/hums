@@ -21,7 +21,7 @@ class AudioPlayerRepositoryImpl implements AudioPlayerRepository {
   ]);
 
   @override
-  Future<TrackPlaybackEntity> getPlaybackSource(String trackId) async {
+  Future<TrackPlaybackEntity> getPlaybackSource(String trackId, {String? quality}) async {
     // 1. Check if track is downloaded locally for offline playback
     if (_downloadLocalDataSource != null) {
       try {
@@ -31,6 +31,8 @@ class AudioPlayerRepositoryImpl implements AudioPlayerRepository {
             download.localPath != null) {
           final file = File(download.localPath!);
           if (await file.exists() && await file.length() > 0) {
+            final bit = download.audioBitrate ?? 192;
+            final q = bit >= 160 ? 'HIGH' : (bit >= 96 ? 'MEDIUM' : 'LOW');
             return TrackPlaybackEntity(
               trackId: download.trackId,
               title: download.title,
@@ -42,9 +44,10 @@ class AudioPlayerRepositoryImpl implements AudioPlayerRepository {
                 url: download.localPath!,
                 format: download.format,
                 codec: download.format == 'mp3' ? 'mp3' : 'aac',
-                bitrateKbps: download.audioBitrate ?? 320,
+                bitrateKbps: bit,
                 durationSeconds: download.durationSeconds,
                 fileSizeBytes: download.totalBytes,
+                quality: q,
               ),
               waveformSamples: download.waveformSamples,
             );
@@ -56,9 +59,10 @@ class AudioPlayerRepositoryImpl implements AudioPlayerRepository {
     }
 
     try {
-      final model = await _remoteDataSource.getPlaybackSource(trackId);
+      final model = await _remoteDataSource.getPlaybackSource(trackId, quality: quality);
       return model.toEntity();
     } on ApiException catch (e) {
+
       if (e.statusCode == 409 || e.code == 'TRACK_NOT_READY') {
         throw PlayerError(
           type: PlayerErrorType.sourceUnavailable,

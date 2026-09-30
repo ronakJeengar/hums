@@ -35,6 +35,11 @@ class UserRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     last_login_at: Optional[datetime] = None
+    preferred_streaming_quality: Optional[str] = "AUTO"
+    preferred_mobile_quality: Optional[str] = "LOW"
+    preferred_wifi_quality: Optional[str] = "HIGH"
+    preferred_download_quality: Optional[str] = "HIGH"
+    data_saver_enabled: Optional[bool] = False
 
     model_config = ConfigDict(from_attributes=True)
 

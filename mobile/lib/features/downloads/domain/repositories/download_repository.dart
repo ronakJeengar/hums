@@ -2,8 +2,9 @@ import 'package:hums_mobile/features/downloads/domain/entities/download_item.dar
 
 /// Abstract contract for offline download persistence and operations.
 abstract class DownloadRepository {
-  /// Fetches an authorized download URL and metadata for a track from backend.
-  Future<DownloadItem> getAuthorizedDownload(String trackId, String userId);
+  /// Fetches an authorized download URL and metadata for a track from backend at the given quality tier.
+  Future<DownloadItem> getAuthorizedDownload(String trackId, String userId, {String? quality});
+
 
   /// Saves or creates a download record in local storage.
   Future<void> saveDownload(DownloadItem item);

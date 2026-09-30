@@ -19,9 +19,10 @@ class DownloadRepositoryImpl implements DownloadRepository {
         _fileManager = fileManager;
 
   @override
-  Future<DownloadItem> getAuthorizedDownload(String trackId, String userId) async {
-    final remote = await _remoteDataSource.getAuthorizedDownload(trackId);
+  Future<DownloadItem> getAuthorizedDownload(String trackId, String userId, {String? quality}) async {
+    final remote = await _remoteDataSource.getAuthorizedDownload(trackId, quality: quality);
     final now = DateTime.now();
+
 
     final existing = await _localDataSource.getDownload(trackId);
     if (existing != null) {

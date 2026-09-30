@@ -350,3 +350,11 @@ async def get_optional_current_user(
     except Exception:
         return None
 
+
+async def get_playback_settings_service(
+    session: AsyncSession = Depends(get_db),
+) -> "PlaybackSettingsService":
+    from app.services.playback_settings_service import PlaybackSettingsService
+    return PlaybackSettingsService(session)
+
+

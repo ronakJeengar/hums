@@ -87,7 +87,7 @@ void main() {
     });
 
     test('playTrack successfully loads and starts playing', () async {
-      when(() => mockRepository.getPlaybackSource('track-100'))
+      when(() => mockRepository.getPlaybackSource('track-100', quality: any(named: 'quality')))
           .thenAnswer((_) async => tTrackPlayback);
       when(() => mockRepository.loadTrack(tTrackPlayback))
           .thenAnswer((_) async {});
@@ -103,13 +103,13 @@ void main() {
       expect(notifier.state.status, PlayerStatus.playing);
       expect(notifier.state.track?.trackId, 'track-100');
       expect(notifier.state.duration, const Duration(seconds: 200));
-      verify(() => mockRepository.getPlaybackSource('track-100')).called(1);
+      verify(() => mockRepository.getPlaybackSource('track-100', quality: any(named: 'quality'))).called(1);
       verify(() => mockRepository.loadTrack(tTrackPlayback)).called(1);
       verify(() => mockRepository.play()).called(1);
     });
 
     test('playTrack sets error state when getPlaybackSource fails', () async {
-      when(() => mockRepository.getPlaybackSource('track-100')).thenThrow(
+      when(() => mockRepository.getPlaybackSource('track-100', quality: any(named: 'quality'))).thenThrow(
         const PlayerError(
           type: PlayerErrorType.sourceUnavailable,
           message: 'Track is not ready',
@@ -125,7 +125,7 @@ void main() {
 
     test('togglePlayPause pauses when playing and resumes when paused',
         () async {
-      when(() => mockRepository.getPlaybackSource('track-100'))
+      when(() => mockRepository.getPlaybackSource('track-100', quality: any(named: 'quality')))
           .thenAnswer((_) async => tTrackPlayback);
       when(() => mockRepository.loadTrack(tTrackPlayback))
           .thenAnswer((_) async {});

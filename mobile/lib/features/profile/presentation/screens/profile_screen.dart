@@ -364,6 +364,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           const SizedBox(height: AppSpacing.sm),
 
+          // Playback & Audio Quality Button
+          SizedBox(
+            width: double.infinity,
+            child: HumsButton(
+              label: 'Audio Quality & Data Saver',
+              icon: Icons.tune_rounded,
+              variant: HumsButtonVariant.secondary,
+              onPressed: () => context.push(RouteNames.playbackSettingsPath),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+
           // Edit Profile Button
           SizedBox(
             width: double.infinity,
