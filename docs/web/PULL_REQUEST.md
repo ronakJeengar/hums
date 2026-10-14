@@ -115,7 +115,7 @@ This pull request introduces the complete, production-grade **Hums Web Platform*
    ```bash
    cd backend
    source .venv/bin/activate
-   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+   uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
    ```
 
 2. **Start Web Platform (Next.js):**

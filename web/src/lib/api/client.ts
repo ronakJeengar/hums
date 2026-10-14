@@ -36,8 +36,9 @@ async function request<T>(
 ): Promise<T> {
   const isServer = typeof window === "undefined";
   const baseUrl = isServer
-    ? (process.env.INTERNAL_API_URL || "http://127.0.0.1:8000") + "/api/v1"
+    ? (process.env.INTERNAL_API_URL || "http://127.0.0.1:8001") + "/api/v1"
     : "/api/proxy";
+
 
   const cleanPath = path.startsWith("/") ? path.slice(1) : path;
   const url = `${baseUrl}/${cleanPath}`;

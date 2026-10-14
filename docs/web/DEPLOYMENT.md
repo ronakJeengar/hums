@@ -6,10 +6,11 @@ The web platform reads environment settings from `.env.local` (development) or s
 
 | Variable | Description | Example / Default |
 | :--- | :--- | :--- |
-| `INTERNAL_API_URL` | Server-to-server URL for FastAPI backend | `http://127.0.0.1:8000` |
-| `NEXT_PUBLIC_API_URL` | Public API endpoint for direct client calls (fallback) | `http://127.0.0.1:8000` |
+| `INTERNAL_API_URL` | Server-to-server URL for FastAPI backend (Host: `http://127.0.0.1:8001`, Docker: `http://api:8001`) | `http://127.0.0.1:8001` |
+| `NEXT_PUBLIC_API_URL` | Public API endpoint for direct client calls (fallback) | `http://127.0.0.1:8001` |
 | `NODE_ENV` | Runtime environment mode | `production` |
 | `PORT` | Web server listening port | `3000` |
+
 
 ---
 
