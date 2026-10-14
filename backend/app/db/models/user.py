@@ -57,6 +57,20 @@ class User(BaseDBModel):
         default=False,
         nullable=False,
     )
+    role: Mapped[str] = mapped_column(
+        String(50),
+        default="listener",
+        nullable=False,
+        index=True,  # listener, creator, moderator, admin
+    )
+    suspension_reason: Mapped[Optional[str]] = mapped_column(
+        String(500),
+        nullable=True,
+    )
+    suspended_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     last_login_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True,

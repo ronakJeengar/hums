@@ -16,6 +16,11 @@ from app.db.models.subscription import (
     SubscriptionTransaction,
     SubscriptionWebhookEvent,
 )
+from app.db.models.admin import (
+    CreatorApplication,
+    ContentReport,
+    AdminAuditLog,
+)
 
 __all__ = [
     "Base",
@@ -46,4 +51,7 @@ __all__ = [
     "UserEntitlementGrant",
     "SubscriptionTransaction",
     "SubscriptionWebhookEvent",
+    "CreatorApplication",
+    "ContentReport",
+    "AdminAuditLog",
 ]

@@ -388,3 +388,75 @@ async def get_playback_settings_service(
     return PlaybackSettingsService(session)
 
 
+def get_admin_repository(session: AsyncSession = Depends(get_db)) -> "AdminRepository":
+    from app.repositories.admin_repository import AdminRepository
+    return AdminRepository(session)
+
+
+def get_admin_service(
+    admin_repo: "AdminRepository" = Depends(get_admin_repository),
+) -> "AdminService":
+    from app.services.admin_service import AdminService
+    return AdminService(admin_repo)
+
+
+def get_creator_studio_repository(
+    session: AsyncSession = Depends(get_db),
+) -> "CreatorStudioRepository":
+    from app.repositories.creator_studio_repository import CreatorStudioRepository
+    return CreatorStudioRepository(session)
+
+
+def get_creator_studio_service(
+    studio_repo: "CreatorStudioRepository" = Depends(get_creator_studio_repository),
+) -> "CreatorStudioService":
+    from app.services.creator_studio_service import CreatorStudioService
+    return CreatorStudioService(studio_repo)
+
+
+async def require_admin_role(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Enforces that the authenticated user possesses administrator role."""
+    role = getattr(current_user, "role", "listener")
+    if role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator access required for this operation.",
+        )
+    return current_user
+
+
+async def require_moderator_or_admin_role(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Enforces that the authenticated user possesses moderator or administrator role."""
+    role = getattr(current_user, "role", "listener")
+    if role not in ("moderator", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Moderator or Administrator access required for this operation.",
+        )
+    return current_user
+
+
+async def require_creator_role(
+    current_user: User = Depends(get_current_user),
+    studio_repo: "CreatorStudioRepository" = Depends(get_creator_studio_repository),
+) -> User:
+    """Enforces that the authenticated user is an authorized creator or administrator."""
+    role = getattr(current_user, "role", "listener")
+    if role in ("creator", "admin"):
+        return current_user
+
+    # Also check if user has an existing Creator record
+    creator = await studio_repo.get_profile(current_user.id)
+    if creator:
+        return current_user
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Approved Creator access required for Creator Studio.",
+    )
+
+

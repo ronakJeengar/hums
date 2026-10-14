@@ -66,6 +66,35 @@ from app.schemas.subscription import (
     UserEntitlementsResponse,
     WebhookEventResponse,
 )
+from app.schemas.admin import (
+    AdminDashboardStats,
+    AdminUserItem,
+    AdminUserDetail,
+    UpdateUserStatusRequest,
+    UpdateUserRoleRequest,
+    AdminCreatorItem,
+    VerifyCreatorRequest,
+    CreatorApplicationItem,
+    CreateCreatorApplicationRequest,
+    ReviewApplicationRequest,
+    AdminTrackItem,
+    AdminTrackDetail,
+    ModerateTrackRequest,
+    ContentReportItem,
+    CreateReportRequest,
+    ResolveReportRequest,
+    AdminAuditLogItem,
+    SystemHealthStatus,
+    ProcessingJobItem,
+)
+from app.schemas.creator_studio import (
+    CreatorTrackItem,
+    CreatorDashboardStats,
+    UpdateTrackRequest,
+    CreatorAnalyticsResponse,
+    CreatorStudioProfile,
+    UpdateCreatorProfileRequest,
+)
 
 __all__ = [
     "ApiResponse",

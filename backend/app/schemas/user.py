@@ -41,6 +41,9 @@ class UserRead(BaseModel):
     preferred_download_quality: Optional[str] = "HIGH"
     data_saver_enabled: Optional[bool] = False
 
+    role: str = "listener"
+    suspension_reason: Optional[str] = None
+    suspended_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
 
