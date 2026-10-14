@@ -10,6 +10,8 @@ import 'package:hums_mobile/core/widgets/hums_button.dart';
 import 'package:hums_mobile/features/profile/domain/entities/profile_entity.dart';
 import 'package:hums_mobile/features/profile/presentation/providers/profile_provider.dart';
 import 'package:hums_mobile/features/profile/presentation/states/profile_state.dart';
+import 'package:hums_mobile/features/subscriptions/presentation/providers/subscription_provider.dart';
+import 'package:hums_mobile/features/subscriptions/presentation/widgets/premium_badge.dart';
 import 'package:hums_mobile/routing/route_names.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -338,7 +340,96 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ],
             ),
           ),
-          const SizedBox(height: AppSpacing.xxl),
+          const SizedBox(height: AppSpacing.xl),
+
+          // Subscription & Premium Membership Card
+          Consumer(
+            builder: (context, ref, _) {
+              final subState = ref.watch(subscriptionNotifierProvider);
+              final isPremium = subState.isPremium;
+              final planName = subState.currentSubscription?.planName ??
+                  (isPremium ? 'Hums Premium' : 'Free Tier');
+
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  gradient: isPremium
+                      ? LinearGradient(
+                          colors: [
+                            AppColors.surfaceElevated,
+                            AppColors.primary.withValues(alpha: 0.15),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
+                  color: isPremium ? null : AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  border: Border.all(
+                    color: isPremium ? AppColors.primary : AppColors.border,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    if (isPremium)
+                      const PremiumBadge(size: PremiumBadgeSize.medium)
+                    else
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.xs),
+                        decoration: const BoxDecoration(
+                          color: AppColors.surfaceElevated,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.workspace_premium_outlined,
+                          color: AppColors.primary,
+                          size: 22,
+                        ),
+                      ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isPremium ? planName : 'Hums Free Tier',
+                            style: AppTypography.titleMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            isPremium
+                                ? 'Studio 192 kbps & offline active'
+                                : 'Upgrade for 192 kbps & downloads',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => context.push(
+                        isPremium
+                            ? RouteNames.subscriptionStatusPath
+                            : RouteNames.premiumPlansPath,
+                      ),
+                      child: Text(
+                        isPremium ? 'Manage' : 'Upgrade',
+                        style: AppTypography.labelLarge.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.lg),
 
           // Following Artists Button
           SizedBox(

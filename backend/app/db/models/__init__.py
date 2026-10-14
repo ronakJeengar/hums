@@ -7,6 +7,15 @@ from app.db.models.notification import UserDevice, Notification, NotificationPre
 from app.db.models.recommendation import RecommendationSet, RecommendationItem
 from app.db.models.creator import Creator, CreatorFollower
 from app.db.models.like import UserTrackLike
+from app.db.models.subscription import (
+    SubscriptionPlan,
+    Entitlement,
+    PlanEntitlement,
+    UserSubscription,
+    UserEntitlementGrant,
+    SubscriptionTransaction,
+    SubscriptionWebhookEvent,
+)
 
 __all__ = [
     "Base",
@@ -30,4 +39,11 @@ __all__ = [
     "Creator",
     "CreatorFollower",
     "UserTrackLike",
+    "SubscriptionPlan",
+    "Entitlement",
+    "PlanEntitlement",
+    "UserSubscription",
+    "UserEntitlementGrant",
+    "SubscriptionTransaction",
+    "SubscriptionWebhookEvent",
 ]

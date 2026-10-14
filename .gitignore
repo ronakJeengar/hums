@@ -24,6 +24,8 @@ docs/*
 !docs/social/**
 !docs/library/
 !docs/library/**
+!docs/subscriptions/
+!docs/subscriptions/**
 !docs/PRD.md
 !docs/CHANGELOG.md
 !docs/ARCHITECTURE.md

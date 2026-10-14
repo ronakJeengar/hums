@@ -56,6 +56,16 @@ from app.schemas.like import (
 from app.schemas.library import (
     LibrarySummaryResponse,
 )
+from app.schemas.subscription import (
+    SubscriptionPlanResponse,
+    UserSubscriptionResponse,
+    PurchaseVerificationRequest,
+    PurchaseVerificationResponse,
+    PurchaseRestoreRequest,
+    PurchaseRestoreResponse,
+    UserEntitlementsResponse,
+    WebhookEventResponse,
+)
 
 __all__ = [
     "ApiResponse",
@@ -100,4 +110,12 @@ __all__ = [
     "LikedTrackItem",
     "LikedTracksListResponse",
     "LibrarySummaryResponse",
+    "SubscriptionPlanResponse",
+    "UserSubscriptionResponse",
+    "PurchaseVerificationRequest",
+    "PurchaseVerificationResponse",
+    "PurchaseRestoreRequest",
+    "PurchaseRestoreResponse",
+    "UserEntitlementsResponse",
+    "WebhookEventResponse",
 ]

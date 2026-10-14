@@ -13,6 +13,7 @@ from app.api.v1.endpoints import (
     profile,
     recommendations,
     search,
+    subscriptions,
     telemetry,
     users,
 )
@@ -36,4 +37,5 @@ v1_router.include_router(playback_settings.router, prefix="/settings", tags=["se
 v1_router.include_router(telemetry.router)
 v1_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
 v1_router.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
+v1_router.include_router(subscriptions.router, tags=["subscriptions"])
 

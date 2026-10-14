@@ -126,11 +126,13 @@ class AudioService:
         audio_file_repo: AudioFileRepository,
         processing_job_repo: ProcessingJobRepository,
         storage_service: BaseStorageService,
+        entitlement_service: Optional[Any] = None,
     ):
         self.track_repo = track_repo
         self.audio_file_repo = audio_file_repo
         self.processing_job_repo = processing_job_repo
         self.storage_service = storage_service
+        self.entitlement_service = entitlement_service
 
     async def upload_audio(
         self,
@@ -377,6 +379,18 @@ class AudioService:
             track.renditions, requested_quality=quality
         )
 
+        # Enforce server-side entitlement check for HIGH (192 kbps) audio quality
+        if resolved_quality == "HIGH" and track.owner_id != user_id and self.entitlement_service:
+            has_prem = await self.entitlement_service.has_entitlement(
+                user_id, "PREMIUM_AUDIO_QUALITY"
+            )
+            if not has_prem:
+                # Deterministic fallback to standard MEDIUM tier for Free listeners
+                selected_rendition, resolved_quality, _ = self.resolve_rendition(
+                    track.renditions, requested_quality="MEDIUM"
+                )
+                is_fallback = True
+
         req_label = (quality or "AUTO").strip().upper()
         metrics_registry.record_playback_quality(
             requested=req_label,
@@ -449,9 +463,16 @@ class AudioService:
         if track.status != "READY":
             return False, f"Track is not ready for download (current status: {track.status}).", track
 
-        # Access control: User can only download accessible tracks (owner or entitled)
+        # Access control: User can only download accessible tracks (owner or entitled with OFFLINE_DOWNLOADS)
         if track.owner_id != user.id:
-            return False, "You do not have permission to download this private track.", track
+            if self.entitlement_service:
+                has_offline = await self.entitlement_service.has_entitlement(
+                    user.id, "OFFLINE_DOWNLOADS"
+                )
+                if not has_offline:
+                    return False, "Offline downloads require a Hums Premium subscription.", track
+            else:
+                return False, "You do not have permission to download this private track.", track
 
         if not track.renditions and not track.audio_files:
             return False, "No audio media files available for this track.", track
@@ -484,6 +505,16 @@ class AudioService:
         selected_rendition, resolved_quality, _ = self.resolve_rendition(
             track.renditions, requested_quality=quality
         )
+
+        # Enforce PREMIUM_AUDIO_QUALITY for HIGH tier offline downloads
+        if resolved_quality == "HIGH" and track.owner_id != user.id and self.entitlement_service:
+            has_prem = await self.entitlement_service.has_entitlement(
+                user.id, "PREMIUM_AUDIO_QUALITY"
+            )
+            if not has_prem:
+                selected_rendition, resolved_quality, _ = self.resolve_rendition(
+                    track.renditions, requested_quality="MEDIUM"
+                )
         expires_in = 900  # 15 minutes short-lived expiry
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
 

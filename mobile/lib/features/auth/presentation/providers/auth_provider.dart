@@ -8,6 +8,7 @@ import 'package:hums_mobile/features/auth/data/repositories/auth_repository_impl
 import 'package:hums_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:hums_mobile/features/auth/presentation/states/auth_state.dart';
 import 'package:hums_mobile/features/library/presentation/providers/library_provider.dart';
+import 'package:hums_mobile/features/subscriptions/presentation/providers/subscription_provider.dart';
 
 final authStorageProvider = Provider<FlutterSecureStorage>((ref) {
   return const FlutterSecureStorage();
@@ -104,6 +105,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = const AuthState.unauthenticated();
       _ref?.invalidate(librarySummaryProvider);
       _ref?.invalidate(likedTracksNotifierProvider);
+      _ref?.invalidate(subscriptionNotifierProvider);
     }
   }
 

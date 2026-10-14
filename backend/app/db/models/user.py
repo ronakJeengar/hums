@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from app.db.models.recommendation import RecommendationSet
     from app.db.models.creator import Creator, CreatorFollower
     from app.db.models.like import UserTrackLike
+    from app.db.models.subscription import UserSubscription, UserEntitlementGrant
 
 
 class User(BaseDBModel):
@@ -143,6 +144,18 @@ class User(BaseDBModel):
         back_populates="user",
         cascade="all, delete-orphan",
         order_by="UserTrackLike.created_at.desc()",
+    )
+    subscriptions: Mapped[List["UserSubscription"]] = relationship(
+        "UserSubscription",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="UserSubscription.created_at.desc()",
+    )
+    entitlement_grants: Mapped[List["UserEntitlementGrant"]] = relationship(
+        "UserEntitlementGrant",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="UserEntitlementGrant.effective_start.desc()",
     )
 
     @property

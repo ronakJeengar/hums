@@ -152,13 +152,43 @@ def get_processing_job_repository(
     return ProcessingJobRepository(session)
 
 
+def get_subscription_repository(
+    session: AsyncSession = Depends(get_db),
+) -> "SubscriptionRepository":
+    from app.repositories.subscription_repository import SubscriptionRepository
+    return SubscriptionRepository(session)
+
+
+async def get_entitlement_service(
+    session: AsyncSession = Depends(get_db),
+    redis: aioredis.Redis = Depends(get_redis_client),
+) -> "EntitlementService":
+    from app.services.entitlement_service import EntitlementService
+    return EntitlementService(db_session=session, redis_client=redis)
+
+
+async def get_subscription_service(
+    session: AsyncSession = Depends(get_db),
+    redis: aioredis.Redis = Depends(get_redis_client),
+) -> "SubscriptionService":
+    from app.services.subscription_service import SubscriptionService
+    return SubscriptionService(db_session=session, redis_client=redis)
+
+
 def get_audio_service(
     track_repo: TrackRepository = Depends(get_track_repository),
     audio_file_repo: AudioFileRepository = Depends(get_audio_file_repository),
     processing_job_repo: ProcessingJobRepository = Depends(get_processing_job_repository),
     storage_service: BaseStorageService = Depends(get_storage_service),
+    entitlement_service: "EntitlementService" = Depends(get_entitlement_service),
 ) -> AudioService:
-    return AudioService(track_repo, audio_file_repo, processing_job_repo, storage_service)
+    return AudioService(
+        track_repo=track_repo,
+        audio_file_repo=audio_file_repo,
+        processing_job_repo=processing_job_repo,
+        storage_service=storage_service,
+        entitlement_service=entitlement_service,
+    )
 
 
 def get_playlist_repository(

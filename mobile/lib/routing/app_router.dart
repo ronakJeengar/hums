@@ -28,6 +28,8 @@ import 'package:hums_mobile/features/social/presentation/screens/following_scree
 import 'package:hums_mobile/features/library/presentation/screens/library_screen.dart';
 import 'package:hums_mobile/features/library/presentation/screens/liked_songs_screen.dart';
 import 'package:hums_mobile/features/playback_settings/presentation/screens/playback_settings_screen.dart';
+import 'package:hums_mobile/features/subscriptions/presentation/screens/premium_plans_screen.dart';
+import 'package:hums_mobile/features/subscriptions/presentation/screens/subscription_status_screen.dart';
 import 'package:hums_mobile/routing/route_names.dart';
 
 class RouterNotifier extends ChangeNotifier {
@@ -204,6 +206,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.playbackSettings,
         path: RouteNames.playbackSettingsPath,
         builder: (context, state) => const PlaybackSettingsScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.premiumPlans,
+        path: RouteNames.premiumPlansPath,
+        builder: (context, state) => const PremiumPlansScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.subscriptionStatus,
+        path: RouteNames.subscriptionStatusPath,
+        builder: (context, state) => const SubscriptionStatusScreen(),
       ),
     ],
 

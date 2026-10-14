@@ -78,6 +78,12 @@ abstract class RouteNames {
 
   static const String playbackSettings = 'playback-settings';
   static const String playbackSettingsPath = '/settings/playback';
+
+  static const String premiumPlans = 'premium-plans';
+  static const String premiumPlansPath = '/premium';
+
+  static const String subscriptionStatus = 'subscription-status';
+  static const String subscriptionStatusPath = '/subscription';
 }
 
 

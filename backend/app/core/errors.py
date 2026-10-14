@@ -83,6 +83,11 @@ class ServiceUnavailableError(AppException):
         )
 
 
+# Convenience aliases
+UnauthorizedError = AuthenticationError
+ValidationError = BadRequestError
+
+
 def format_error_response(code: str, message: str, details: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Formats standardized error envelope."""
     return {

@@ -88,4 +88,11 @@ abstract class ApiEndpoints {
   static const String library = '/api/v1/library';
   static String libraryLikedTracks({int page = 1, int size = 20}) =>
       '/api/v1/library/liked-tracks?page=$page&size=$size';
+
+  // Subscriptions & Entitlements Endpoints
+  static const String subscriptionPlans = '/api/v1/plans';
+  static const String mySubscription = '/api/v1/subscriptions/me';
+  static const String verifyPurchase = '/api/v1/subscriptions/verify-purchase';
+  static const String restorePurchases = '/api/v1/subscriptions/restore';
+  static const String myEntitlements = '/api/v1/entitlements/me';
 }
