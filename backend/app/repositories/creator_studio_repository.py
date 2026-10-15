@@ -1,12 +1,12 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
-from sqlalchemy import desc, func, or_, select
+from sqlalchemy import and_, asc, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db.models.admin import CreatorApplication
-from app.db.models.audio import Track
+from app.db.models.audio import AudioFile, AudioRendition, ProcessingJob, Track
 from app.db.models.creator import Creator
 from app.db.models.playback import PlaybackEvent
 
@@ -136,19 +136,38 @@ class CreatorStudioRepository:
         page: int = 1,
         size: int = 20,
         status: Optional[str] = None,
+        is_published: Optional[bool] = None,
+        genre: Optional[str] = None,
         search: Optional[str] = None,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
     ) -> Tuple[List[Dict[str, Any]], int]:
-        """Lists tracks owned by the authenticated creator with play counts."""
+        """Lists tracks owned by the authenticated creator with play counts, sorting, and filters."""
         query = select(Track).where(Track.owner_id == user_id)
 
         if status:
             query = query.where(Track.status == status)
+
+        if is_published is not None:
+            query = query.where(Track.is_published.is_(is_published))
+
+        if genre:
+            query = query.where(func.lower(Track.genre) == genre.strip().lower())
+
+        if date_from:
+            query = query.where(Track.created_at >= date_from)
+
+        if date_to:
+            query = query.where(Track.created_at <= date_to)
 
         if search:
             pat = f"%{search.strip().lower()}%"
             query = query.where(
                 or_(
                     func.lower(Track.title).like(pat),
+                    func.lower(Track.artist_name).like(pat),
                     func.lower(Track.album_name).like(pat),
                     func.lower(Track.genre).like(pat),
                 )
@@ -157,8 +176,20 @@ class CreatorStudioRepository:
         count_query = select(func.count()).select_from(query.subquery())
         total = (await self.session.execute(count_query)).scalar() or 0
 
+        # Sorting logic
+        sort_col = Track.created_at
+        if sort_by == "title":
+            sort_col = Track.title
+        elif sort_by == "duration_seconds":
+            sort_col = Track.duration_seconds
+        elif sort_by == "likes_count":
+            sort_col = Track.likes_count
+
+        order_expr = desc(sort_col) if sort_order.lower() == "desc" else asc(sort_col)
+        query = query.order_by(order_expr)
+
         offset = (page - 1) * size
-        query = query.order_by(desc(Track.created_at)).offset(offset).limit(size)
+        query = query.offset(offset).limit(size)
         tracks = (await self.session.execute(query)).scalars().all()
 
         track_ids = [t.id for t in tracks]
@@ -185,6 +216,8 @@ class CreatorStudioRepository:
                 "genre": t.genre,
                 "duration_seconds": t.duration_seconds,
                 "status": t.status,
+                "is_published": t.is_published,
+                "cover_image_key": t.cover_image_key,
                 "likes_count": t.likes_count,
                 "play_count": play_counts.get(t.id, 0),
                 "created_at": t.created_at,
@@ -201,6 +234,93 @@ class CreatorStudioRepository:
                 select(Track).where(Track.id == track_id, Track.owner_id == user_id)
             )
         ).scalar_one_or_none()
+
+    async def get_track_detail(
+        self, user_id: uuid.UUID, track_id: uuid.UUID
+    ) -> Optional[Dict[str, Any]]:
+        """Fetches track detail with audio files, renditions, and jobs for creator."""
+        query = (
+            select(Track)
+            .options(
+                selectinload(Track.audio_files),
+                selectinload(Track.renditions),
+                selectinload(Track.processing_jobs),
+            )
+            .where(Track.id == track_id, Track.owner_id == user_id)
+        )
+        t = (await self.session.execute(query)).scalar_one_or_none()
+        if not t:
+            return None
+
+        play_count = (
+            await self.session.execute(
+                select(func.count())
+                .select_from(PlaybackEvent)
+                .where(
+                    PlaybackEvent.track_id == t.id,
+                    PlaybackEvent.event_type.in_(["start", "complete"]),
+                )
+            )
+        ).scalar() or 0
+
+        audio_files = [
+            {
+                "id": af.id,
+                "original_filename": af.original_filename,
+                "mime_type": af.mime_type,
+                "file_size_bytes": af.file_size_bytes,
+                "created_at": af.created_at,
+            }
+            for af in t.audio_files
+        ]
+
+        renditions = [
+            {
+                "id": r.id,
+                "format": r.format,
+                "codec": r.codec,
+                "bitrate_kbps": r.bitrate_kbps,
+                "sample_rate": r.sample_rate,
+                "channels": r.channels,
+                "duration_seconds": r.duration_seconds,
+                "file_size_bytes": r.file_size_bytes,
+                "storage_key": r.storage_key,
+            }
+            for r in t.renditions
+        ]
+
+        processing_jobs = [
+            {
+                "id": j.id,
+                "job_type": j.job_type,
+                "status": j.status,
+                "attempts": j.attempts,
+                "error_message": j.error_message,
+                "created_at": j.created_at,
+                "updated_at": j.updated_at,
+            }
+            for j in t.processing_jobs
+        ]
+
+        return {
+            "id": t.id,
+            "title": t.title,
+            "artist_name": t.artist_name,
+            "album_name": t.album_name,
+            "genre": t.genre,
+            "description": t.description,
+            "duration_seconds": t.duration_seconds,
+            "status": t.status,
+            "is_published": t.is_published,
+            "cover_image_key": t.cover_image_key,
+            "waveform_key": t.waveform_key,
+            "likes_count": t.likes_count,
+            "play_count": play_count,
+            "created_at": t.created_at,
+            "audio_files": audio_files,
+            "renditions": renditions,
+            "processing_jobs": processing_jobs,
+        }
 
     async def update_track(
         self,
@@ -220,6 +340,148 @@ class CreatorStudioRepository:
         await self.session.commit()
         await self.session.refresh(track)
         return track
+
+    async def set_publishing(
+        self,
+        user_id: uuid.UUID,
+        track_id: uuid.UUID,
+        is_published: bool,
+    ) -> Optional[Track]:
+        """Updates publishing state for a creator track."""
+        track = await self.get_track(user_id, track_id)
+        if not track:
+            return None
+
+        track.is_published = is_published
+        await self.session.commit()
+        await self.session.refresh(track)
+        return track
+
+    async def update_artwork(
+        self,
+        user_id: uuid.UUID,
+        track_id: uuid.UUID,
+        cover_image_key: Optional[str],
+    ) -> Optional[Track]:
+        """Updates cover artwork key for a creator track."""
+        track = await self.get_track(user_id, track_id)
+        if not track:
+            return None
+
+        track.cover_image_key = cover_image_key
+        await self.session.commit()
+        await self.session.refresh(track)
+        return track
+
+    async def bulk_action(
+        self,
+        user_id: uuid.UUID,
+        action: str,
+        track_ids: List[uuid.UUID],
+        data: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Executes authorized bulk operations with per-item outcomes."""
+        results = []
+        succeeded = 0
+        failed = 0
+
+        # Bounded query
+        tracks_res = await self.session.execute(
+            select(Track)
+            .options(selectinload(Track.processing_jobs))
+            .where(Track.id.in_(track_ids))
+        )
+        tracks_by_id = {t.id: t for t in tracks_res.scalars().all()}
+
+        for tid in track_ids:
+            track = tracks_by_id.get(tid)
+            if not track or track.owner_id != user_id:
+                failed += 1
+                results.append({
+                    "track_id": tid,
+                    "title": track.title if track else None,
+                    "status": "failed",
+                    "error": "Track not found or unauthorized.",
+                })
+                continue
+
+            if action == "publish":
+                if track.status != "READY":
+                    failed += 1
+                    results.append({
+                        "track_id": tid,
+                        "title": track.title,
+                        "status": "failed",
+                        "error": f"Cannot publish track with processing status '{track.status}'. Must be READY.",
+                    })
+                else:
+                    track.is_published = True
+                    succeeded += 1
+                    results.append({
+                        "track_id": tid,
+                        "title": track.title,
+                        "status": "success",
+                        "message": "Track published successfully.",
+                    })
+
+            elif action == "unpublish":
+                track.is_published = False
+                succeeded += 1
+                results.append({
+                    "track_id": tid,
+                    "title": track.title,
+                    "status": "success",
+                    "message": "Track unpublished.",
+                })
+
+            elif action == "retry":
+                if track.status not in ("FAILED", "PROCESSING", "UPLOADED"):
+                    failed += 1
+                    results.append({
+                        "track_id": tid,
+                        "title": track.title,
+                        "status": "failed",
+                        "error": f"Cannot retry track with status '{track.status}'.",
+                    })
+                else:
+                    track.status = "PROCESSING"
+                    # Trigger worker
+                    try:
+                        from app.workers.audio_tasks import process_audio_track
+                        process_audio_track.delay(str(track.id))
+                    except Exception:
+                        pass
+                    succeeded += 1
+                    results.append({
+                        "track_id": tid,
+                        "title": track.title,
+                        "status": "success",
+                        "message": "Processing retry enqueued.",
+                    })
+
+            elif action == "update_metadata":
+                if data:
+                    if "genre" in data and data["genre"]:
+                        track.genre = data["genre"].strip()
+                    if "album_name" in data and data["album_name"]:
+                        track.album_name = data["album_name"].strip()
+                succeeded += 1
+                results.append({
+                    "track_id": tid,
+                    "title": track.title,
+                    "status": "success",
+                    "message": "Metadata updated.",
+                })
+
+        await self.session.commit()
+
+        return {
+            "action": action,
+            "total": len(track_ids),
+            "succeeded": succeeded,
+            "failed": failed,
+            "results": results,
+        }
 
     async def get_analytics(
         self,

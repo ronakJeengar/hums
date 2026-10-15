@@ -1,12 +1,15 @@
 import uuid
+from datetime import datetime
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 
+from app.core.config import get_settings
 from app.core.dependencies import (
     get_creator_studio_service,
     get_current_user,
     require_creator_role,
 )
+from app.core.errors import BadRequestError
 from app.db.models.user import User
 from app.schemas.admin import (
     CreateCreatorApplicationRequest,
@@ -14,14 +17,22 @@ from app.schemas.admin import (
 )
 from app.schemas.common import ApiResponse
 from app.schemas.creator_studio import (
+    BulkTrackActionResult,
     CreatorAnalyticsResponse,
+    CreatorBulkTrackActionRequest,
     CreatorDashboardStats,
     CreatorStudioProfile,
+    CreatorTrackDetail,
     CreatorTrackItem,
+    SetPublishingRequest,
+    TrackArtworkUploadResponse,
     UpdateCreatorProfileRequest,
     UpdateTrackRequest,
 )
 from app.services.creator_studio_service import CreatorStudioService
+from app.utils.upload import read_upload_file_bounded
+
+settings = get_settings()
 
 router = APIRouter(prefix="/creator-studio", tags=["Creator Studio"])
 applications_router = APIRouter(prefix="/creator-applications", tags=["Creator Applications"])
@@ -61,6 +72,12 @@ async def list_tracks(
     size: int = Query(20, ge=1, le=100),
     status_filter: Optional[str] = Query(None, alias="status"),
     search: Optional[str] = Query(None),
+    is_published: Optional[bool] = Query(None),
+    genre: Optional[str] = Query(None),
+    date_from: Optional[datetime] = Query(None),
+    date_to: Optional[datetime] = Query(None),
+    sort_by: str = Query("created_at", pattern="^(created_at|title|duration_seconds|play_count)$"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     current_user: User = Depends(require_creator_role),
     studio_service: CreatorStudioService = Depends(get_creator_studio_service),
 ) -> ApiResponse[Dict[str, Any]]:
@@ -71,6 +88,12 @@ async def list_tracks(
         size=size,
         status=status_filter,
         search=search,
+        is_published=is_published,
+        genre=genre,
+        date_from=date_from,
+        date_to=date_to,
+        sort_by=sort_by,
+        sort_order=sort_order,
     )
     return ApiResponse(
         data={
@@ -81,6 +104,25 @@ async def list_tracks(
             "total_pages": (total + size - 1) // size if total > 0 else 1,
         }
     )
+
+
+@router.get(
+    "/tracks/{track_id}",
+    response_model=ApiResponse[CreatorTrackDetail],
+    status_code=status.HTTP_200_OK,
+    summary="Get creator track details with audio renditions and processing jobs",
+)
+async def get_track_detail(
+    track_id: uuid.UUID,
+    current_user: User = Depends(require_creator_role),
+    studio_service: CreatorStudioService = Depends(get_creator_studio_service),
+) -> ApiResponse[CreatorTrackDetail]:
+    """Retrieves full track details including audio files, renditions, and background jobs."""
+    detail = await studio_service.get_track_detail(
+        user_id=current_user.id,
+        track_id=track_id,
+    )
+    return ApiResponse(data=detail)
 
 
 @router.patch(
@@ -105,6 +147,52 @@ async def update_track(
     return ApiResponse(data=item)
 
 
+@router.patch(
+    "/tracks/{track_id}/publishing",
+    response_model=ApiResponse[CreatorTrackItem],
+    status_code=status.HTTP_200_OK,
+    summary="Set track publishing status",
+)
+async def set_publishing(
+    track_id: uuid.UUID,
+    payload: SetPublishingRequest,
+    current_user: User = Depends(require_creator_role),
+    studio_service: CreatorStudioService = Depends(get_creator_studio_service),
+) -> ApiResponse[CreatorTrackItem]:
+    """Publishes or unpublishes a creator track. Track must be READY to publish."""
+    item = await studio_service.set_publishing(
+        user_id=current_user.id,
+        track_id=track_id,
+        is_published=payload.is_published,
+    )
+    return ApiResponse(data=item)
+
+
+@router.post(
+    "/tracks/{track_id}/artwork",
+    response_model=ApiResponse[TrackArtworkUploadResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Upload track artwork",
+)
+async def upload_artwork(
+    track_id: uuid.UUID,
+    file: UploadFile = File(...),
+    current_user: User = Depends(require_creator_role),
+    studio_service: CreatorStudioService = Depends(get_creator_studio_service),
+) -> ApiResponse[TrackArtworkUploadResponse]:
+    """Uploads and associates cover artwork for an owned track."""
+    max_bytes = settings.MAX_AVATAR_SIZE_MB * 1024 * 1024
+    content = await read_upload_file_bounded(file, max_bytes=max_bytes)
+    res = await studio_service.upload_artwork(
+        user_id=current_user.id,
+        track_id=track_id,
+        file_bytes=content,
+        filename=file.filename or "artwork.jpg",
+        content_type=file.content_type or "",
+    )
+    return ApiResponse(data=TrackArtworkUploadResponse.model_validate(res))
+
+
 @router.post(
     "/tracks/{track_id}/retry",
     response_model=ApiResponse[Dict[str, str]],
@@ -120,6 +208,33 @@ async def retry_track_processing(
     result = await studio_service.retry_processing(
         user_id=current_user.id,
         track_id=track_id,
+    )
+    return ApiResponse(data=result)
+
+
+@router.post(
+    "/tracks/bulk-action",
+    response_model=ApiResponse[BulkTrackActionResult],
+    status_code=status.HTTP_200_OK,
+    summary="Execute bulk action on creator tracks",
+)
+async def bulk_action(
+    payload: CreatorBulkTrackActionRequest,
+    current_user: User = Depends(require_creator_role),
+    studio_service: CreatorStudioService = Depends(get_creator_studio_service),
+) -> ApiResponse[BulkTrackActionResult]:
+    """Executes bulk publish, unpublish, retry, or metadata update on creator-owned tracks."""
+    bulk_data = dict(payload.data or {})
+    for field in ("genre", "title", "artist_name", "album_name", "description"):
+        val = getattr(payload, field, None)
+        if val is not None:
+            bulk_data[field] = val
+
+    result = await studio_service.bulk_action(
+        user_id=current_user.id,
+        action=payload.action,
+        track_ids=payload.track_ids,
+        data=bulk_data,
     )
     return ApiResponse(data=result)
 

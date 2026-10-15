@@ -104,6 +104,8 @@ export interface AdminTrackItem {
   genre?: string | null;
   duration_seconds?: number | null;
   status: "UPLOADED" | "PROCESSING" | "READY" | "FAILED" | "MODERATED";
+  is_published: boolean;
+  cover_image_key?: string | null;
   owner_id: string;
   owner_email?: string | null;
   created_at: string;
@@ -151,6 +153,37 @@ export interface SystemHealthStatus {
   timestamp: string;
 }
 
+export interface AudioFileInfo {
+  id: string;
+  filename: string;
+  file_size_bytes: number;
+  mime_type: string;
+  storage_key: string;
+  created_at: string;
+}
+
+export interface AudioRenditionInfo {
+  id: string;
+  format: string;
+  codec: string;
+  bitrate_kbps: number;
+  sample_rate?: number | null;
+  channels?: number | null;
+  duration_seconds?: number | null;
+  file_size_bytes: number;
+  storage_key: string;
+}
+
+export interface ProcessingJobInfo {
+  id: string;
+  job_type: string;
+  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+  attempts: number;
+  error_message?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ProcessingJobItem {
   id: string;
   track_id: string;
@@ -161,6 +194,102 @@ export interface ProcessingJobItem {
   error_message?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface CreatorTrackDetail {
+  id: string;
+  title: string;
+  artist_name?: string | null;
+  album_name?: string | null;
+  genre?: string | null;
+  description?: string | null;
+  duration_seconds?: number | null;
+  status: "UPLOADED" | "PROCESSING" | "READY" | "FAILED" | "MODERATED";
+  is_published: boolean;
+  cover_image_key?: string | null;
+  waveform_key?: string | null;
+  likes_count: number;
+  play_count: number;
+  created_at: string;
+  audio_files: AudioFileInfo[];
+  renditions: AudioRenditionInfo[];
+  processing_jobs: ProcessingJobInfo[];
+}
+
+export interface AdminTrackDetail {
+  id: string;
+  title: string;
+  artist_name?: string | null;
+  album_name?: string | null;
+  genre?: string | null;
+  description?: string | null;
+  duration_seconds?: number | null;
+  status: "UPLOADED" | "PROCESSING" | "READY" | "FAILED" | "MODERATED";
+  is_published: boolean;
+  cover_image_key?: string | null;
+  waveform_key?: string | null;
+  likes_count: number;
+  play_count: number;
+  created_at: string;
+  owner?: {
+    id: string;
+    email: string;
+    name?: string | null;
+    role: string;
+    is_active: boolean;
+  } | null;
+  creator?: {
+    id: string;
+    name: string;
+    is_verified: boolean;
+  } | null;
+  renditions: AudioRenditionInfo[];
+  processing_jobs: ProcessingJobInfo[];
+  audit_logs: AdminAuditLog[];
+}
+
+// Bulk Actions
+export interface BulkItemResult {
+  track_id: string;
+  title?: string | null;
+  status: "success" | "failed";
+  message?: string | null;
+  error?: string | null;
+}
+
+export interface BulkTrackActionResult {
+  action: string;
+  total: number;
+  succeeded: number;
+  failed: number;
+  results: BulkItemResult[];
+}
+
+export interface CreatorBulkTrackActionRequest {
+  track_ids: string[];
+  action: "publish" | "unpublish" | "retry" | "update_metadata";
+  genre?: string;
+  title?: string;
+  artist_name?: string;
+  album_name?: string;
+  description?: string;
+  data?: Record<string, unknown>;
+}
+
+export interface AdminBulkTrackActionRequest {
+  track_ids: string[];
+  action: "moderate" | "retry" | "publish" | "unpublish" | "update_metadata";
+  reason: string;
+  target_status?: "READY" | "MODERATED" | "FAILED";
+  status?: "READY" | "MODERATED" | "FAILED";
+  data?: Record<string, unknown>;
+  metadata_updates?: Record<string, unknown>;
+}
+
+export interface TrackArtworkUploadResponse {
+  track_id: string;
+  cover_image_key: string;
+  cover_image_url?: string | null;
 }
 
 // Creator Studio Types
@@ -183,6 +312,8 @@ export interface CreatorTrackItem {
   genre?: string | null;
   duration_seconds?: number | null;
   status: "UPLOADED" | "PROCESSING" | "READY" | "FAILED" | "MODERATED";
+  is_published: boolean;
+  cover_image_key?: string | null;
   likes_count: number;
   play_count: number;
   created_at: string;

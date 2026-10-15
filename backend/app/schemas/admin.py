@@ -112,6 +112,8 @@ class AdminTrackItem(BaseModel):
     genre: Optional[str] = None
     duration_seconds: Optional[int] = None
     status: str  # UPLOADED, PROCESSING, READY, FAILED, MODERATED
+    is_published: bool = True
+    cover_image_key: Optional[str] = None
     owner_id: uuid.UUID
     owner_email: Optional[str] = None
     created_at: datetime
@@ -126,11 +128,24 @@ class AdminTrackDetail(AdminTrackItem):
     waveform_key: Optional[str] = None
     renditions: List[Dict[str, Any]] = []
     processing_jobs: List[Dict[str, Any]] = []
+    audit_logs: List[Dict[str, Any]] = []
 
 
 class ModerateTrackRequest(BaseModel):
     status: str = Field(..., pattern="^(READY|MODERATED|FAILED)$")
     reason: str = Field(..., min_length=3, max_length=500)
+
+
+class AdminBulkTrackActionRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    track_ids: List[uuid.UUID] = Field(..., min_length=1, max_length=50)
+    action: str = Field(..., pattern="^(moderate|retry|publish|unpublish|update_metadata)$")
+    reason: str = Field(..., min_length=3, max_length=500)
+    status: Optional[str] = Field(None, pattern="^(READY|MODERATED|FAILED)$")
+    target_status: Optional[str] = Field(None, pattern="^(READY|MODERATED|FAILED)$")
+    data: Optional[Dict[str, Any]] = None
+    metadata_updates: Optional[Dict[str, Any]] = None
 
 
 class ContentReportItem(BaseModel):

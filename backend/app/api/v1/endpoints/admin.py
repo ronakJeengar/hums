@@ -1,7 +1,9 @@
 import uuid
+from datetime import datetime
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile, status
 
+from app.core.config import get_settings
 from app.core.dependencies import (
     get_admin_service,
     require_admin_role,
@@ -10,6 +12,7 @@ from app.core.dependencies import (
 from app.db.models.user import User
 from app.schemas.admin import (
     AdminAuditLogItem,
+    AdminBulkTrackActionRequest,
     AdminCreatorItem,
     AdminDashboardStats,
     AdminTrackDetail,
@@ -28,7 +31,14 @@ from app.schemas.admin import (
     VerifyCreatorRequest,
 )
 from app.schemas.common import ApiResponse
+from app.schemas.creator_studio import (
+    BulkTrackActionResult,
+    TrackArtworkUploadResponse,
+)
 from app.services.admin_service import AdminService
+from app.utils.upload import read_upload_file_bounded
+
+settings = get_settings()
 
 router = APIRouter(prefix="/admin", tags=["Admin Panel"])
 
@@ -313,12 +323,26 @@ async def list_tracks(
     search: Optional[str] = Query(None),
     status_filter: Optional[str] = Query(None, alias="status"),
     genre: Optional[str] = Query(None),
+    is_published: Optional[bool] = Query(None),
+    date_from: Optional[datetime] = Query(None),
+    date_to: Optional[datetime] = Query(None),
+    sort_by: str = Query("created_at", pattern="^(created_at|title|duration_seconds|play_count)$"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     current_admin: User = Depends(require_moderator_or_admin_role),
     admin_service: AdminService = Depends(get_admin_service),
 ) -> ApiResponse[Dict[str, Any]]:
     """Tracks catalog for administrative monitoring and moderation."""
     items, total = await admin_service.list_tracks(
-        page=page, size=size, search=search, status=status_filter, genre=genre
+        page=page,
+        size=size,
+        search=search,
+        status=status_filter,
+        genre=genre,
+        is_published=is_published,
+        date_from=date_from,
+        date_to=date_to,
+        sort_by=sort_by,
+        sort_order=sort_order,
     )
     return ApiResponse(
         data={
@@ -373,6 +397,34 @@ async def moderate_track(
 
 
 @router.post(
+    "/tracks/{track_id}/artwork",
+    response_model=ApiResponse[TrackArtworkUploadResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Upload track artwork by admin",
+)
+async def upload_track_artwork(
+    track_id: uuid.UUID,
+    request: Request,
+    file: UploadFile = File(...),
+    current_admin: User = Depends(require_moderator_or_admin_role),
+    admin_service: AdminService = Depends(get_admin_service),
+) -> ApiResponse[TrackArtworkUploadResponse]:
+    """Allows administrators to replace or upload cover artwork for any track with audit logging."""
+    client_ip = request.client.host if request.client else None
+    max_bytes = settings.MAX_AVATAR_SIZE_MB * 1024 * 1024
+    content = await read_upload_file_bounded(file, max_bytes=max_bytes)
+    res = await admin_service.upload_artwork(
+        actor=current_admin,
+        track_id=track_id,
+        file_bytes=content,
+        filename=file.filename or "artwork.jpg",
+        content_type=file.content_type or "",
+        ip_address=client_ip,
+    )
+    return ApiResponse(data=TrackArtworkUploadResponse.model_validate(res))
+
+
+@router.post(
     "/tracks/{track_id}/retry",
     response_model=ApiResponse[Dict[str, str]],
     status_code=status.HTTP_200_OK,
@@ -388,6 +440,32 @@ async def retry_track_processing(
     client_ip = request.client.host if request.client else None
     result = await admin_service.retry_track_processing(
         actor=current_admin, track_id=track_id, ip_address=client_ip
+    )
+    return ApiResponse(data=result)
+
+
+@router.post(
+    "/tracks/bulk-action",
+    response_model=ApiResponse[BulkTrackActionResult],
+    status_code=status.HTTP_200_OK,
+    summary="Execute bulk moderation or action on tracks",
+)
+async def bulk_action_tracks(
+    payload: AdminBulkTrackActionRequest,
+    request: Request,
+    current_admin: User = Depends(require_moderator_or_admin_role),
+    admin_service: AdminService = Depends(get_admin_service),
+) -> ApiResponse[BulkTrackActionResult]:
+    """Executes bulk moderate, retry, publish, or unpublish across catalog tracks."""
+    client_ip = request.client.host if request.client else None
+    result = await admin_service.bulk_action(
+        actor=current_admin,
+        action=payload.action,
+        track_ids=payload.track_ids,
+        reason=payload.reason or "Admin bulk action",
+        status=payload.target_status or payload.status,
+        data=payload.metadata_updates or payload.data,
+        ip_address=client_ip,
     )
     return ApiResponse(data=result)
 

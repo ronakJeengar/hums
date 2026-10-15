@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -12,12 +12,57 @@ class CreatorTrackItem(BaseModel):
     genre: Optional[str] = None
     duration_seconds: Optional[int] = None
     status: str
+    is_published: bool = True
+    cover_image_key: Optional[str] = None
     likes_count: int = 0
     play_count: int = 0
     created_at: datetime
     waveform_key: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AudioFileInfo(BaseModel):
+    id: uuid.UUID
+    original_filename: str
+    mime_type: str
+    file_size_bytes: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AudioRenditionInfo(BaseModel):
+    id: uuid.UUID
+    format: str
+    codec: str
+    bitrate_kbps: int
+    sample_rate: Optional[int] = None
+    channels: Optional[int] = None
+    duration_seconds: Optional[int] = None
+    file_size_bytes: int
+    storage_key: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProcessingJobInfo(BaseModel):
+    id: uuid.UUID
+    job_type: str
+    status: str
+    attempts: int
+    error_message: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CreatorTrackDetail(CreatorTrackItem):
+    description: Optional[str] = None
+    audio_files: List[AudioFileInfo] = []
+    renditions: List[AudioRenditionInfo] = []
+    processing_jobs: List[ProcessingJobInfo] = []
 
 
 class CreatorDashboardStats(BaseModel):
@@ -37,6 +82,45 @@ class UpdateTrackRequest(BaseModel):
     album_name: Optional[str] = Field(None, max_length=255)
     genre: Optional[str] = Field(None, max_length=100)
     description: Optional[str] = None
+
+
+class SetPublishingRequest(BaseModel):
+    is_published: bool
+
+
+class BulkItemResult(BaseModel):
+    track_id: uuid.UUID
+    title: Optional[str] = None
+    status: str  # "success" or "failed"
+    message: Optional[str] = None
+    error: Optional[str] = None
+
+
+class BulkTrackActionResult(BaseModel):
+    action: str
+    total: int
+    succeeded: int
+    failed: int
+    results: List[BulkItemResult] = []
+
+
+class CreatorBulkTrackActionRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    track_ids: List[uuid.UUID] = Field(..., min_length=1, max_length=50)
+    action: str = Field(..., pattern="^(publish|unpublish|retry|update_metadata)$")
+    genre: Optional[str] = None
+    title: Optional[str] = None
+    artist_name: Optional[str] = None
+    album_name: Optional[str] = None
+    description: Optional[str] = None
+    data: Optional[Dict[str, Any]] = None
+
+
+class TrackArtworkUploadResponse(BaseModel):
+    track_id: uuid.UUID
+    cover_image_key: str
+    cover_image_url: Optional[str] = None
 
 
 class DailyPlayStat(BaseModel):

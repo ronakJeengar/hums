@@ -74,6 +74,8 @@ class TrackResponse(BaseModel):
     duration_seconds: Optional[int] = None
     waveform_key: Optional[str] = None
     status: str
+    is_published: bool = True
+    cover_image_key: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     audio_files: List[AudioFileResponse] = []

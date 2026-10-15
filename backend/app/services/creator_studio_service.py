@@ -1,23 +1,46 @@
+import io
+import logging
+import os
 import uuid
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
-from app.core.errors import ForbiddenError, NotFoundError, ValidationError
+from PIL import Image
+
+from app.core.config import get_settings
+from app.core.errors import BadRequestError, ForbiddenError, NotFoundError, ValidationError
 from app.db.models.admin import ContentReport, CreatorApplication
 from app.db.models.creator import Creator
 from app.repositories.creator_studio_repository import CreatorStudioRepository
 from app.schemas.creator_studio import (
+    BulkTrackActionResult,
     CreatorAnalyticsResponse,
     CreatorDashboardStats,
     CreatorStudioProfile,
+    CreatorTrackDetail,
     CreatorTrackItem,
 )
+from app.utils.storage import BaseStorageService, S3StorageService
+
+logger = logging.getLogger("hums.creator_studio")
+settings = get_settings()
+
+ALLOWED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
+ALLOWED_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP"}
+MIN_IMAGE_DIMENSION = 200
+MAX_IMAGE_DIMENSION = 4000
 
 
 class CreatorStudioService:
     """Business logic for Creator Studio content management, analytics, and applications."""
 
-    def __init__(self, studio_repo: CreatorStudioRepository):
+    def __init__(
+        self,
+        studio_repo: CreatorStudioRepository,
+        storage_service: Optional[BaseStorageService] = None,
+    ):
         self.studio_repo = studio_repo
+        self.storage_service = storage_service or S3StorageService()
 
     async def get_dashboard(self, user_id: uuid.UUID) -> CreatorDashboardStats:
         """Calculates and returns creator dashboard stats."""
@@ -39,17 +62,43 @@ class CreatorStudioService:
         page: int = 1,
         size: int = 20,
         status: Optional[str] = None,
+        is_published: Optional[bool] = None,
+        genre: Optional[str] = None,
         search: Optional[str] = None,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
     ) -> Tuple[List[CreatorTrackItem], int]:
-        """Lists tracks owned by the authenticated creator."""
+        """Lists tracks owned by the authenticated creator with multi-field filtering and sorting."""
         items, total = await self.studio_repo.list_tracks(
             user_id=user_id,
             page=page,
             size=size,
             status=status,
+            is_published=is_published,
+            genre=genre,
             search=search,
+            date_from=date_from,
+            date_to=date_to,
+            sort_by=sort_by,
+            sort_order=sort_order,
         )
         return [CreatorTrackItem.model_validate(t) for t in items], total
+
+    async def get_track_detail(
+        self,
+        user_id: uuid.UUID,
+        track_id: uuid.UUID,
+    ) -> CreatorTrackDetail:
+        """Fetches comprehensive track detail with renditions and processing history."""
+        track_dict = await self.studio_repo.get_track_detail(user_id=user_id, track_id=track_id)
+        if not track_dict:
+            raise NotFoundError(
+                f"Track {track_id} not found or you do not have permission to view it.",
+                code="TRACK_NOT_FOUND_OR_FORBIDDEN",
+            )
+        return CreatorTrackDetail.model_validate(track_dict)
 
     async def update_track(
         self,
@@ -70,6 +119,134 @@ class CreatorStudioService:
             )
         return CreatorTrackItem.model_validate(track)
 
+    async def set_publishing(
+        self,
+        user_id: uuid.UUID,
+        track_id: uuid.UUID,
+        is_published: bool,
+    ) -> CreatorTrackItem:
+        """Publishes or unpublishes a creator track with readiness validation."""
+        track = await self.studio_repo.get_track(user_id, track_id)
+        if not track:
+            raise NotFoundError(
+                f"Track {track_id} not found or you do not have permission to modify it.",
+                code="TRACK_NOT_FOUND_OR_FORBIDDEN",
+            )
+
+        if is_published and track.status != "READY":
+            raise ValidationError(
+                f"Cannot publish track with processing status '{track.status}'. Only tracks in READY state can be published.",
+                code="TRACK_NOT_READY_FOR_PUBLISHING",
+            )
+
+        updated_track = await self.studio_repo.set_publishing(user_id, track_id, is_published)
+        return CreatorTrackItem.model_validate(updated_track)
+
+    async def upload_artwork(
+        self,
+        user_id: uuid.UUID,
+        track_id: uuid.UUID,
+        file_bytes: bytes,
+        filename: str,
+        content_type: str,
+    ) -> Dict[str, str]:
+        """Validates and uploads cover artwork for an owned track."""
+        track = await self.studio_repo.get_track(user_id, track_id)
+        if not track:
+            raise NotFoundError(
+                f"Track {track_id} not found or you do not have permission to modify it.",
+                code="TRACK_NOT_FOUND_OR_FORBIDDEN",
+            )
+
+        clean_content_type = (content_type or "").lower().strip()
+        if clean_content_type not in ALLOWED_IMAGE_MIME_TYPES:
+            raise BadRequestError(
+                "Unsupported image type. Allowed formats: JPEG, PNG, WebP.",
+                code="UNSUPPORTED_IMAGE_TYPE",
+            )
+
+        max_bytes = settings.MAX_AVATAR_SIZE_MB * 1024 * 1024
+        if len(file_bytes) > max_bytes:
+            raise BadRequestError(
+                f"Cover image exceeds the {settings.MAX_AVATAR_SIZE_MB}MB size limit.",
+                code="IMAGE_TOO_LARGE",
+            )
+        if len(file_bytes) < 100:
+            raise BadRequestError("Cover image is empty or too small.", code="INVALID_IMAGE")
+
+        # Verify image using PIL
+        try:
+            image_stream = io.BytesIO(file_bytes)
+            img = Image.open(image_stream)
+            img.verify()
+
+            image_stream.seek(0)
+            img = Image.open(image_stream)
+            img_format = (img.format or "").upper()
+
+            if img_format not in ALLOWED_IMAGE_FORMATS:
+                raise BadRequestError(
+                    "Unsupported image format. Allowed formats: JPEG, PNG, WebP.",
+                    code="UNSUPPORTED_IMAGE_TYPE",
+                )
+
+            width, height = img.size
+            if width < MIN_IMAGE_DIMENSION or height < MIN_IMAGE_DIMENSION:
+                raise BadRequestError(
+                    f"Image is too small ({width}x{height}). Minimum dimensions are {MIN_IMAGE_DIMENSION}x{MIN_IMAGE_DIMENSION}.",
+                    code="IMAGE_TOO_SMALL",
+                )
+            if width > MAX_IMAGE_DIMENSION or height > MAX_IMAGE_DIMENSION:
+                raise BadRequestError(
+                    f"Image is too large ({width}x{height}). Maximum dimensions are {MAX_IMAGE_DIMENSION}x{MAX_IMAGE_DIMENSION}.",
+                    code="IMAGE_TOO_LARGE",
+                )
+        except BadRequestError:
+            raise
+        except Exception as exc:
+            logger.error(f"Image verification failed: {exc}")
+            raise BadRequestError("Invalid or corrupted image file.", code="INVALID_IMAGE")
+
+        ext = "jpg" if img_format == "JPEG" else img_format.lower()
+        cover_image_key = f"artwork/tracks/{track_id}/{uuid.uuid4()}.{ext}"
+
+        # Upload to object storage
+        await self.storage_service.upload_file(
+            file_bytes=file_bytes,
+            destination_key=cover_image_key,
+            content_type=clean_content_type,
+        )
+
+        await self.studio_repo.update_artwork(user_id, track_id, cover_image_key)
+
+        return {
+            "track_id": str(track_id),
+            "cover_image_key": cover_image_key,
+            "cover_image_url": f"{settings.CDN_BASE_URL}/{cover_image_key}",
+        }
+
+    async def bulk_action(
+        self,
+        user_id: uuid.UUID,
+        action: str,
+        track_ids: List[uuid.UUID],
+        data: Optional[Dict[str, Any]] = None,
+    ) -> BulkTrackActionResult:
+        """Executes bulk operations on creator-owned tracks."""
+        if not track_ids or len(track_ids) > 50:
+            raise BadRequestError(
+                "Batch size must be between 1 and 50 tracks.",
+                code="INVALID_BATCH_SIZE",
+            )
+
+        res = await self.studio_repo.bulk_action(
+            user_id=user_id,
+            action=action,
+            track_ids=track_ids,
+            data=data,
+        )
+        return BulkTrackActionResult.model_validate(res)
+
     async def retry_processing(
         self,
         user_id: uuid.UUID,
@@ -83,14 +260,13 @@ class CreatorStudioService:
                 code="TRACK_NOT_FOUND",
             )
 
-        # Update status
         track.status = "PROCESSING"
         await self.studio_repo.session.commit()
 
-        # Trigger celery
+        # Trigger worker
         try:
-            from app.workers.tasks import transcode_audio_track
-            transcode_audio_track.delay(str(track_id))
+            from app.workers.audio_tasks import process_audio_track
+            process_audio_track.delay(str(track_id))
         except Exception:
             pass
 
@@ -122,7 +298,6 @@ class CreatorStudioService:
         """Retrieves creator profile for user."""
         creator = await self.studio_repo.get_profile(user_id)
         if not creator:
-            # Auto-provision profile shell if user has creator privileges
             creator = Creator(
                 id=uuid.uuid4(),
                 user_id=user_id,

@@ -1,22 +1,39 @@
+import io
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+from PIL import Image
+
 from app.core.config import get_settings
-from app.core.errors import NotFoundError, ValidationError
+from app.core.errors import BadRequestError, NotFoundError, ValidationError
 from app.db.models.admin import AdminAuditLog, ContentReport, CreatorApplication
+from app.db.models.audio import Track
 from app.db.models.user import User
 from app.repositories.admin_repository import AdminRepository
 from app.schemas.admin import AdminDashboardStats, SystemHealthStatus
+from app.utils.storage import BaseStorageService, S3StorageService
 
+logger = logging.getLogger("hums.admin")
 settings = get_settings()
+
+ALLOWED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
+ALLOWED_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP"}
+MIN_IMAGE_DIMENSION = 200
+MAX_IMAGE_DIMENSION = 4000
 
 
 class AdminService:
     """Service orchestrating administrative operations, moderation, health, and audit logs."""
 
-    def __init__(self, admin_repo: AdminRepository):
+    def __init__(
+        self,
+        admin_repo: AdminRepository,
+        storage_service: Optional[BaseStorageService] = None,
+    ):
         self.admin_repo = admin_repo
+        self.storage_service = storage_service or S3StorageService()
 
     async def get_dashboard_stats(self) -> AdminDashboardStats:
         """Retrieves verified dashboard metrics and KPIs."""
@@ -213,11 +230,25 @@ class AdminService:
         size: int = 20,
         search: Optional[str] = None,
         status: Optional[str] = None,
+        is_published: Optional[bool] = None,
         genre: Optional[str] = None,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
     ) -> Tuple[List[Dict[str, Any]], int]:
-        """Lists tracks across catalog."""
+        """Lists tracks across catalog with filters and sorting."""
         return await self.admin_repo.list_tracks(
-            page=page, size=size, search=search, status=status, genre=genre
+            page=page,
+            size=size,
+            search=search,
+            status=status,
+            is_published=is_published,
+            genre=genre,
+            date_from=date_from,
+            date_to=date_to,
+            sort_by=sort_by,
+            sort_order=sort_order,
         )
 
     async def get_track_detail(self, track_id: uuid.UUID) -> Dict[str, Any]:
@@ -268,10 +299,9 @@ class AdminService:
 
         # Dispatch Celery worker job safely
         try:
-            from app.workers.tasks import transcode_audio_track
-            transcode_audio_track.delay(str(track_id))
-        except Exception as e:
-            # If celery is not running in local test environment, log message
+            from app.workers.audio_tasks import process_audio_track
+            process_audio_track.delay(str(track_id))
+        except Exception:
             pass
 
         await self.admin_repo.log_audit_action(
@@ -283,8 +313,133 @@ class AdminService:
             reason="Administrator manual retry trigger",
             ip_address=ip_address,
         )
+        return {"message": "Track processing retry queued successfully."}
 
-        return {"message": "Track transcoding job dispatched to processing workers."}
+    async def bulk_action(
+        self,
+        actor: User,
+        action: str,
+        track_ids: List[uuid.UUID],
+        reason: str,
+        status: Optional[str] = None,
+        data: Optional[Dict[str, Any]] = None,
+        ip_address: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Executes administrative bulk operations with per-item reporting and audit logs."""
+        if not track_ids or len(track_ids) > 50:
+            raise BadRequestError(
+                "Batch size must be between 1 and 50 tracks.",
+                code="INVALID_BATCH_SIZE",
+            )
+
+        return await self.admin_repo.bulk_action(
+            actor_id=actor.id,
+            actor_email=actor.email,
+            action=action,
+            track_ids=track_ids,
+            reason=reason,
+            status=status,
+            data=data,
+            ip_address=ip_address,
+        )
+
+    async def upload_artwork(
+        self,
+        actor: User,
+        track_id: uuid.UUID,
+        file_bytes: bytes,
+        filename: str,
+        content_type: str,
+        ip_address: Optional[str] = None,
+    ) -> Dict[str, str]:
+        """Admin override: Validates and uploads cover artwork for any track."""
+        track_dict = await self.admin_repo.get_track_detail(track_id)
+        if not track_dict:
+            raise NotFoundError(f"Track {track_id} not found", code="TRACK_NOT_FOUND")
+
+        clean_content_type = (content_type or "").lower().strip()
+        if clean_content_type not in ALLOWED_IMAGE_MIME_TYPES:
+            raise BadRequestError(
+                "Unsupported image type. Allowed formats: JPEG, PNG, WebP.",
+                code="UNSUPPORTED_IMAGE_TYPE",
+            )
+
+        max_bytes = settings.MAX_AVATAR_SIZE_MB * 1024 * 1024
+        if len(file_bytes) > max_bytes:
+            raise BadRequestError(
+                f"Cover image exceeds the {settings.MAX_AVATAR_SIZE_MB}MB size limit.",
+                code="IMAGE_TOO_LARGE",
+            )
+        if len(file_bytes) < 100:
+            raise BadRequestError("Cover image is empty or too small.", code="INVALID_IMAGE")
+
+        try:
+            image_stream = io.BytesIO(file_bytes)
+            img = Image.open(image_stream)
+            img.verify()
+
+            image_stream.seek(0)
+            img = Image.open(image_stream)
+            img_format = (img.format or "").upper()
+
+            if img_format not in ALLOWED_IMAGE_FORMATS:
+                raise BadRequestError(
+                    "Unsupported image format. Allowed formats: JPEG, PNG, WebP.",
+                    code="UNSUPPORTED_IMAGE_TYPE",
+                )
+
+            width, height = img.size
+            if width < MIN_IMAGE_DIMENSION or height < MIN_IMAGE_DIMENSION:
+                raise BadRequestError(
+                    f"Image is too small ({width}x{height}). Minimum dimensions are {MIN_IMAGE_DIMENSION}x{MIN_IMAGE_DIMENSION}.",
+                    code="IMAGE_TOO_SMALL",
+                )
+            if width > MAX_IMAGE_DIMENSION or height > MAX_IMAGE_DIMENSION:
+                raise BadRequestError(
+                    f"Image is too large ({width}x{height}). Maximum dimensions are {MAX_IMAGE_DIMENSION}x{MAX_IMAGE_DIMENSION}.",
+                    code="IMAGE_TOO_LARGE",
+                )
+        except BadRequestError:
+            raise
+        except Exception as exc:
+            logger.error(f"Image verification failed: {exc}")
+            raise BadRequestError("Invalid or corrupted image file.", code="INVALID_IMAGE")
+
+        ext = "jpg" if img_format == "JPEG" else img_format.lower()
+        cover_image_key = f"artwork/tracks/{track_id}/{uuid.uuid4()}.{ext}"
+
+        await self.storage_service.upload_file(
+            file_bytes=file_bytes,
+            destination_key=cover_image_key,
+            content_type=clean_content_type,
+        )
+
+        # Update track in db
+        track_obj = (
+            await self.admin_repo.session.execute(
+                select(Track).where(Track.id == track_id)
+            )
+        ).scalar_one_or_none()
+        if track_obj:
+            track_obj.cover_image_key = cover_image_key
+            await self.admin_repo.session.commit()
+
+        await self.admin_repo.log_audit_action(
+            actor_id=actor.id,
+            actor_email=actor.email,
+            action="TRACK_UPDATE_ARTWORK",
+            target_type="track",
+            target_id=str(track_id),
+            details={"cover_image_key": cover_image_key},
+            reason="Administrator updated track cover artwork",
+            ip_address=ip_address,
+        )
+
+        return {
+            "track_id": str(track_id),
+            "cover_image_key": cover_image_key,
+            "cover_image_url": f"{settings.CDN_BASE_URL}/{cover_image_key}",
+        }
 
     async def list_reports(
         self,

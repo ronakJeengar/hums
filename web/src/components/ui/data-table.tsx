@@ -5,6 +5,8 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
+  OnChangeFn,
+  RowSelectionState,
   useReactTable,
 } from "@tanstack/react-table";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
@@ -19,6 +21,10 @@ interface DataTableProps<TData, TValue> {
   total?: number;
   onPageChange?: (newPage: number) => void;
   emptyMessage?: string;
+  enableRowSelection?: boolean | ((row: any) => boolean);
+  rowSelection?: RowSelectionState;
+  onRowSelectionChange?: OnChangeFn<RowSelectionState>;
+  getRowId?: (originalRow: TData, index: number, parent?: any) => string;
 }
 
 export function DataTable<TData, TValue>({
@@ -30,11 +36,21 @@ export function DataTable<TData, TValue>({
   total,
   onPageChange,
   emptyMessage = "No records found.",
+  enableRowSelection,
+  rowSelection,
+  onRowSelectionChange,
+  getRowId,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    enableRowSelection,
+    onRowSelectionChange,
+    getRowId,
+    state: {
+      rowSelection: rowSelection ?? {},
+    },
   });
 
   return (

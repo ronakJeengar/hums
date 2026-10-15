@@ -18,7 +18,9 @@ export default function StudioLayout({
 
   return (
     <div className="flex min-h-screen bg-[#090a0f]">
-      <Sidebar role={user?.role} experience="studio" />
+      <React.Suspense fallback={<div className="w-64 bg-[#0d0f17] border-r border-slate-800" />}>
+        <Sidebar role={user?.role} experience="studio" />
+      </React.Suspense>
       <div className="flex-1 flex flex-col min-w-0">
         <Navbar user={user} title="Creator Studio" />
         <main className="flex-1 p-6 overflow-y-auto">{children}</main>

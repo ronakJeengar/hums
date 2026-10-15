@@ -98,7 +98,7 @@ class TrackRepository(BaseRepository[Track]):
         stmt = (
             select(Track)
             .outerjoin(PlaylistTrack, Track.id == PlaylistTrack.track_id)
-            .where(Track.status == "READY")
+            .where(Track.status == "READY", Track.is_published.is_(True))
         )
         if exclude_ids:
             stmt = stmt.where(Track.id.not_in(exclude_ids))
@@ -114,7 +114,7 @@ class TrackRepository(BaseRepository[Track]):
         self, limit: int = 20, exclude_ids: Optional[List[uuid.UUID]] = None
     ) -> List[Track]:
         """Retrieves most recently created ready tracks."""
-        stmt = select(Track).where(Track.status == "READY")
+        stmt = select(Track).where(Track.status == "READY", Track.is_published.is_(True))
         if exclude_ids:
             stmt = stmt.where(Track.id.not_in(exclude_ids))
         stmt = stmt.order_by(Track.created_at.desc()).limit(limit)
@@ -130,6 +130,7 @@ class TrackRepository(BaseRepository[Track]):
         lower_genres = [g.lower() for g in genres]
         stmt = select(Track).where(
             Track.status == "READY",
+            Track.is_published.is_(True),
             func.lower(Track.genre).in_(lower_genres)
         )
         if exclude_ids:
@@ -147,6 +148,7 @@ class TrackRepository(BaseRepository[Track]):
         lower_artists = [a.lower() for a in artists]
         stmt = select(Track).where(
             Track.status == "READY",
+            Track.is_published.is_(True),
             func.lower(Track.artist_name).in_(lower_artists)
         )
         if exclude_ids:
@@ -159,7 +161,7 @@ class TrackRepository(BaseRepository[Track]):
         self, skip: int = 0, limit: int = 50, exclude_ids: Optional[List[uuid.UUID]] = None
     ) -> List[Track]:
         """Retrieves paginated ready tracks."""
-        stmt = select(Track).where(Track.status == "READY")
+        stmt = select(Track).where(Track.status == "READY", Track.is_published.is_(True))
         if exclude_ids:
             stmt = stmt.where(Track.id.not_in(exclude_ids))
         stmt = stmt.order_by(Track.created_at.desc()).offset(skip).limit(limit)

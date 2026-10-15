@@ -1,17 +1,23 @@
 import {
   AdminAuditLog,
+  AdminBulkTrackActionRequest,
   AdminCreatorItem,
   AdminDashboardStats,
+  AdminTrackDetail,
   AdminTrackItem,
+  BulkTrackActionResult,
   ContentReport,
   CreatorAnalytics,
   CreatorApplication,
+  CreatorBulkTrackActionRequest,
   CreatorDashboardStats,
   CreatorStudioProfile,
+  CreatorTrackDetail,
   CreatorTrackItem,
   PaginatedResult,
   ProcessingJobItem,
   SystemHealthStatus,
+  TrackArtworkUploadResponse,
   User,
   UserRole,
 } from "@/types";
@@ -198,6 +204,11 @@ export const api = {
       search?: string;
       status?: string;
       genre?: string;
+      is_published?: boolean;
+      date_from?: string;
+      date_to?: string;
+      sort_by?: string;
+      sort_order?: string;
     } = {}): Promise<PaginatedResult<AdminTrackItem>> {
       const query = new URLSearchParams();
       if (params.page) query.set("page", params.page.toString());
@@ -205,27 +216,48 @@ export const api = {
       if (params.search) query.set("search", params.search);
       if (params.status) query.set("status", params.status);
       if (params.genre) query.set("genre", params.genre);
+      if (params.is_published !== undefined) query.set("is_published", params.is_published.toString());
+      if (params.date_from) query.set("date_from", params.date_from);
+      if (params.date_to) query.set("date_to", params.date_to);
+      if (params.sort_by) query.set("sort_by", params.sort_by);
+      if (params.sort_order) query.set("sort_order", params.sort_order);
       return request<PaginatedResult<AdminTrackItem>>(`admin/tracks?${query.toString()}`);
     },
 
-    async getTrackDetail(id: string): Promise<AdminTrackItem> {
-      return request<AdminTrackItem>(`admin/tracks/${id}`);
+    async getTrackDetail(id: string): Promise<AdminTrackDetail> {
+      return request<AdminTrackDetail>(`admin/tracks/${id}`);
     },
 
     async moderateTrack(
       id: string,
       status: "READY" | "MODERATED" | "FAILED",
       reason: string
-    ): Promise<AdminTrackItem> {
-      return request<AdminTrackItem>(`admin/tracks/${id}/status`, {
+    ): Promise<AdminTrackDetail> {
+      return request<AdminTrackDetail>(`admin/tracks/${id}/status`, {
         method: "PATCH",
         body: JSON.stringify({ status, reason }),
+      });
+    },
+
+    async uploadTrackArtwork(id: string, file: File): Promise<TrackArtworkUploadResponse> {
+      const formData = new FormData();
+      formData.append("file", file);
+      return request<TrackArtworkUploadResponse>(`admin/tracks/${id}/artwork`, {
+        method: "POST",
+        body: formData,
       });
     },
 
     async retryTrack(id: string): Promise<{ message: string }> {
       return request<{ message: string }>(`admin/tracks/${id}/retry`, {
         method: "POST",
+      });
+    },
+
+    async bulkAction(payload: AdminBulkTrackActionRequest): Promise<BulkTrackActionResult> {
+      return request<BulkTrackActionResult>("admin/tracks/bulk-action", {
+        method: "POST",
+        body: JSON.stringify(payload),
       });
     },
 
@@ -303,15 +335,47 @@ export const api = {
       size?: number;
       status?: string;
       search?: string;
+      is_published?: boolean;
+      genre?: string;
+      date_from?: string;
+      date_to?: string;
+      sort_by?: string;
+      sort_order?: string;
     } = {}): Promise<PaginatedResult<CreatorTrackItem>> {
       const query = new URLSearchParams();
       if (params.page) query.set("page", params.page.toString());
       if (params.size) query.set("size", params.size.toString());
       if (params.status) query.set("status", params.status);
       if (params.search) query.set("search", params.search);
+      if (params.is_published !== undefined) query.set("is_published", params.is_published.toString());
+      if (params.genre) query.set("genre", params.genre);
+      if (params.date_from) query.set("date_from", params.date_from);
+      if (params.date_to) query.set("date_to", params.date_to);
+      if (params.sort_by) query.set("sort_by", params.sort_by);
+      if (params.sort_order) query.set("sort_order", params.sort_order);
       return request<PaginatedResult<CreatorTrackItem>>(
         `creator-studio/tracks?${query.toString()}`
       );
+    },
+
+    async getTrackDetail(id: string): Promise<CreatorTrackDetail> {
+      return request<CreatorTrackDetail>(`creator-studio/tracks/${id}`);
+    },
+
+    async setPublishing(id: string, is_published: boolean): Promise<CreatorTrackItem> {
+      return request<CreatorTrackItem>(`creator-studio/tracks/${id}/publishing`, {
+        method: "PATCH",
+        body: JSON.stringify({ is_published }),
+      });
+    },
+
+    async uploadTrackArtwork(id: string, file: File): Promise<TrackArtworkUploadResponse> {
+      const formData = new FormData();
+      formData.append("file", file);
+      return request<TrackArtworkUploadResponse>(`creator-studio/tracks/${id}/artwork`, {
+        method: "POST",
+        body: formData,
+      });
     },
 
     async updateTrack(
@@ -333,6 +397,52 @@ export const api = {
     async retryTrack(id: string): Promise<{ message: string }> {
       return request<{ message: string }>(`creator-studio/tracks/${id}/retry`, {
         method: "POST",
+      });
+    },
+
+    async bulkAction(payload: CreatorBulkTrackActionRequest): Promise<BulkTrackActionResult> {
+      return request<BulkTrackActionResult>("creator-studio/tracks/bulk-action", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    },
+
+    async uploadTrack(
+      formData: FormData,
+      onProgress?: (percent: number) => void
+    ): Promise<CreatorTrackItem> {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/api/proxy/audio/upload");
+
+        if (xhr.upload && onProgress) {
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const pct = Math.round((event.loaded / event.total) * 100);
+              onProgress(pct);
+            }
+          };
+        }
+
+        xhr.onload = () => {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            if (xhr.status >= 200 && xhr.status < 300 && data.success) {
+              resolve(data.data);
+            } else {
+              const msg = data?.error?.message || data?.detail || `Upload failed with status ${xhr.status}`;
+              reject(new ApiError(msg, xhr.status, data?.error?.code));
+            }
+          } catch {
+            reject(new ApiError(`Upload failed with status ${xhr.status}`, xhr.status));
+          }
+        };
+
+        xhr.onerror = () => {
+          reject(new ApiError("Network error during track upload", 0));
+        };
+
+        xhr.send(formData);
       });
     },
 

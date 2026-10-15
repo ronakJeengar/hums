@@ -62,6 +62,7 @@ class SearchRepository:
 
         match_cond = and_(
             Track.status == "READY",
+            Track.is_published.is_(True),
             or_(
                 Track.title.ilike(substr_q),
                 func.coalesce(Track.artist_name, "").ilike(substr_q),
@@ -237,7 +238,7 @@ class SearchRepository:
         # 2. Search Users table (fallback for registered users without separate creator profiles)
         user_track_count_subq = (
             select(func.count(Track.id))
-            .where(Track.owner_id == User.id, Track.status == "READY")
+            .where(Track.owner_id == User.id, Track.status == "READY", Track.is_published.is_(True))
             .scalar_subquery()
         )
 
@@ -305,6 +306,7 @@ class SearchRepository:
 
         track_artist_match_cond = and_(
             Track.status == "READY",
+            Track.is_published.is_(True),
             Track.artist_name.isnot(None),
             Track.artist_name != "",
             or_(
@@ -414,6 +416,7 @@ class SearchRepository:
 
         album_match_cond = and_(
             Track.status == "READY",
+            Track.is_published.is_(True),
             Track.album_name.isnot(None),
             Track.album_name != "",
             or_(
@@ -486,6 +489,7 @@ class SearchRepository:
             .where(
                 and_(
                     Track.status == "READY",
+                    Track.is_published.is_(True),
                     or_(Track.title.ilike(prefix_q), Track.title.ilike(substr_q)),
                 )
             )
@@ -505,6 +509,7 @@ class SearchRepository:
             .where(
                 and_(
                     Track.status == "READY",
+                    Track.is_published.is_(True),
                     Track.artist_name.isnot(None),
                     or_(Track.artist_name.ilike(prefix_q), Track.artist_name.ilike(substr_q)),
                 )
@@ -526,6 +531,7 @@ class SearchRepository:
             .where(
                 and_(
                     Track.status == "READY",
+                    Track.is_published.is_(True),
                     Track.album_name.isnot(None),
                     or_(Track.album_name.ilike(prefix_q), Track.album_name.ilike(substr_q)),
                 )

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
-from sqlalchemy import desc, func, or_, select, update
+from sqlalchemy import and_, asc, desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -449,9 +449,14 @@ class AdminRepository:
         size: int = 20,
         search: Optional[str] = None,
         status: Optional[str] = None,
+        is_published: Optional[bool] = None,
         genre: Optional[str] = None,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
     ) -> Tuple[List[Dict[str, Any]], int]:
-        """Lists tracks with pagination and status filters."""
+        """Lists tracks with pagination, status/publishing filters, and sorting."""
         query = select(Track).options(selectinload(Track.owner))
 
         if search:
@@ -467,14 +472,35 @@ class AdminRepository:
         if status:
             query = query.where(Track.status == status)
 
+        if is_published is not None:
+            query = query.where(Track.is_published.is_(is_published))
+
         if genre:
             query = query.where(func.lower(Track.genre) == genre.strip().lower())
+
+        if date_from:
+            query = query.where(Track.created_at >= date_from)
+
+        if date_to:
+            query = query.where(Track.created_at <= date_to)
 
         count_query = select(func.count()).select_from(query.subquery())
         total = (await self.session.execute(count_query)).scalar() or 0
 
+        # Sorting logic
+        sort_col = Track.created_at
+        if sort_by == "title":
+            sort_col = Track.title
+        elif sort_by == "duration_seconds":
+            sort_col = Track.duration_seconds
+        elif sort_by == "likes_count":
+            sort_col = Track.likes_count
+
+        order_expr = desc(sort_col) if sort_order.lower() == "desc" else asc(sort_col)
+        query = query.order_by(order_expr)
+
         offset = (page - 1) * size
-        query = query.order_by(desc(Track.created_at)).offset(offset).limit(size)
+        query = query.offset(offset).limit(size)
         tracks = (await self.session.execute(query)).scalars().all()
 
         # Batch play counts from PlaybackEvent
@@ -502,6 +528,8 @@ class AdminRepository:
                 "genre": t.genre,
                 "duration_seconds": t.duration_seconds,
                 "status": t.status,
+                "is_published": t.is_published,
+                "cover_image_key": t.cover_image_key,
                 "owner_id": t.owner_id,
                 "owner_email": t.owner.email if t.owner else None,
                 "created_at": t.created_at,
@@ -513,7 +541,7 @@ class AdminRepository:
         return result, total
 
     async def get_track_detail(self, track_id: uuid.UUID) -> Optional[Dict[str, Any]]:
-        """Fetches track with renditions and processing history."""
+        """Fetches track with renditions, processing history, and audit logs."""
         query = (
             select(Track)
             .options(
@@ -543,6 +571,7 @@ class AdminRepository:
             {
                 "id": r.id,
                 "format": r.format,
+                "codec": r.codec,
                 "bitrate_kbps": r.bitrate_kbps,
                 "file_size_bytes": r.file_size_bytes,
                 "storage_key": r.storage_key,
@@ -558,8 +587,33 @@ class AdminRepository:
                 "attempts": j.attempts,
                 "error_message": j.error_message,
                 "created_at": j.created_at,
+                "updated_at": j.updated_at,
             }
             for j in t.processing_jobs
+        ]
+
+        # Audit logs for this track
+        logs_query = (
+            select(AdminAuditLog)
+            .where(
+                AdminAuditLog.target_type == "track",
+                AdminAuditLog.target_id == str(track_id),
+            )
+            .order_by(desc(AdminAuditLog.created_at))
+            .limit(20)
+        )
+        logs = (await self.session.execute(logs_query)).scalars().all()
+        audit_logs = [
+            {
+                "id": l.id,
+                "actor_id": l.actor_id,
+                "actor_email": l.actor_email,
+                "action": l.action,
+                "reason": l.reason,
+                "details": l.details,
+                "created_at": l.created_at,
+            }
+            for l in logs
         ]
 
         return {
@@ -571,6 +625,8 @@ class AdminRepository:
             "description": t.description,
             "duration_seconds": t.duration_seconds,
             "status": t.status,
+            "is_published": t.is_published,
+            "cover_image_key": t.cover_image_key,
             "waveform_key": t.waveform_key,
             "owner_id": t.owner_id,
             "owner_email": t.owner.email if t.owner else None,
@@ -579,6 +635,130 @@ class AdminRepository:
             "play_count": play_count,
             "renditions": renditions,
             "processing_jobs": processing_jobs,
+            "audit_logs": audit_logs,
+        }
+
+    async def bulk_action(
+        self,
+        actor_id: uuid.UUID,
+        actor_email: str,
+        action: str,
+        track_ids: List[uuid.UUID],
+        reason: str,
+        status: Optional[str] = None,
+        data: Optional[Dict[str, Any]] = None,
+        ip_address: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Executes administrative bulk track actions with per-item reporting and audit logging."""
+        results = []
+        succeeded = 0
+        failed = 0
+
+        tracks_res = await self.session.execute(
+            select(Track).where(Track.id.in_(track_ids))
+        )
+        tracks_by_id = {t.id: t for t in tracks_res.scalars().all()}
+
+        for tid in track_ids:
+            track = tracks_by_id.get(tid)
+            if not track:
+                failed += 1
+                results.append({
+                    "track_id": tid,
+                    "title": None,
+                    "status": "failed",
+                    "error": "Track not found.",
+                })
+                continue
+
+            if action == "moderate":
+                new_status = status or "MODERATED"
+                track.status = new_status
+                succeeded += 1
+                results.append({
+                    "track_id": tid,
+                    "title": track.title,
+                    "status": "success",
+                    "message": f"Track status updated to {new_status}.",
+                })
+
+            elif action == "publish":
+                track.is_published = True
+                succeeded += 1
+                results.append({
+                    "track_id": tid,
+                    "title": track.title,
+                    "status": "success",
+                    "message": "Track published.",
+                })
+
+            elif action == "unpublish":
+                track.is_published = False
+                succeeded += 1
+                results.append({
+                    "track_id": tid,
+                    "title": track.title,
+                    "status": "success",
+                    "message": "Track unpublished.",
+                })
+
+            elif action == "retry":
+                track.status = "PROCESSING"
+                try:
+                    from app.workers.audio_tasks import process_audio_track
+                    process_audio_track.delay(str(track.id))
+                except Exception:
+                    pass
+                succeeded += 1
+                results.append({
+                    "track_id": tid,
+                    "title": track.title,
+                    "status": "success",
+                    "message": "Processing retry enqueued.",
+                })
+
+            elif action == "update_metadata":
+                if data:
+                    if "genre" in data and data["genre"]:
+                        track.genre = data["genre"].strip()
+                    if "album_name" in data and data["album_name"]:
+                        track.album_name = data["album_name"].strip()
+                succeeded += 1
+                results.append({
+                    "track_id": tid,
+                    "title": track.title,
+                    "status": "success",
+                    "message": "Metadata updated.",
+                })
+
+        # Record audit log
+        log = AdminAuditLog(
+            id=uuid.uuid4(),
+            actor_id=actor_id,
+            actor_email=actor_email,
+            action=f"BULK_TRACK_{action.upper()}",
+            target_type="track_bulk",
+            target_id=",".join(str(tid) for tid in track_ids[:10]),
+            details={
+                "action": action,
+                "target_count": len(track_ids),
+                "succeeded": succeeded,
+                "failed": failed,
+                "reason": reason,
+                "status": status,
+            },
+            reason=reason,
+            ip_address=ip_address,
+        )
+        self.session.add(log)
+        await self.session.commit()
+
+        return {
+            "action": action,
+            "total": len(track_ids),
+            "succeeded": succeeded,
+            "failed": failed,
+            "results": results,
         }
 
     async def update_track_status(
