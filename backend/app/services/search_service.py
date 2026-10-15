@@ -2,9 +2,9 @@ import hashlib
 import json
 import logging
 import uuid
-
 import redis.asyncio as aioredis
 
+from typing import Optional
 from app.core.config import get_settings
 from app.repositories.like_repository import LikeRepository
 from app.repositories.search_repository import SearchRepository
