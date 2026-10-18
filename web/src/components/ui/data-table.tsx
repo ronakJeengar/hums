@@ -6,6 +6,7 @@ import {
   flexRender,
   getCoreRowModel,
   OnChangeFn,
+  Row,
   RowSelectionState,
   useReactTable,
 } from "@tanstack/react-table";
@@ -21,10 +22,10 @@ interface DataTableProps<TData, TValue> {
   total?: number;
   onPageChange?: (newPage: number) => void;
   emptyMessage?: string;
-  enableRowSelection?: boolean | ((row: any) => boolean);
+  enableRowSelection?: boolean | ((row: Row<TData>) => boolean);
   rowSelection?: RowSelectionState;
   onRowSelectionChange?: OnChangeFn<RowSelectionState>;
-  getRowId?: (originalRow: TData, index: number, parent?: any) => string;
+  getRowId?: (originalRow: TData, index: number, parent?: Row<TData>) => string;
 }
 
 export function DataTable<TData, TValue>({

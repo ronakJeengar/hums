@@ -48,7 +48,7 @@ function AdminTrackDetailContent() {
   >("overview");
 
   // Moderation form state
-  const [targetStatus, setTargetStatus] = React.useState<"READY" | "MODERATED" | "FAILED">("MODERATED");
+  const [selectedStatusOverride, setSelectedStatusOverride] = React.useState<"READY" | "MODERATED" | "FAILED" | null>(null);
   const [moderationReason, setModerationReason] = React.useState("");
   const [moderationSuccess, setModerationSuccess] = React.useState(false);
   const [moderationError, setModerationError] = React.useState<string | null>(null);
@@ -69,16 +69,9 @@ function AdminTrackDetailContent() {
     },
   });
 
-  // Populate targetStatus with opposite or appropriate status
-  React.useEffect(() => {
-    if (track) {
-      if (track.status === "MODERATED") {
-        setTargetStatus("READY");
-      } else {
-        setTargetStatus("MODERATED");
-      }
-    }
-  }, [track]);
+  const targetStatus: "READY" | "MODERATED" | "FAILED" =
+    selectedStatusOverride ?? (track?.status === "MODERATED" ? "READY" : "MODERATED");
+  const setTargetStatus = (status: "READY" | "MODERATED" | "FAILED") => setSelectedStatusOverride(status);
 
   const moderateMutation = useMutation({
     mutationFn: ({ status, reason }: { status: "READY" | "MODERATED" | "FAILED"; reason: string }) =>

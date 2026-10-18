@@ -529,10 +529,10 @@ async def test_admin_tracks_catalog_and_bulk_moderation(
         select(AdminAuditLog).where(
             AdminAuditLog.action == "BULK_TRACK_MODERATE",
             AdminAuditLog.target_type == "track_bulk",
-        )
+        ).order_by(AdminAuditLog.created_at.desc())
     )
     logs = log_res.scalars().all()
     assert len(logs) >= 1
-    latest_log = logs[-1]
+    latest_log = logs[0]
     assert str(t1.id) in latest_log.target_id
     assert str(t2.id) in latest_log.target_id

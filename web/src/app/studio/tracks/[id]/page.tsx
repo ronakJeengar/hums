@@ -62,12 +62,7 @@ function CreatorTrackDetailContent() {
     "overview" | "metadata" | "artwork" | "processing" | "publishing"
   >("overview");
 
-  // Metadata form state
-  const [title, setTitle] = React.useState("");
-  const [artistName, setArtistName] = React.useState("");
-  const [albumName, setAlbumName] = React.useState("");
-  const [genre, setGenre] = React.useState("");
-  const [description, setDescription] = React.useState("");
+  // Metadata form status
   const [metadataSuccess, setMetadataSuccess] = React.useState(false);
   const [metadataError, setMetadataError] = React.useState<string | null>(null);
 
@@ -87,17 +82,6 @@ function CreatorTrackDetailContent() {
       return status === "PROCESSING" || status === "UPLOADED" ? 4000 : false;
     },
   });
-
-  // Populate form fields on data load
-  React.useEffect(() => {
-    if (track) {
-      setTitle(track.title || "");
-      setArtistName(track.artist_name || "");
-      setAlbumName(track.album_name || "");
-      setGenre(track.genre || "");
-      setDescription(track.description || "");
-    }
-  }, [track]);
 
   const updateMetadataMutation = useMutation({
     mutationFn: (data: {
@@ -503,109 +487,15 @@ function CreatorTrackDetailContent() {
       )}
 
       {/* Tab 2: Metadata Editor */}
-      {activeTab === "metadata" && (
-        <Card className="max-w-2xl">
-          <CardHeader>
-            <CardTitle className="text-base">Edit Release Metadata</CardTitle>
-            <CardDescription>
-              Update public title, album credits, genre classification, and liner notes
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {metadataSuccess && (
-              <div className="p-3 rounded-lg bg-emerald-950/50 border border-emerald-800 text-xs text-emerald-300 flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4" />
-                Track metadata updated successfully!
-              </div>
-            )}
-            {metadataError && (
-              <div className="p-3 rounded-lg bg-rose-950/50 border border-rose-800 text-xs text-rose-300 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                {metadataError}
-              </div>
-            )}
-
-            <div>
-              <label className="text-xs font-medium text-slate-300 block mb-1">
-                Track Title *
-              </label>
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Track title"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-slate-300 block mb-1">
-                Artist Name
-              </label>
-              <Input
-                value={artistName}
-                onChange={(e) => setArtistName(e.target.value)}
-                placeholder="Artist or ensemble name"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-slate-300 block mb-1">
-                Album / EP Name
-              </label>
-              <Input
-                value={albumName}
-                onChange={(e) => setAlbumName(e.target.value)}
-                placeholder="Album name or leave empty for single"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-slate-300 block mb-1">
-                Genre
-              </label>
-              <select
-                value={genre}
-                onChange={(e) => setGenre(e.target.value)}
-                className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-slate-200 focus:outline-none focus:border-purple-500"
-              >
-                <option value="">Select Genre</option>
-                {GENRE_OPTIONS.map((g) => (
-                  <option key={g} value={g}>
-                    {g}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-slate-300 block mb-1">
-                Description / Liner Notes
-              </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-                placeholder="Track description, instruments used, or release notes..."
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 p-2.5 text-xs text-slate-200 focus:outline-none focus:border-purple-500"
-              />
-            </div>
-
-            <Button
-              variant="primary"
-              onClick={() =>
-                updateMetadataMutation.mutate({
-                  title,
-                  artist_name: artistName || undefined,
-                  album_name: albumName || undefined,
-                  genre: genre || undefined,
-                  description: description || undefined,
-                })
-              }
-              isLoading={updateMetadataMutation.isPending}
-            >
-              Save Metadata Changes
-            </Button>
-          </CardContent>
-        </Card>
+      {activeTab === "metadata" && track && (
+        <MetadataEditor
+          key={track.id}
+          track={track}
+          onSave={(data) => updateMetadataMutation.mutate(data)}
+          isLoading={updateMetadataMutation.isPending}
+          success={metadataSuccess}
+          error={metadataError}
+        />
       )}
 
       {/* Tab 3: Artwork Manager */}
@@ -920,6 +810,133 @@ function CreatorTrackDetailContent() {
         </Card>
       )}
     </div>
+  );
+}
+
+interface MetadataEditorProps {
+  track: CreatorTrackDetail;
+  onSave: (data: {
+    title: string;
+    artist_name?: string;
+    album_name?: string;
+    genre?: string;
+    description?: string;
+  }) => void;
+  isLoading: boolean;
+  success: boolean;
+  error: string | null;
+}
+
+function MetadataEditor({ track, onSave, isLoading, success, error }: MetadataEditorProps) {
+  const [title, setTitle] = React.useState(track.title || "");
+  const [artistName, setArtistName] = React.useState(track.artist_name || "");
+  const [albumName, setAlbumName] = React.useState(track.album_name || "");
+  const [genre, setGenre] = React.useState(track.genre || "");
+  const [description, setDescription] = React.useState(track.description || "");
+
+  return (
+    <Card className="max-w-2xl">
+      <CardHeader>
+        <CardTitle className="text-base">Edit Release Metadata</CardTitle>
+        <CardDescription>
+          Update public title, album credits, genre classification, and liner notes
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {success && (
+          <div className="p-3 rounded-lg bg-emerald-950/50 border border-emerald-800 text-xs text-emerald-300 flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4" />
+            Track metadata updated successfully!
+          </div>
+        )}
+        {error && (
+          <div className="p-3 rounded-lg bg-rose-950/50 border border-rose-800 text-xs text-rose-300 flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            {error}
+          </div>
+        )}
+
+        <div>
+          <label className="text-xs font-medium text-slate-300 block mb-1">
+            Track Title *
+          </label>
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Track title"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-medium text-slate-300 block mb-1">
+            Artist Name
+          </label>
+          <Input
+            value={artistName}
+            onChange={(e) => setArtistName(e.target.value)}
+            placeholder="Artist or ensemble name"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-medium text-slate-300 block mb-1">
+            Album / EP Name
+          </label>
+          <Input
+            value={albumName}
+            onChange={(e) => setAlbumName(e.target.value)}
+            placeholder="Album name or leave empty for single"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-medium text-slate-300 block mb-1">
+            Genre
+          </label>
+          <select
+            value={genre}
+            onChange={(e) => setGenre(e.target.value)}
+            className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-slate-200 focus:outline-none focus:border-purple-500"
+          >
+            <option value="">Select Genre</option>
+            {GENRE_OPTIONS.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="text-xs font-medium text-slate-300 block mb-1">
+            Description / Liner Notes
+          </label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={4}
+            placeholder="Track description, instruments used, or release notes..."
+            className="w-full rounded-lg border border-slate-700 bg-slate-900 p-2.5 text-xs text-slate-200 focus:outline-none focus:border-purple-500"
+          />
+        </div>
+
+        <Button
+          variant="primary"
+          onClick={() =>
+            onSave({
+              title,
+              artist_name: artistName || undefined,
+              album_name: albumName || undefined,
+              genre: genre || undefined,
+              description: description || undefined,
+            })
+          }
+          isLoading={isLoading}
+        >
+          Save Metadata Changes
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
