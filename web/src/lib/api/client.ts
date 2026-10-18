@@ -20,6 +20,11 @@ import {
   TrackArtworkUploadResponse,
   User,
   UserRole,
+  NotificationItem,
+  NotificationListResponse,
+  NotificationPreferences,
+  NotificationPreferencesUpdate,
+  UnreadCountResponse,
 } from "@/types";
 
 export class ApiError extends Error {
@@ -493,6 +498,53 @@ export const api = {
     }): Promise<ContentReport> {
       return request<ContentReport>("reports", {
         method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+  },
+
+  // Notifications & Activity Center APIs
+  notifications: {
+    async list(params?: {
+      skip?: number;
+      limit?: number;
+      is_read?: boolean;
+      type?: string;
+    }): Promise<NotificationListResponse> {
+      const q = new URLSearchParams();
+      if (params?.skip !== undefined) q.set("skip", String(params.skip));
+      if (params?.limit !== undefined) q.set("limit", String(params.limit));
+      if (params?.is_read !== undefined) q.set("is_read", String(params.is_read));
+      if (params?.type) q.set("type", params.type);
+      const query = q.toString() ? `?${q.toString()}` : "";
+      return request<NotificationListResponse>(`notifications${query}`);
+    },
+
+    async getUnreadCount(): Promise<UnreadCountResponse> {
+      return request<UnreadCountResponse>("notifications/unread-count");
+    },
+
+    async markAsRead(notificationId: string): Promise<NotificationItem> {
+      return request<NotificationItem>(`notifications/${notificationId}/read`, {
+        method: "PATCH",
+      });
+    },
+
+    async markAllAsRead(): Promise<{ marked_count: number }> {
+      return request<{ marked_count: number }>("notifications/read-all", {
+        method: "POST",
+      });
+    },
+
+    async getPreferences(): Promise<NotificationPreferences> {
+      return request<NotificationPreferences>("notifications/preferences");
+    },
+
+    async updatePreferences(
+      data: NotificationPreferencesUpdate
+    ): Promise<NotificationPreferences> {
+      return request<NotificationPreferences>("notifications/preferences", {
+        method: "PUT",
         body: JSON.stringify(data),
       });
     },

@@ -140,6 +140,23 @@ class CreatorStudioService:
             )
 
         updated_track = await self.studio_repo.set_publishing(user_id, track_id, is_published)
+
+        if is_published:
+            try:
+                from app.schemas.notification import NotificationType
+                from app.services.notification_service import NotificationService
+                notif_service = NotificationService()
+                await notif_service.notify_user(
+                    user_id=user_id,
+                    notification_type=NotificationType.TRACK_PUBLISHED.value,
+                    title="Track Published!",
+                    body=f"Your track '{updated_track.title}' is now live on Hums.",
+                    data={"track_id": str(updated_track.id), "title": updated_track.title},
+                    idempotency_key=f"track_pub_{updated_track.id}",
+                )
+            except Exception as notif_err:
+                logger.warning(f"Could not dispatch notification for track {track_id}: {notif_err}")
+
         return CreatorTrackItem.model_validate(updated_track)
 
     async def upload_artwork(

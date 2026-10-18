@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { NotificationBell } from "@/components/shared/notification-bell";
 import { api } from "@/lib/api/client";
 import { User } from "@/types";
 
@@ -39,6 +40,8 @@ export function Navbar({ user, title }: NavbarProps) {
       </div>
 
       <div className="flex items-center gap-4">
+        {user && <NotificationBell user={user} />}
+
         {user && (
           <div className="flex items-center gap-3">
             <div className="text-right">

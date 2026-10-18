@@ -222,6 +222,22 @@ class AdminService:
             reason=review_notes,
             ip_address=ip_address,
         )
+
+        try:
+            from app.schemas.notification import NotificationType
+            from app.services.notification_service import NotificationService
+            notif_service = NotificationService()
+            await notif_service.notify_user(
+                user_id=app.user_id,
+                notification_type=NotificationType.CREATOR_APPLICATION.value,
+                title=f"Creator Application {status.capitalize()}",
+                body=f"Your creator application has been {status.lower()}{f': {review_notes}' if review_notes else '.'}",
+                data={"application_id": str(app.id), "status": status, "review_notes": review_notes},
+                idempotency_key=f"creator_app_{app.id}_{status}",
+            )
+        except Exception as notif_err:
+            logger.warning(f"Could not dispatch notification for application {app_id}: {notif_err}")
+
         return app
 
     async def list_tracks(
@@ -281,6 +297,22 @@ class AdminService:
             reason=reason,
             ip_address=ip_address,
         )
+
+        try:
+            from app.schemas.notification import NotificationType
+            from app.services.notification_service import NotificationService
+            notif_service = NotificationService()
+            await notif_service.notify_user(
+                user_id=track.owner_id,
+                notification_type=NotificationType.TRACK_MODERATED.value,
+                title=f"Track Moderation: {track.title}",
+                body=f"Your track '{track.title}' status was updated to {status.lower()}{f': {reason}' if reason else '.'}",
+                data={"track_id": str(track.id), "status": status, "reason": reason},
+                idempotency_key=f"track_mod_{track.id}_{status}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
+            )
+        except Exception as notif_err:
+            logger.warning(f"Could not dispatch notification for track {track_id}: {notif_err}")
+
         return await self.get_track_detail(track_id)
 
     async def retry_track_processing(

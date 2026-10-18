@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   Activity,
   BarChart3,
+  Bell,
   CheckCircle,
   FileText,
   Headphones,
@@ -75,6 +76,11 @@ export function Sidebar({ role, experience }: SidebarProps) {
       href: "/admin/audit-logs",
       icon: <FileText className="h-4 w-4" />,
     },
+    {
+      title: "Notifications",
+      href: "/admin/notifications",
+      icon: <Bell className="h-4 w-4" />,
+    },
   ];
 
   const studioNavItems: NavItem[] = [
@@ -102,6 +108,11 @@ export function Sidebar({ role, experience }: SidebarProps) {
       title: "Artist Profile",
       href: "/studio/profile",
       icon: <Headphones className="h-4 w-4" />,
+    },
+    {
+      title: "Notifications",
+      href: "/studio/notifications",
+      icon: <Bell className="h-4 w-4" />,
     },
   ];
 

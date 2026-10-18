@@ -341,3 +341,55 @@ export interface CreatorStudioProfile {
   followers_count: number;
   created_at: string;
 }
+
+// Notification & Activity Center Types
+export type NotificationType =
+  | "NEW_RELEASE"
+  | "PLAYLIST_UPDATE"
+  | "UPLOAD_COMPLETE"
+  | "TRANSCRIPTION_COMPLETE"
+  | "RECOMMENDATION_READY"
+  | "SYSTEM"
+  | "TRACK_MODERATED"
+  | "TRACK_PUBLISHED"
+  | "TRACK_PROCESSING_FAILED"
+  | "CREATOR_APPLICATION";
+
+export interface NotificationItem {
+  id: string;
+  type: NotificationType | string;
+  title: string;
+  body: string;
+  data?: Record<string, unknown> | null;
+  is_read: boolean;
+  read_at?: string | null;
+  created_at: string;
+}
+
+export interface NotificationListResponse {
+  items: NotificationItem[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
+export interface UnreadCountResponse {
+  unread_count: number;
+}
+
+export interface NotificationPreferences {
+  push_enabled: boolean;
+  new_releases_enabled: boolean;
+  playlist_updates_enabled: boolean;
+  recommendations_enabled: boolean;
+  processing_updates_enabled: boolean;
+}
+
+export interface NotificationPreferencesUpdate {
+  push_enabled?: boolean;
+  new_releases_enabled?: boolean;
+  playlist_updates_enabled?: boolean;
+  recommendations_enabled?: boolean;
+  processing_updates_enabled?: boolean;
+}
+
