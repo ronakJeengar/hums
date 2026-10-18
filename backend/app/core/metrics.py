@@ -148,6 +148,25 @@ class MetricsRegistry:
         self.playback_errors_total = ThreadSafeCounter()
         self.client_runtime_errors_total = ThreadSafeCounter()
 
+        # 9. Playback Quality & Data Saver Metrics
+        self.playback_quality_requested_total = ThreadSafeCounter()
+        self.playback_quality_selected_total = ThreadSafeCounter()
+        self.playback_quality_fallback_total = ThreadSafeCounter()
+        self.download_quality_selected_total = ThreadSafeCounter()
+        self.data_saver_enabled_total = ThreadSafeCounter()
+
+        # 10. Subscription & Premium Entitlement Metrics
+        self.subscription_verifications_total = ThreadSafeCounter()
+        self.subscription_provider_duration_seconds = ThreadSafeHistogram()
+        self.subscription_status_transitions_total = ThreadSafeCounter()
+        self.entitlement_grants_total = ThreadSafeCounter()
+        self.entitlement_revocations_total = ThreadSafeCounter()
+        self.entitlement_denials_total = ThreadSafeCounter()
+        self.subscription_webhooks_total = ThreadSafeCounter()
+        self.subscription_webhook_duplicates_total = ThreadSafeCounter()
+        self.subscription_restores_total = ThreadSafeCounter()
+
+
     def record_http_request(
         self,
         method: str,
@@ -223,6 +242,32 @@ class MetricsRegistry:
         self.playback_events_total.inc(event_type=event_type, platform=platform)
         if error_category:
             self.playback_errors_total.inc(category=error_category, platform=platform)
+
+    def record_playback_quality(self, requested: str, selected: str, is_fallback: bool = False) -> None:
+        self.playback_quality_requested_total.inc(quality=requested)
+        self.playback_quality_selected_total.inc(quality=selected)
+        if is_fallback:
+            self.playback_quality_fallback_total.inc(requested=requested, selected=selected)
+
+    def record_download_quality(self, quality: str) -> None:
+        self.download_quality_selected_total.inc(quality=quality)
+
+    def record_subscription_verification(self, provider: str, status: str, duration_seconds: float) -> None:
+        self.subscription_verifications_total.inc(provider=provider.lower(), status=status.upper())
+        self.subscription_provider_duration_seconds.observe(duration_seconds, provider=provider.lower())
+
+    def record_entitlement_denial(self, entitlement_code: str) -> None:
+        self.entitlement_denials_total.inc(entitlement=entitlement_code)
+
+    def record_subscription_webhook(self, provider: str, status: str) -> None:
+        self.subscription_webhooks_total.inc(provider=provider.lower(), status=status.upper())
+
+    def record_subscription_webhook_duplicate(self, provider: str) -> None:
+        self.subscription_webhook_duplicates_total.inc(provider=provider.lower())
+
+    def record_subscription_restore(self, provider: str, outcome: str) -> None:
+        self.subscription_restores_total.inc(provider=provider.lower(), outcome=outcome)
+
 
     def generate_prometheus_metrics(self) -> str:
         """Renders all metrics in standard Prometheus exposition text format."""
@@ -405,6 +450,15 @@ class MetricsRegistry:
         self.playback_events_total.reset()
         self.playback_errors_total.reset()
         self.client_runtime_errors_total.reset()
+        self.subscription_verifications_total.reset()
+        self.subscription_provider_duration_seconds.reset()
+        self.subscription_status_transitions_total.reset()
+        self.entitlement_grants_total.reset()
+        self.entitlement_revocations_total.reset()
+        self.entitlement_denials_total.reset()
+        self.subscription_webhooks_total.reset()
+        self.subscription_webhook_duplicates_total.reset()
+        self.subscription_restores_total.reset()
 
 
 # Global singleton metrics registry

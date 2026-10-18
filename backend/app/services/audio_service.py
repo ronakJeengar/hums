@@ -2,11 +2,11 @@ import logging
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 from app.core.config import get_settings
 from app.core.errors import AppException, BadRequestError, ForbiddenError, NotFoundError
 from app.core.metrics import metrics_registry
-from app.db.models.audio import AudioFile, ProcessingJob, Track
+from app.db.models.audio import AudioFile, AudioRendition, ProcessingJob, Track
 from app.db.models.user import User
 from app.repositories.audio_repository import (
     AudioFileRepository,
@@ -15,6 +15,7 @@ from app.repositories.audio_repository import (
 )
 from app.schemas.audio import (
     AudioPlaybackSourceResponse,
+    AudioRenditionResponse,
     TrackDownloadResponse,
     TrackPlaybackResponse,
     TrackStatusResponse,
@@ -125,11 +126,13 @@ class AudioService:
         audio_file_repo: AudioFileRepository,
         processing_job_repo: ProcessingJobRepository,
         storage_service: BaseStorageService,
+        entitlement_service: Optional[Any] = None,
     ):
         self.track_repo = track_repo
         self.audio_file_repo = audio_file_repo
         self.processing_job_repo = processing_job_repo
         self.storage_service = storage_service
+        self.entitlement_service = entitlement_service
 
     async def upload_audio(
         self,
@@ -303,18 +306,108 @@ class AudioService:
         if not track.renditions and not track.audio_files:
             raise NotFoundError("No audio source available for this track.")
 
-        # Renditions are ordered by bitrate_kbps DESC in model
-        primary_rendition = track.renditions[0] if track.renditions else None
+    @staticmethod
+    def get_rendition_quality_label(bitrate_kbps: int) -> str:
+        """Classifies a bitrate into standard quality tier."""
+        if bitrate_kbps >= 160:
+            return "HIGH"
+        elif bitrate_kbps >= 96:
+            return "MEDIUM"
+        else:
+            return "LOW"
 
-        if primary_rendition:
-            audio_url = await self.storage_service.get_download_url(primary_rendition.storage_key)
+    @staticmethod
+    def resolve_rendition(
+        renditions: List[AudioRendition],
+        requested_quality: Optional[str] = None,
+    ) -> Tuple[Optional[AudioRendition], str, bool]:
+        """
+        Deterministically resolves the most appropriate audio rendition based on requested quality tier.
+
+        Returns:
+            Tuple of (selected_rendition, actual_quality_tier, is_fallback)
+        """
+        if not renditions:
+            return None, "LOW", False
+
+        sorted_renditions = sorted(renditions, key=lambda r: r.bitrate_kbps, reverse=True)
+        req = (requested_quality or "AUTO").strip().upper()
+
+        if req == "AUTO":
+            best = sorted_renditions[0]
+            label = AudioService.get_rendition_quality_label(best.bitrate_kbps)
+            return best, label, False
+
+        target_candidates = [
+            r for r in sorted_renditions
+            if AudioService.get_rendition_quality_label(r.bitrate_kbps) == req
+        ]
+        if target_candidates:
+            return target_candidates[0], req, False
+
+        # Fallback to closest available rendition
+        target_bitrates = {"HIGH": 192, "MEDIUM": 128, "LOW": 64}
+        target_kbps = target_bitrates.get(req, 128)
+        fallback = min(sorted_renditions, key=lambda r: abs(r.bitrate_kbps - target_kbps))
+        fallback_label = AudioService.get_rendition_quality_label(fallback.bitrate_kbps)
+        return fallback, fallback_label, True
+
+    async def get_track_playback(
+        self,
+        track_id: uuid.UUID,
+        user_id: uuid.UUID,
+        quality: Optional[str] = None,
+    ) -> TrackPlaybackResponse:
+        """
+        Retrieves streaming playback source at the requested audio quality tier,
+        falling back deterministically if the requested rendition is absent.
+        """
+        track = await self.track_repo.get_by_id_with_relations(track_id)
+        if not track:
+            raise NotFoundError("Track not found", details={"track_id": str(track_id)})
+        if track.status != "READY":
+            raise AppException(
+                f"Track is not ready for playback (current status: {track.status})",
+                code="TRACK_NOT_READY",
+                status_code=409,
+            )
+
+        if not track.renditions and not track.audio_files:
+            raise NotFoundError("No audio source available for this track.")
+
+        selected_rendition, resolved_quality, is_fallback = self.resolve_rendition(
+            track.renditions, requested_quality=quality
+        )
+
+        # Enforce server-side entitlement check for HIGH (192 kbps) audio quality
+        if resolved_quality == "HIGH" and track.owner_id != user_id and self.entitlement_service:
+            has_prem = await self.entitlement_service.has_entitlement(
+                user_id, "PREMIUM_AUDIO_QUALITY"
+            )
+            if not has_prem:
+                # Deterministic fallback to standard MEDIUM tier for Free listeners
+                selected_rendition, resolved_quality, _ = self.resolve_rendition(
+                    track.renditions, requested_quality="MEDIUM"
+                )
+                is_fallback = True
+
+        req_label = (quality or "AUTO").strip().upper()
+        metrics_registry.record_playback_quality(
+            requested=req_label,
+            selected=resolved_quality,
+            is_fallback=is_fallback,
+        )
+
+        if selected_rendition:
+            audio_url = await self.storage_service.get_download_url(selected_rendition.storage_key)
             source = AudioPlaybackSourceResponse(
                 url=audio_url,
-                format=primary_rendition.format,
-                codec=primary_rendition.codec,
-                bitrate_kbps=primary_rendition.bitrate_kbps,
-                duration_seconds=primary_rendition.duration_seconds or track.duration_seconds,
-                file_size_bytes=primary_rendition.file_size_bytes,
+                format=selected_rendition.format,
+                codec=selected_rendition.codec,
+                bitrate_kbps=selected_rendition.bitrate_kbps,
+                duration_seconds=selected_rendition.duration_seconds or track.duration_seconds,
+                file_size_bytes=selected_rendition.file_size_bytes,
+                quality=resolved_quality,
             )
         else:
             orig_file = track.audio_files[0]
@@ -326,9 +419,13 @@ class AudioService:
                 bitrate_kbps=128,
                 duration_seconds=track.duration_seconds,
                 file_size_bytes=orig_file.file_size_bytes,
+                quality="MEDIUM",
             )
 
         waveform_samples = await self.get_track_waveform(track_id, user_id)
+        available_renditions = [
+            AudioRenditionResponse.model_validate(r) for r in (track.renditions or [])
+        ]
 
         return TrackPlaybackResponse(
             track_id=track.id,
@@ -340,6 +437,7 @@ class AudioService:
             status=track.status,
             audio=source,
             waveform_samples=waveform_samples,
+            available_renditions=available_renditions,
         )
 
     async def can_download_track(
@@ -365,9 +463,16 @@ class AudioService:
         if track.status != "READY":
             return False, f"Track is not ready for download (current status: {track.status}).", track
 
-        # Access control: User can only download accessible tracks (owner or entitled)
+        # Access control: User can only download accessible tracks (owner or entitled with OFFLINE_DOWNLOADS)
         if track.owner_id != user.id:
-            return False, "You do not have permission to download this private track.", track
+            if self.entitlement_service:
+                has_offline = await self.entitlement_service.has_entitlement(
+                    user.id, "OFFLINE_DOWNLOADS"
+                )
+                if not has_offline:
+                    return False, "Offline downloads require a Hums Premium subscription.", track
+            else:
+                return False, "You do not have permission to download this private track.", track
 
         if not track.renditions and not track.audio_files:
             return False, "No audio media files available for this track.", track
@@ -375,10 +480,14 @@ class AudioService:
         return True, None, track
 
     async def get_track_download(
-        self, track_id: uuid.UUID, user: User
+        self,
+        track_id: uuid.UUID,
+        user: User,
+        quality: Optional[str] = None,
     ) -> TrackDownloadResponse:
         """
-        Validates download eligibility and generates a short-lived authorized download resource.
+        Validates download eligibility and generates a short-lived authorized download resource
+        tailored to the requested quality tier (e.g. LOW, MEDIUM, HIGH).
         """
         can_dl, reason, track = await self.can_download_track(track_id, user)
         if not can_dl or not track:
@@ -393,20 +502,31 @@ class AudioService:
             else:
                 raise ForbiddenError(reason or "Track is not eligible for download.")
 
-        # Select highest quality primary rendition (renditions are pre-sorted by bitrate_kbps DESC)
-        primary_rendition = track.renditions[0] if track.renditions else None
+        selected_rendition, resolved_quality, _ = self.resolve_rendition(
+            track.renditions, requested_quality=quality
+        )
+
+        # Enforce PREMIUM_AUDIO_QUALITY for HIGH tier offline downloads
+        if resolved_quality == "HIGH" and track.owner_id != user.id and self.entitlement_service:
+            has_prem = await self.entitlement_service.has_entitlement(
+                user.id, "PREMIUM_AUDIO_QUALITY"
+            )
+            if not has_prem:
+                selected_rendition, resolved_quality, _ = self.resolve_rendition(
+                    track.renditions, requested_quality="MEDIUM"
+                )
         expires_in = 900  # 15 minutes short-lived expiry
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
 
-        if primary_rendition:
+        if selected_rendition:
             download_url = await self.storage_service.get_presigned_download_url(
-                primary_rendition.storage_key, expires_in=expires_in
+                selected_rendition.storage_key, expires_in=expires_in
             )
-            source_format = primary_rendition.format
-            source_codec = primary_rendition.codec
-            source_bitrate = primary_rendition.bitrate_kbps
-            source_file_size = primary_rendition.file_size_bytes
-            source_duration = primary_rendition.duration_seconds or track.duration_seconds
+            source_format = selected_rendition.format
+            source_codec = selected_rendition.codec
+            source_bitrate = selected_rendition.bitrate_kbps
+            source_file_size = selected_rendition.file_size_bytes
+            source_duration = selected_rendition.duration_seconds or track.duration_seconds
         else:
             orig_file = track.audio_files[0]
             download_url = await self.storage_service.get_presigned_download_url(
@@ -417,11 +537,13 @@ class AudioService:
             source_bitrate = 128
             source_file_size = orig_file.file_size_bytes
             source_duration = track.duration_seconds
+            resolved_quality = "MEDIUM"
 
         waveform_samples = await self.get_track_waveform(track_id, user.id)
 
-        # Track observability metric
+        # Track observability metrics
         metrics_registry.playback_events_total.inc(event_type="download_authorized", platform="backend")
+        metrics_registry.record_download_quality(resolved_quality)
 
         return TrackDownloadResponse(
             track_id=track.id,
@@ -437,8 +559,10 @@ class AudioService:
             file_size_bytes=source_file_size,
             download_url=download_url,
             expires_at=expires_at,
+            quality=resolved_quality,
             waveform_samples=waveform_samples,
         )
+
 
 
 

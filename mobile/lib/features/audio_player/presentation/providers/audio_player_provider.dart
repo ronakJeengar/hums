@@ -13,6 +13,9 @@ import 'package:hums_mobile/features/downloads/presentation/providers/download_m
 import 'package:hums_mobile/features/history/domain/entities/playback_event_entity.dart';
 import 'package:hums_mobile/features/history/domain/repositories/history_repository.dart';
 import 'package:hums_mobile/features/history/presentation/providers/history_provider.dart';
+import 'package:hums_mobile/features/playback_settings/domain/entities/playback_quality_resolver.dart';
+import 'package:hums_mobile/features/playback_settings/domain/entities/playback_settings_entity.dart';
+import 'package:hums_mobile/features/playback_settings/presentation/providers/playback_settings_provider.dart';
 
 final audioPlayerRemoteDataSourceProvider =
     Provider<AudioPlayerRemoteDataSource>((ref) {
@@ -39,12 +42,23 @@ final audioPlayerNotifierProvider =
     StateNotifierProvider<AudioPlayerNotifier, PlayerState>((ref) {
   final repository = ref.watch(audioPlayerRepositoryProvider);
   final historyRepo = ref.watch(historyRepositoryProvider);
-  return AudioPlayerNotifier(repository, historyRepo);
+  final qualityResolver = ref.watch(playbackQualityResolverProvider);
+
+  return AudioPlayerNotifier(
+    repository,
+    historyRepo,
+    qualityResolver,
+    () => ref.read(playbackSettingsNotifierProvider),
+    () => ref.read(networkTypeProvider),
+  );
 });
 
 class AudioPlayerNotifier extends StateNotifier<PlayerState> {
   final AudioPlayerRepository _repository;
   final HistoryRepository? _historyRepository;
+  final PlaybackQualityResolver _qualityResolver;
+  final PlaybackSettingsEntity Function()? _getSettings;
+  final NetworkType Function()? _getNetworkType;
 
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<Duration?>? _durationSub;
@@ -59,9 +73,16 @@ class AudioPlayerNotifier extends StateNotifier<PlayerState> {
   AudioPlayerNotifier(
     this._repository, [
     this._historyRepository,
-  ]) : super(const PlayerState()) {
+    PlaybackQualityResolver? qualityResolver,
+    PlaybackSettingsEntity Function()? getSettings,
+    NetworkType Function()? getNetworkType,
+  ])  : _qualityResolver = qualityResolver ?? const PlaybackQualityResolver(),
+        _getSettings = getSettings,
+        _getNetworkType = getNetworkType,
+        super(const PlayerState()) {
     _initStreams();
   }
+
 
   void _initStreams() {
     _positionSub = _repository.positionStream.listen((position) {
@@ -187,9 +208,9 @@ class AudioPlayerNotifier extends StateNotifier<PlayerState> {
     } catch (_) {}
   }
 
-  Future<void> playTrack(String trackId) async {
-    // If the same track is already loaded
-    if (state.track?.trackId == trackId) {
+  Future<void> playTrack(String trackId, {AudioQuality? sessionQuality}) async {
+    // If the same track is already loaded and no manual quality override requested
+    if (state.track?.trackId == trackId && sessionQuality == null) {
       if (state.isPaused || state.isReady) {
         await resume();
         return;
@@ -209,23 +230,45 @@ class AudioPlayerNotifier extends StateNotifier<PlayerState> {
     }
     _stopCheckpointTimer();
 
+    // 1. Resolve target streaming quality tier via single decision engine
+    final currentSettings =
+        _getSettings?.call() ?? const PlaybackSettingsEntity();
+    final currentNetwork = _getNetworkType?.call() ?? NetworkType.wifi;
+    final targetQuality = _qualityResolver.resolveStreamingQuality(
+      sessionOverride: sessionQuality,
+      settings: currentSettings,
+      networkType: currentNetwork,
+    );
+
     state = state.copyWith(
       status: PlayerStatus.loading,
       error: null,
       position: Duration.zero,
       duration: Duration.zero,
       bufferedPosition: Duration.zero,
+      selectedQuality: (sessionQuality ?? targetQuality).name.toUpperCase(),
+      isManualQuality:
+          sessionQuality != null && sessionQuality != AudioQuality.auto,
     );
 
     try {
-      final trackPlayback = await _repository.getPlaybackSource(trackId);
+      final trackPlayback = await _repository.getPlaybackSource(
+        trackId,
+        quality: targetQuality.toApiValue(),
+      );
       final initialDuration = trackPlayback.durationSeconds != null
           ? Duration(seconds: trackPlayback.durationSeconds!)
           : Duration.zero;
 
+      final actualQuality = trackPlayback.audio.quality ??
+          PlaybackQualityResolver.mapBitrateToQualityTier(
+              trackPlayback.audio.bitrateKbps);
+
       state = state.copyWith(
         track: trackPlayback,
         duration: initialDuration,
+        activeRenditionQuality: actualQuality,
+        activeBitrateKbps: trackPlayback.audio.bitrateKbps,
       );
 
       // Check saved progress for cross-device resume & replay logic
@@ -278,6 +321,69 @@ class AudioPlayerNotifier extends StateNotifier<PlayerState> {
       );
     }
   }
+
+  /// Changes audio playback quality on the fly, seamlessly preserving position without restarting.
+  Future<void> changeQuality(AudioQuality newQuality) async {
+    if (state.track == null) return;
+    final trackId = state.track!.trackId;
+    final wasPlaying = state.isPlaying;
+    final currentPos = state.position;
+
+    final targetApiValue = newQuality.toApiValue();
+    if (state.selectedQuality == targetApiValue && !state.isError) {
+      return;
+    }
+
+    state = state.copyWith(
+      selectedQuality: targetApiValue,
+      isManualQuality: newQuality != AudioQuality.auto,
+      status: PlayerStatus.buffering,
+    );
+
+    try {
+      final currentSettings =
+          _getSettings?.call() ?? const PlaybackSettingsEntity();
+      final currentNetwork = _getNetworkType?.call() ?? NetworkType.wifi;
+      final targetQuality = _qualityResolver.resolveStreamingQuality(
+        sessionOverride: newQuality,
+        settings: currentSettings,
+        networkType: currentNetwork,
+      );
+
+      final newSource = await _repository.getPlaybackSource(
+        trackId,
+        quality: targetQuality.toApiValue(),
+      );
+
+      await _repository.loadTrack(newSource);
+      if (currentPos > Duration.zero) {
+        await _repository.seek(currentPos);
+      }
+
+      final actualQuality = newSource.audio.quality ??
+          PlaybackQualityResolver.mapBitrateToQualityTier(
+              newSource.audio.bitrateKbps);
+
+      state = state.copyWith(
+        track: newSource,
+        position: currentPos,
+        activeRenditionQuality: actualQuality,
+        activeBitrateKbps: newSource.audio.bitrateKbps,
+        status: wasPlaying ? PlayerStatus.playing : PlayerStatus.paused,
+      );
+
+      if (wasPlaying) {
+        await _repository.play();
+        _startCheckpointTimer();
+      }
+    } catch (e) {
+      // Non-fatal: if switch failed, return to previous player state
+      state = state.copyWith(
+        status: wasPlaying ? PlayerStatus.playing : PlayerStatus.paused,
+      );
+    }
+  }
+
 
   Future<void> togglePlayPause() async {
     if (state.isPlaying) {

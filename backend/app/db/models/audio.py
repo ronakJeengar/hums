@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     DateTime,
     ForeignKey,
     Index,
@@ -72,6 +73,17 @@ class Track(BaseDBModel):
     waveform_key: Mapped[Optional[str]] = mapped_column(
         String(500),
         nullable=True,
+    )
+    cover_image_key: Mapped[Optional[str]] = mapped_column(
+        String(500),
+        nullable=True,
+    )
+    is_published: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        server_default=text("true"),
+        nullable=False,
+        index=True,
     )
     status: Mapped[str] = mapped_column(
         String(50),

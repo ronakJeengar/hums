@@ -155,15 +155,20 @@ class NotificationService:
         skip: int = 0,
         limit: int = 50,
         is_read: Optional[bool] = None,
+        notification_type: Optional[str] = None,
     ) -> Tuple[List[Notification], int]:
         """Lists paginated notifications for the user."""
         if self._session:
             repo = NotificationRepository(self._session)
-            return await repo.list_for_user(user_id, skip=skip, limit=limit, is_read=is_read)
+            return await repo.list_for_user(
+                user_id, skip=skip, limit=limit, is_read=is_read, notification_type=notification_type
+            )
 
         async with AsyncSessionLocal() as session:
             repo = NotificationRepository(session)
-            return await repo.list_for_user(user_id, skip=skip, limit=limit, is_read=is_read)
+            return await repo.list_for_user(
+                user_id, skip=skip, limit=limit, is_read=is_read, notification_type=notification_type
+            )
 
     async def get_unread_count(self, user_id: uuid.UUID) -> int:
         """Returns the number of unread notifications for a user."""
@@ -224,6 +229,7 @@ class NotificationService:
         elif type_lower in (
             NotificationType.UPLOAD_COMPLETE.value,
             NotificationType.TRANSCRIPTION_COMPLETE.value,
+            NotificationType.TRACK_PROCESSING_FAILED.value,
         ):
             return pref.processing_updates_enabled
         elif type_lower == NotificationType.RECOMMENDATION_READY.value:

@@ -113,20 +113,21 @@ class TestSearchApi:
 
     async def test_case_insensitivity_and_partial_substring(self, async_client: AsyncClient, search_user1):
         """Search is case-insensitive and matches mid-string substrings."""
+        uid = uuid.uuid4().hex[:6]
         async with AsyncSessionLocal() as session:
             track_repo = TrackRepository(session)
             t = await track_repo.create(
                 id=uuid.uuid4(),
                 owner_id=search_user1["id"],
-                title="Sublime Morning Waves",
-                artist_name="Ocean Echoes",
+                title=f"Sublime Morning Waves {uid}",
+                artist_name=f"Ocean Echoes {uid}",
                 album_name="Ambient Horizons",
                 genre="Ambient",
                 status="READY",
             )
             await session.commit()
 
-        for term in ["sublime", "SUBLIME", "Morning", "WAVES", "Echoes"]:
+        for term in ["sublime", "SUBLIME", "Morning", "WAVES", f"Echoes {uid}"]:
             res = await async_client.get(f"/api/v1/search?q={term}&type=tracks")
             assert res.status_code == 200
             data = res.json()["data"]

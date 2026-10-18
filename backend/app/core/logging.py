@@ -123,3 +123,8 @@ def setup_logging(
     logger.propagate = False
 
     return logger
+
+
+def get_logger(name: str) -> logging.Logger:
+    """Returns a configured logger instance."""
+    return logging.getLogger(name)

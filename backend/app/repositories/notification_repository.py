@@ -208,11 +208,14 @@ class NotificationRepository(BaseRepository[Notification]):
         skip: int = 0,
         limit: int = 50,
         is_read: Optional[bool] = None,
+        notification_type: Optional[str] = None,
     ) -> Tuple[List[Notification], int]:
         """Retrieves paginated notifications and total count for a user."""
         base_where = [Notification.user_id == user_id]
         if is_read is not None:
             base_where.append(Notification.is_read == is_read)
+        if notification_type:
+            base_where.append(Notification.type == notification_type)
 
         count_stmt = select(func.count(Notification.id)).where(*base_where)
         count_res = await self.session.execute(count_stmt)

@@ -169,15 +169,16 @@ async def get_track_waveform(
     response_model=ApiResponse[TrackPlaybackResponse],
     status_code=status.HTTP_200_OK,
     summary="Get track playback source",
-    description="Returns secure streaming audio URL, metadata, and waveform for a READY track.",
+    description="Returns secure streaming audio URL, metadata, available renditions, and waveform for a READY track at the requested quality tier.",
 )
 async def get_track_playback(
     track_id: uuid.UUID,
+    quality: Optional[str] = Query(None, description="Requested audio quality: AUTO, LOW, MEDIUM, HIGH"),
     current_user: User = Depends(get_current_user),
     audio_service: AudioService = Depends(get_audio_service),
 ) -> ApiResponse[TrackPlaybackResponse]:
     playback_data = await audio_service.get_track_playback(
-        track_id=track_id, user_id=current_user.id
+        track_id=track_id, user_id=current_user.id, quality=quality
     )
     return ApiResponse(data=playback_data)
 
@@ -187,16 +188,17 @@ async def get_track_playback(
     response_model=ApiResponse[TrackDownloadResponse],
     status_code=status.HTTP_200_OK,
     summary="Get authorized track download resource",
-    description="Validates track download eligibility and returns a short-lived authorized download URL with audio metadata.",
+    description="Validates track download eligibility and returns a short-lived authorized download URL for the requested quality tier with audio metadata.",
     dependencies=[Depends(RateLimiter(requests=30, window_seconds=60, action="audio_download"))],
 )
 async def get_track_download(
     track_id: uuid.UUID,
+    quality: Optional[str] = Query(None, description="Requested download audio quality: LOW, MEDIUM, HIGH"),
     current_user: User = Depends(get_current_user),
     audio_service: AudioService = Depends(get_audio_service),
 ) -> ApiResponse[TrackDownloadResponse]:
     download_data = await audio_service.get_track_download(
-        track_id=track_id, user=current_user
+        track_id=track_id, user=current_user, quality=quality
     )
     return ApiResponse(data=download_data)
 

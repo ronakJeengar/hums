@@ -6,6 +6,8 @@ import 'package:hums_mobile/core/widgets/app_icon.dart';
 import 'package:hums_mobile/features/audio_player/presentation/providers/audio_player_provider.dart';
 import 'package:hums_mobile/features/downloads/presentation/widgets/download_button.dart';
 import 'package:hums_mobile/features/library/presentation/widgets/like_button.dart';
+import 'package:hums_mobile/features/audio_player/presentation/widgets/audio_quality_bottom_sheet.dart';
+import 'package:hums_mobile/features/audio_player/presentation/states/player_state.dart';
 
 class FullPlayerScreen extends ConsumerStatefulWidget {
   const FullPlayerScreen({super.key});
@@ -25,6 +27,16 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
       return '$hours:$minutes:$seconds';
     }
     return '$minutes:$seconds';
+  }
+
+  String _buildQualityText(dynamic track, PlayerState state) {
+    final format = track.audio.format.toUpperCase();
+    final bitrate = state.activeBitrateKbps ?? track.audio.bitrateKbps;
+    final qualityLabel = state.activeRenditionQuality ?? state.selectedQuality?.toUpperCase();
+    if (qualityLabel != null) {
+      return '$qualityLabel · $format $bitrate kbps';
+    }
+    return '$format · $bitrate kbps';
   }
 
   @override
@@ -119,6 +131,18 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
                                   durationSeconds: track.durationSeconds,
                                   size: 24,
                                   color: AppColors.textPrimary,
+                                ),
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.tune_rounded,
+                                    size: 22,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                  tooltip: 'Audio Quality',
+                                  onPressed: () =>
+                                      AudioQualityBottomSheet.show(context),
+                                  splashRadius: 24,
                                 ),
                               ],
                             ),
@@ -526,21 +550,50 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
               const Spacer(flex: 1),
 
               // Audio Quality Indicator
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceElevated,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Text(
-                  '${track.audio.format.toUpperCase()} · ${track.audio.bitrateKbps} kbps',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.8,
+              InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () => AudioQualityBottomSheet.show(context),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceElevated,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: playerState.selectedQuality != null
+                          ? AppColors.primary.withValues(alpha: 0.5)
+                          : AppColors.border,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.graphic_eq_rounded,
+                        size: 14,
+                        color: playerState.selectedQuality != null
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _buildQualityText(track, playerState),
+                        style: TextStyle(
+                          color: playerState.selectedQuality != null
+                              ? AppColors.primary
+                              : AppColors.textSecondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 14,
+                        color: AppColors.textTertiary,
+                      ),
+                    ],
                   ),
                 ),
               ),

@@ -152,13 +152,43 @@ def get_processing_job_repository(
     return ProcessingJobRepository(session)
 
 
+def get_subscription_repository(
+    session: AsyncSession = Depends(get_db),
+) -> "SubscriptionRepository":
+    from app.repositories.subscription_repository import SubscriptionRepository
+    return SubscriptionRepository(session)
+
+
+async def get_entitlement_service(
+    session: AsyncSession = Depends(get_db),
+    redis: aioredis.Redis = Depends(get_redis_client),
+) -> "EntitlementService":
+    from app.services.entitlement_service import EntitlementService
+    return EntitlementService(db_session=session, redis_client=redis)
+
+
+async def get_subscription_service(
+    session: AsyncSession = Depends(get_db),
+    redis: aioredis.Redis = Depends(get_redis_client),
+) -> "SubscriptionService":
+    from app.services.subscription_service import SubscriptionService
+    return SubscriptionService(db_session=session, redis_client=redis)
+
+
 def get_audio_service(
     track_repo: TrackRepository = Depends(get_track_repository),
     audio_file_repo: AudioFileRepository = Depends(get_audio_file_repository),
     processing_job_repo: ProcessingJobRepository = Depends(get_processing_job_repository),
     storage_service: BaseStorageService = Depends(get_storage_service),
+    entitlement_service: "EntitlementService" = Depends(get_entitlement_service),
 ) -> AudioService:
-    return AudioService(track_repo, audio_file_repo, processing_job_repo, storage_service)
+    return AudioService(
+        track_repo=track_repo,
+        audio_file_repo=audio_file_repo,
+        processing_job_repo=processing_job_repo,
+        storage_service=storage_service,
+        entitlement_service=entitlement_service,
+    )
 
 
 def get_playlist_repository(
@@ -349,4 +379,84 @@ async def get_optional_current_user(
         return user
     except Exception:
         return None
+
+
+async def get_playback_settings_service(
+    session: AsyncSession = Depends(get_db),
+) -> "PlaybackSettingsService":
+    from app.services.playback_settings_service import PlaybackSettingsService
+    return PlaybackSettingsService(session)
+
+
+def get_admin_repository(session: AsyncSession = Depends(get_db)) -> "AdminRepository":
+    from app.repositories.admin_repository import AdminRepository
+    return AdminRepository(session)
+
+
+def get_admin_service(
+    admin_repo: "AdminRepository" = Depends(get_admin_repository),
+) -> "AdminService":
+    from app.services.admin_service import AdminService
+    return AdminService(admin_repo)
+
+
+def get_creator_studio_repository(
+    session: AsyncSession = Depends(get_db),
+) -> "CreatorStudioRepository":
+    from app.repositories.creator_studio_repository import CreatorStudioRepository
+    return CreatorStudioRepository(session)
+
+
+def get_creator_studio_service(
+    studio_repo: "CreatorStudioRepository" = Depends(get_creator_studio_repository),
+) -> "CreatorStudioService":
+    from app.services.creator_studio_service import CreatorStudioService
+    return CreatorStudioService(studio_repo)
+
+
+async def require_admin_role(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Enforces that the authenticated user possesses administrator role."""
+    role = getattr(current_user, "role", "listener")
+    if role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator access required for this operation.",
+        )
+    return current_user
+
+
+async def require_moderator_or_admin_role(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Enforces that the authenticated user possesses moderator or administrator role."""
+    role = getattr(current_user, "role", "listener")
+    if role not in ("moderator", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Moderator or Administrator access required for this operation.",
+        )
+    return current_user
+
+
+async def require_creator_role(
+    current_user: User = Depends(get_current_user),
+    studio_repo: "CreatorStudioRepository" = Depends(get_creator_studio_repository),
+) -> User:
+    """Enforces that the authenticated user is an authorized creator or administrator."""
+    role = getattr(current_user, "role", "listener")
+    if role in ("creator", "admin"):
+        return current_user
+
+    # Also check if user has an existing Creator record
+    creator = await studio_repo.get_profile(current_user.id)
+    if creator:
+        return current_user
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Approved Creator access required for Creator Studio.",
+    )
+
 

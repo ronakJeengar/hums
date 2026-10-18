@@ -131,6 +131,7 @@ async def list_notifications(
     skip: int = Query(0, ge=0, description="Offset for pagination"),
     limit: int = Query(50, ge=1, le=100, description="Page limit"),
     is_read: Optional[bool] = Query(None, description="Filter by read status"),
+    notification_type: Optional[str] = Query(None, alias="type", description="Filter by notification type"),
     current_user: User = Depends(get_current_user),
     service: NotificationService = Depends(get_notification_service),
 ) -> ApiResponse[NotificationListResponse]:
@@ -139,6 +140,7 @@ async def list_notifications(
         skip=skip,
         limit=limit,
         is_read=is_read,
+        notification_type=notification_type,
     )
     res_items = [NotificationItemResponse.model_validate(item) for item in items]
     return ApiResponse(

@@ -56,6 +56,45 @@ from app.schemas.like import (
 from app.schemas.library import (
     LibrarySummaryResponse,
 )
+from app.schemas.subscription import (
+    SubscriptionPlanResponse,
+    UserSubscriptionResponse,
+    PurchaseVerificationRequest,
+    PurchaseVerificationResponse,
+    PurchaseRestoreRequest,
+    PurchaseRestoreResponse,
+    UserEntitlementsResponse,
+    WebhookEventResponse,
+)
+from app.schemas.admin import (
+    AdminDashboardStats,
+    AdminUserItem,
+    AdminUserDetail,
+    UpdateUserStatusRequest,
+    UpdateUserRoleRequest,
+    AdminCreatorItem,
+    VerifyCreatorRequest,
+    CreatorApplicationItem,
+    CreateCreatorApplicationRequest,
+    ReviewApplicationRequest,
+    AdminTrackItem,
+    AdminTrackDetail,
+    ModerateTrackRequest,
+    ContentReportItem,
+    CreateReportRequest,
+    ResolveReportRequest,
+    AdminAuditLogItem,
+    SystemHealthStatus,
+    ProcessingJobItem,
+)
+from app.schemas.creator_studio import (
+    CreatorTrackItem,
+    CreatorDashboardStats,
+    UpdateTrackRequest,
+    CreatorAnalyticsResponse,
+    CreatorStudioProfile,
+    UpdateCreatorProfileRequest,
+)
 
 __all__ = [
     "ApiResponse",
@@ -100,4 +139,12 @@ __all__ = [
     "LikedTrackItem",
     "LikedTracksListResponse",
     "LibrarySummaryResponse",
+    "SubscriptionPlanResponse",
+    "UserSubscriptionResponse",
+    "PurchaseVerificationRequest",
+    "PurchaseVerificationResponse",
+    "PurchaseRestoreRequest",
+    "PurchaseRestoreResponse",
+    "UserEntitlementsResponse",
+    "WebhookEventResponse",
 ]

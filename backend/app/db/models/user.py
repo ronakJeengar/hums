@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from app.db.models.recommendation import RecommendationSet
     from app.db.models.creator import Creator, CreatorFollower
     from app.db.models.like import UserTrackLike
+    from app.db.models.subscription import UserSubscription, UserEntitlementGrant
 
 
 class User(BaseDBModel):
@@ -56,9 +57,48 @@ class User(BaseDBModel):
         default=False,
         nullable=False,
     )
+    role: Mapped[str] = mapped_column(
+        String(50),
+        default="listener",
+        nullable=False,
+        index=True,  # listener, creator, moderator, admin
+    )
+    suspension_reason: Mapped[Optional[str]] = mapped_column(
+        String(500),
+        nullable=True,
+    )
+    suspended_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     last_login_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
+    )
+    preferred_streaming_quality: Mapped[str] = mapped_column(
+        String(20),
+        default="AUTO",
+        nullable=False,
+    )
+    preferred_mobile_quality: Mapped[str] = mapped_column(
+        String(20),
+        default="LOW",
+        nullable=False,
+    )
+    preferred_wifi_quality: Mapped[str] = mapped_column(
+        String(20),
+        default="HIGH",
+        nullable=False,
+    )
+    preferred_download_quality: Mapped[str] = mapped_column(
+        String(20),
+        default="HIGH",
+        nullable=False,
+    )
+    data_saver_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
     )
 
     # Relationships
@@ -118,6 +158,18 @@ class User(BaseDBModel):
         back_populates="user",
         cascade="all, delete-orphan",
         order_by="UserTrackLike.created_at.desc()",
+    )
+    subscriptions: Mapped[List["UserSubscription"]] = relationship(
+        "UserSubscription",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="UserSubscription.created_at.desc()",
+    )
+    entitlement_grants: Mapped[List["UserEntitlementGrant"]] = relationship(
+        "UserEntitlementGrant",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="UserEntitlementGrant.effective_start.desc()",
     )
 
     @property

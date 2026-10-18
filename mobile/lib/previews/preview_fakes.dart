@@ -7,6 +7,7 @@ import 'package:hums_mobile/features/audio_player/domain/entities/player_queue.d
 import 'package:hums_mobile/features/audio_player/domain/repositories/audio_player_repository.dart';
 import 'package:hums_mobile/features/audio_player/presentation/providers/audio_player_provider.dart';
 import 'package:hums_mobile/features/audio_player/presentation/states/player_state.dart';
+import 'package:hums_mobile/features/playback_settings/domain/entities/playback_settings_entity.dart';
 import 'package:hums_mobile/features/auth/domain/entities/auth_tokens_entity.dart';
 import 'package:hums_mobile/features/auth/domain/entities/user_entity.dart';
 import 'package:hums_mobile/features/auth/domain/repositories/auth_repository.dart';
@@ -122,7 +123,7 @@ class FakeAudioRepository implements AudioRepository {
 
 class FakeAudioPlayerRepository implements AudioPlayerRepository {
   @override
-  Future<TrackPlaybackEntity> getPlaybackSource(String trackId) async =>
+  Future<TrackPlaybackEntity> getPlaybackSource(String trackId, {String? quality}) async =>
       PreviewData.playbackReady;
 
   @override
@@ -295,7 +296,7 @@ class PreviewAudioPlayerNotifier extends AudioPlayerNotifier {
   }
 
   @override
-  Future<void> playTrack(String trackId) async {}
+  Future<void> playTrack(String trackId, {AudioQuality? sessionQuality}) async {}
 
   @override
   Future<void> playQueue(PlayerQueue queue, {int startIndex = 0}) async {}

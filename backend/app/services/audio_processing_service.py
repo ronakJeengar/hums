@@ -293,5 +293,30 @@ class AudioProcessingService:
                         error_message=error_message,
                     )
                 await session.commit()
+
+                # Dispatch failure notification to track owner
+                if track and track.owner_id:
+                    try:
+                        from app.schemas.notification import NotificationType
+                        from app.services.notification_service import NotificationService
+
+                        notif_service = NotificationService()
+                        await notif_service.notify_user(
+                            user_id=track.owner_id,
+                            notification_type=NotificationType.TRACK_PROCESSING_FAILED.value,
+                            title="Processing Failed",
+                            body=f'"{track.title}" failed processing: {error_message}',
+                            data={
+                                "type": "track",
+                                "track_id": str(track_id),
+                                "screen": "track_detail",
+                                "error": error_message,
+                            },
+                            idempotency_key=f"processing_failed_{track_id}",
+                        )
+                    except Exception as notif_exc:
+                        logger.warning(
+                            f"Could not dispatch failure notification for track {track_id}: {notif_exc}"
+                        )
         except Exception as db_exc:
             logger.error(f"Failed to record failure state in database for track {track_id}: {db_exc}")

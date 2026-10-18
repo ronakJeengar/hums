@@ -4,7 +4,7 @@ import 'package:hums_mobile/features/downloads/data/models/track_download_model.
 
 /// Remote data source contract for fetching download authorization.
 abstract class DownloadRemoteDataSource {
-  Future<TrackDownloadModel> getAuthorizedDownload(String trackId);
+  Future<TrackDownloadModel> getAuthorizedDownload(String trackId, {String? quality});
 }
 
 class DownloadRemoteDataSourceImpl implements DownloadRemoteDataSource {
@@ -13,9 +13,9 @@ class DownloadRemoteDataSourceImpl implements DownloadRemoteDataSource {
   DownloadRemoteDataSourceImpl(this._apiClient);
 
   @override
-  Future<TrackDownloadModel> getAuthorizedDownload(String trackId) async {
+  Future<TrackDownloadModel> getAuthorizedDownload(String trackId, {String? quality}) async {
     final response = await _apiClient.get(
-      ApiEndpoints.audioTrackDownload(trackId),
+      ApiEndpoints.audioTrackDownload(trackId, quality: quality),
     );
 
     final data = response.data as Map<String, dynamic>;
@@ -23,3 +23,4 @@ class DownloadRemoteDataSourceImpl implements DownloadRemoteDataSource {
     return TrackDownloadModel.fromJson(payload);
   }
 }
+

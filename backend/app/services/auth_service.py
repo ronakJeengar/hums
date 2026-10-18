@@ -271,7 +271,7 @@ class AuthService:
         user_agent: Optional[str] = None,
     ) -> TokenResponse:
         """Internal helper to create JWT access token and store hashed refresh token."""
-        access_token = create_access_token(subject=str(user.id))
+        access_token = create_access_token(subject=str(user.id), role=getattr(user, "role", "listener"))
         raw_refresh_token = create_refresh_token(subject=str(user.id))
 
         token_hash = hash_token_value(raw_refresh_token)

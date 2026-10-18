@@ -293,7 +293,7 @@ class CreatorRepository(BaseRepository[Creator]):
         Retrieves tracks associated with a creator.
         Matches by creator_id, creator user_id, or track artist_name.
         """
-        filters = [Track.status == "READY"]
+        filters = [Track.status == "READY", Track.is_published.is_(True)]
         or_conds = [Track.creator_id == creator.id]
         if creator.user_id:
             or_conds.append(Track.owner_id == creator.user_id)
@@ -323,7 +323,7 @@ class CreatorRepository(BaseRepository[Creator]):
 
     async def get_creator_track_count(self, creator: Creator) -> int:
         """Counts total READY tracks for a creator."""
-        filters = [Track.status == "READY"]
+        filters = [Track.status == "READY", Track.is_published.is_(True)]
         or_conds = [Track.creator_id == creator.id]
         if creator.user_id:
             or_conds.append(Track.owner_id == creator.user_id)
@@ -348,6 +348,7 @@ class CreatorRepository(BaseRepository[Creator]):
             )
             .where(
                 Track.status == "READY",
+                Track.is_published.is_(True),
                 func.lower(Track.artist_name) == creator_name.strip().lower(),
                 Track.album_name.isnot(None),
                 Track.album_name != "",

@@ -24,6 +24,10 @@ docs/*
 !docs/social/**
 !docs/library/
 !docs/library/**
+!docs/subscriptions/
+!docs/subscriptions/**
+!docs/web/
+!docs/web/**
 !docs/PRD.md
 !docs/CHANGELOG.md
 !docs/ARCHITECTURE.md
@@ -119,3 +123,13 @@ minio_data/
 # Logs
 *.log
 logs/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.turbo/
+web/.next/
+web/out/
+web/node_modules/
+next-env.d.ts

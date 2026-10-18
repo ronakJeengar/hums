@@ -21,10 +21,18 @@ abstract class ApiEndpoints {
   static const String audioTracks = '/api/v1/audio/tracks';
   static String audioTrackDetails(String trackId) => '/api/v1/audio/tracks/$trackId';
   static String audioTrackStatus(String trackId) => '/api/v1/audio/tracks/$trackId/status';
-  static String audioTrackPlayback(String trackId) => '/api/v1/audio/tracks/$trackId/playback';
-  static String audioTrackDownload(String trackId) => '/api/v1/audio/tracks/$trackId/download';
+  static String audioTrackPlayback(String trackId, {String? quality}) =>
+      quality != null
+          ? '/api/v1/audio/tracks/$trackId/playback?quality=$quality'
+          : '/api/v1/audio/tracks/$trackId/playback';
+  static String audioTrackDownload(String trackId, {String? quality}) =>
+      quality != null
+          ? '/api/v1/audio/tracks/$trackId/download?quality=$quality'
+          : '/api/v1/audio/tracks/$trackId/download';
   static String audioTrackWaveform(String trackId) => '/api/v1/audio/tracks/$trackId/waveform';
   static String audioJobStatus(String jobId) => '/api/v1/audio/jobs/$jobId';
+  static const String playbackSettings = '/api/v1/settings/playback';
+
 
   // Playlist Endpoints
   static const String playlists = '/api/v1/playlists';
@@ -80,4 +88,11 @@ abstract class ApiEndpoints {
   static const String library = '/api/v1/library';
   static String libraryLikedTracks({int page = 1, int size = 20}) =>
       '/api/v1/library/liked-tracks?page=$page&size=$size';
+
+  // Subscriptions & Entitlements Endpoints
+  static const String subscriptionPlans = '/api/v1/plans';
+  static const String mySubscription = '/api/v1/subscriptions/me';
+  static const String verifyPurchase = '/api/v1/subscriptions/verify-purchase';
+  static const String restorePurchases = '/api/v1/subscriptions/restore';
+  static const String myEntitlements = '/api/v1/entitlements/me';
 }

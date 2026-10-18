@@ -101,6 +101,20 @@ class Settings(BaseSettings):
     FIREBASE_CREDENTIALS_PATH: str = ""
     FIREBASE_PROJECT_ID: str = ""
 
+    # Subscription & In-App Purchase Billing Settings
+    BILLING_ENABLED: bool = True
+    DEFAULT_BILLING_PROVIDER: str = "mock"  # "apple", "google", "mock"
+    APPLE_BUNDLE_ID: str = "app.hums.ios"
+    APPLE_KEY_ID: str = ""
+    APPLE_ISSUER_ID: str = ""
+    APPLE_PRIVATE_KEY: str = ""
+    APPLE_ENVIRONMENT: str = "Sandbox"  # "Sandbox" or "Production"
+    APPLE_WEBHOOK_SHARED_SECRET: str = ""
+    GOOGLE_PLAY_PACKAGE_NAME: str = "app.hums.android"
+    GOOGLE_PLAY_CREDENTIALS_PATH: str = ""
+    GOOGLE_PLAY_WEBHOOK_SECRET: str = ""
+    ENTITLEMENT_CACHE_TTL_SECONDS: int = 300
+
     # CORS Allowed Origins
     CORS_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://localhost:8000", "http://127.0.0.1:8000"]
 

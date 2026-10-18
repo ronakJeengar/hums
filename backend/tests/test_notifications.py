@@ -419,3 +419,91 @@ def test_celery_send_push_notification_task(mock_push: MockPushProvider):
     ).get()
 
     assert success is True
+
+
+@pytest.mark.asyncio
+async def test_notification_type_filtering(async_client: AsyncClient, user1_auth):
+    """Test filtering notifications by notification type parameter."""
+    user1_id = user1_auth["user_id"]
+    service = NotificationService()
+
+    # Create notifications of distinct types
+    await service.notify_user(
+        user_id=user1_id,
+        notification_type=NotificationType.TRACK_MODERATED.value,
+        title="Moderation Update",
+        body="Track was approved",
+        dispatch_push=False,
+    )
+    await service.notify_user(
+        user_id=user1_id,
+        notification_type=NotificationType.TRACK_PUBLISHED.value,
+        title="Track Published",
+        body="Track is live",
+        dispatch_push=False,
+    )
+    await service.notify_user(
+        user_id=user1_id,
+        notification_type=NotificationType.TRACK_PROCESSING_FAILED.value,
+        title="Processing Failed",
+        body="Transcode error",
+        dispatch_push=False,
+    )
+
+    # Filter by TRACK_MODERATED
+    res_mod = await async_client.get(
+        "/api/v1/notifications?type=TRACK_MODERATED",
+        headers=user1_auth["headers"],
+    )
+    assert res_mod.status_code == 200
+    items_mod = res_mod.json()["data"]["items"]
+    assert len(items_mod) >= 1
+    assert all(item["type"] == "TRACK_MODERATED" for item in items_mod)
+
+    # Filter by TRACK_PUBLISHED
+    res_pub = await async_client.get(
+        "/api/v1/notifications?type=TRACK_PUBLISHED",
+        headers=user1_auth["headers"],
+    )
+    assert res_pub.status_code == 200
+    items_pub = res_pub.json()["data"]["items"]
+    assert len(items_pub) >= 1
+    assert all(item["type"] == "TRACK_PUBLISHED" for item in items_pub)
+
+
+@pytest.mark.asyncio
+async def test_recipient_isolation_and_ownership(
+    async_client: AsyncClient, user1_auth, user2_auth
+):
+    """Verify that users can never access or mark notifications belonging to other users."""
+    user1_id = user1_auth["user_id"]
+    user2_id = user2_auth["user_id"]
+    service = NotificationService()
+
+    # Create notification strictly owned by user1
+    notif1 = await service.notify_user(
+        user_id=user1_id,
+        notification_type=NotificationType.TRACK_MODERATED.value,
+        title="Private User 1 Event",
+        body="Secret moderation rationale",
+        dispatch_push=False,
+    )
+    assert notif1 is not None
+
+    # User 2 attempts to mark User 1's notification as read
+    res_mark = await async_client.patch(
+        f"/api/v1/notifications/{notif1.id}/read",
+        headers=user2_auth["headers"],
+    )
+    # Must be 404 Not Found to prevent ID-enumeration and access leak
+    assert res_mark.status_code == 404
+
+    # User 2 lists their notifications -> User 1's notification must not be present
+    res_list = await async_client.get(
+        "/api/v1/notifications",
+        headers=user2_auth["headers"],
+    )
+    assert res_list.status_code == 200
+    user2_notif_ids = [n["id"] for n in res_list.json()["data"]["items"]]
+    assert str(notif1.id) not in user2_notif_ids
+

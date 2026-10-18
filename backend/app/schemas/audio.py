@@ -1,7 +1,17 @@
 import uuid
 from datetime import datetime
+from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class AudioQuality(str, Enum):
+    """Supported playback and download audio quality tiers."""
+    AUTO = "AUTO"
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+
 
 
 class AudioFileResponse(BaseModel):
@@ -64,6 +74,8 @@ class TrackResponse(BaseModel):
     duration_seconds: Optional[int] = None
     waveform_key: Optional[str] = None
     status: str
+    is_published: bool = True
+    cover_image_key: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     audio_files: List[AudioFileResponse] = []
@@ -104,6 +116,7 @@ class AudioPlaybackSourceResponse(BaseModel):
     bitrate_kbps: int
     duration_seconds: Optional[int] = None
     file_size_bytes: int
+    quality: Optional[str] = Field(None, description="Resolved quality tier: LOW (64k), MEDIUM (128k), HIGH (192k)")
 
 
 class TrackPlaybackResponse(BaseModel):
@@ -117,6 +130,10 @@ class TrackPlaybackResponse(BaseModel):
     status: str
     audio: AudioPlaybackSourceResponse
     waveform_samples: List[float] = []
+    available_renditions: List[AudioRenditionResponse] = Field(
+        default_factory=list,
+        description="Available transcoded audio renditions for runtime quality selection",
+    )
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -136,9 +153,11 @@ class TrackDownloadResponse(BaseModel):
     file_size_bytes: int
     download_url: str
     expires_at: datetime
+    quality: Optional[str] = Field(None, description="Resolved download quality tier: LOW, MEDIUM, HIGH")
     waveform_samples: List[float] = []
 
     model_config = ConfigDict(from_attributes=True)
+
 
 
 

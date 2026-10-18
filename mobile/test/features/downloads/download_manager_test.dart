@@ -116,11 +116,11 @@ void main() {
         title: 'Track Three',
       );
 
-      when(() => mockRepo.getAuthorizedDownload('track_1', 'user_1'))
+      when(() => mockRepo.getAuthorizedDownload('track_1', 'user_1', quality: any(named: 'quality')))
           .thenAnswer((_) async => authItem1);
-      when(() => mockRepo.getAuthorizedDownload('track_2', 'user_1'))
+      when(() => mockRepo.getAuthorizedDownload('track_2', 'user_1', quality: any(named: 'quality')))
           .thenAnswer((_) async => authItem2);
-      when(() => mockRepo.getAuthorizedDownload('track_3', 'user_1'))
+      when(() => mockRepo.getAuthorizedDownload('track_3', 'user_1', quality: any(named: 'quality')))
           .thenAnswer((_) async => authItem3);
 
       // Make mockDio return an open stream that doesn't immediately close
